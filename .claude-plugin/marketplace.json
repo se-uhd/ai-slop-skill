@@ -1,0 +1,18 @@
+{
+  "name": "ai-slop",
+  "description": "Rules for writing and reviewing empirical software engineering research papers in LaTeX, packaged as an Agent Skill. Bundles SE-specific conventions (voice and tense, restricted vocabulary, statistical reporting, citations, BibTeX) and fetches the live AI-trope catalog from tropes.fyi at invocation.",
+  "owner": {
+    "name": "Software Engineering Group, Heidelberg University",
+    "url": "https://github.com/se-uhd"
+  },
+  "plugins": [
+    {
+      "name": "ai-slop",
+      "source": "./plugins/ai-slop",
+      "description": "Apply rules for writing and reviewing empirical SE research papers when editing .tex files, drafting prose, or auditing a draft for AI slop. Combines SE-specific conventions with the community-maintained tropes.fyi catalog of general AI writing patterns.",
+      "version": "2026-05-07",
+      "homepage": "https://github.com/se-uhd/ai-slop-skill",
+      "license": "CC-BY-4.0"
+    }
+  ]
+}
