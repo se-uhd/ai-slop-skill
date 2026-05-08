@@ -6,12 +6,12 @@ Use the `ai-slop:review` skill.
 
 The skill's workflow and report template live in `skills/review/SKILL.md`. By default the skill scans the current working directory for the paper to review (LaTeX root first, falling back to PDF). A path to a `.tex` or `.pdf` can be passed as an argument to override the scan.
 
-The trope catalog can be updated dynamically before the review runs:
+By default the review fetches the trope catalog from the live source (upstream Gist → tropes.fyi viewer → bundled `shared/tropes-snapshot.md`). Updating or editing the catalog is a rare corner case and is opt-in per run. Override flags never modify the plugin install tree:
 
-- `--tropes=<path>` — load the catalog from the given file (absolute or working-directory-relative) instead of the live source or bundled fallback.
-- `--refresh-tropes` — re-fetch the upstream Gist and overwrite `shared/tropes-snapshot.md` before the review begins.
-- `--edit-tropes` — pause to let the user edit `./tropes.local.md` (created from a template if missing). The contents are appended to the catalog after the upstream/bundled content.
+- `--tropes=<path>` — load the catalog from the given file (absolute or working-directory-relative) for this run. Read as-is.
+- `--refresh-tropes` — fetch the upstream Gist into `./tropes-snapshot.cache.md` in the working directory and use that copy for this run.
+- `--edit-tropes` — seed `./tropes-snapshot.cache.md` from the live source (or the bundled fallback) when missing, then pause for the user to edit it before running this review against the edited copy.
 
-A `./tropes.local.md` file in the working directory is appended automatically even without `--edit-tropes`, so users can keep project-specific additions checked in alongside the paper.
+`./tropes-snapshot.cache.md` is never read implicitly. To reuse it on a later run, pass `--tropes=./tropes-snapshot.cache.md`.
 
 Do not modify the user's paper; the only output is `ai-slop-report.md` in the working directory.
