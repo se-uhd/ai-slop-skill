@@ -37,29 +37,26 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 **Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning.
 
-**Trope catalog overrides.** Users can update the trope catalog before the review runs. Three opt-in mechanisms are supported, in order of precedence (the first that matches wins):
+**Trope catalog overrides (corner case).** The default catalog source is the live-fetch chain documented in step 4 (upstream Gist → tropes.fyi viewer → bundled `../../shared/tropes-snapshot.md`). Most users will never need to override it. The mechanisms below only apply when a user explicitly opts in for a particular run; nothing in the working directory is consulted otherwise.
 
-- `--tropes=<path>` argument: load the catalog from that file instead of the live source or bundled fallback. The path can be absolute or relative to the working directory.
-- `--refresh-tropes` argument: re-fetch the upstream Gist and overwrite `../../shared/tropes-snapshot.md` before the review begins. Continue the rest of the workflow with the refreshed snapshot.
-- `--edit-tropes` argument (or a conversational request such as "let me update the tropes first", "I want to add a custom trope"): pause and let the user supply additions, edits, or a replacement catalog. Resolution order: if `./tropes.local.md` exists in the working directory, treat it as a user-maintained extension and **append** it to the catalog after the upstream/bundled content; otherwise prompt the user for the path or content they want to use, write it to `./tropes.local.md`, and append it. After the user signals they are done, continue with step 3.
+- `--tropes=<path>` argument: load the catalog from that file for this run. The path can be absolute or relative to the working directory. The file is read as-is and not copied or modified.
+- `--refresh-tropes` argument: fetch the upstream Gist and write it to `./tropes-snapshot.cache.md` (creating or overwriting it), then run this review against that fresh copy.
+- `--edit-tropes` argument (or a conversational request such as "let me update the tropes first", "I want to add a custom trope"): seed `./tropes-snapshot.cache.md` from upstream (or the bundled fallback if upstream is unreachable) when it does not yet exist, then pause and let the user edit it. Once the user confirms they are done, run this review against the edited cache.
 
-If none of the above apply, fall back to the live-fetch chain documented in step 4.
+`./tropes-snapshot.cache.md` is a per-workspace artifact written only by the two flags above; it is never read implicitly. To reuse it on a later run the user passes `--tropes=./tropes-snapshot.cache.md` explicitly. None of the override flags ever modify files inside the plugin install tree.
 
 ## Workflow
 
 1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any trope-catalog overrides (`--tropes=<path>`, `--refresh-tropes`, `--edit-tropes`) from the user's arguments or message. Open the paper file (or extract text from PDF) and identify its sections (Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
 
-2. **Apply trope-catalog overrides (optional).** If the user requested an override under "Trope catalog overrides", handle it before loading the catalog:
-   - `--refresh-tropes`: fetch `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` and write the body to `../../shared/tropes-snapshot.md`. If the fetch fails, tell the user and continue with the existing snapshot rather than aborting the review.
-   - `--tropes=<path>`: verify the file exists and is readable; record its path for step 4. Do not modify the bundled snapshot.
-   - `--edit-tropes` or an equivalent conversational request: open `./tropes.local.md` (creating it from a short template if it does not exist) and pause. Tell the user the file is ready for them to edit and ask them to confirm when they are done before continuing.
+2. **Apply trope-catalog overrides (rare).** Skip this step entirely unless the user explicitly opted in via one of the flags listed under "Trope catalog overrides" — the default flow goes straight from step 1 to step 3 with no working-directory file lookup. When an override is requested, all writes target `./tropes-snapshot.cache.md` in the working directory; never modify files inside the plugin install tree.
+   - `--refresh-tropes`: fetch `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` and write the body to `./tropes-snapshot.cache.md`, overwriting it if present. Record the cache path for step 4. If the fetch fails, tell the user and continue the review with the default live-fetch chain rather than aborting.
+   - `--tropes=<path>`: verify the file exists and is readable; record its path for step 4. Do not seed or touch `./tropes-snapshot.cache.md`.
+   - `--edit-tropes` or an equivalent conversational request: ensure `./tropes-snapshot.cache.md` exists by seeding it from the live-fetch chain (upstream Gist → tropes.fyi viewer → bundled `../../shared/tropes-snapshot.md`) if missing; if it already exists, leave it alone. Pause and tell the user the file is ready for them to edit; once they confirm, record the cache path for step 4.
 
 3. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 19-item self-check.
 
-4. **Load the AI-trope catalog.** Resolve the catalog using the precedence from "Trope catalog overrides":
-   - If `--tropes=<path>` was supplied, read that file and skip the rest of this step.
-   - Otherwise, try `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` first (the upstream Gist served as `text/plain`). If that fails, try `https://tropes.fyi/tropes-md` (HTML viewer; extract the markdown). If both fail, read `../../shared/tropes-snapshot.md` for the bundled fallback.
-   - If `./tropes.local.md` exists (whether created by `--edit-tropes` or already in the working directory), append its contents to the catalog under a "User additions" heading so user-supplied tropes are checked alongside the upstream catalog.
+4. **Load the AI-trope catalog.** If step 2 recorded an override path (from `--tropes=<path>`, `--refresh-tropes`, or `--edit-tropes`), read that file and skip the rest of this step. Otherwise — the common case — try `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` first (the upstream Gist served as `text/plain`); if that fails, try `https://tropes.fyi/tropes-md` (HTML viewer; extract the markdown); if both fail, read `../../shared/tropes-snapshot.md` for the bundled fallback. Do not consult `./tropes-snapshot.cache.md` unless the user explicitly opted in.
 
 5. **Per-section pass.** For each paper section, scan the prose against the rules and the trope catalog. For each violation, record:
    - The rule or trope name.
@@ -160,8 +157,8 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 ## Bundled files
 
 - `../../shared/rules.md` for the SE-specific rule set.
-- `../../shared/tropes-snapshot.md` for the AI-trope catalog (fallback when the live Gist is unreachable; also the file overwritten by `--refresh-tropes`).
-- `./tropes.local.md` (working directory, optional, user-maintained) for project-local additions appended to the catalog when present.
+- `../../shared/tropes-snapshot.md` for the AI-trope catalog. Together with the live Gist and the tropes.fyi viewer, this is the default catalog source — the common case for every review run.
+- `./tropes-snapshot.cache.md` (working directory, optional) is written only when the user opts in via `--refresh-tropes` or `--edit-tropes`, and read only when an override flag points at it. It is not a default lookup location.
 
 ## Constraints
 
