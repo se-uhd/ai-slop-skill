@@ -8,6 +8,7 @@ These rules draw on empirical studies of AI-to-human word frequency ratios, APA 
 
 - **Use American English consistently.** That means analyze (not analyse), behavior (not behaviour), organization (not organisation), modeling (not modelling), color (not colour). Check for British spellings introduced by co-authors or spell-checkers set to the wrong locale.
 - **Treat "data" as singular.** "The data shows" and "the data is," not "the data show" or "the data are." This is a deliberate project convention. Both forms are accepted in style guides, but we use singular consistently.
+- **Use "such as" not "like" to introduce examples.** Write "scenarios such as code completion," not "scenarios like code completion." `Like` is colloquial in this construction; `such as` is the academic register. Apply this even when the original prose already uses `like` — do not carry it over verbatim into a rewrite. `Like` remains correct as a verb ("readers like terse prose") and in deliberate similes.
 
 ## Research-coded phrases to avoid
 
@@ -105,7 +106,7 @@ Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / C
 ## Structure
 
 - **No formulaic section openings.** Never open a section or subsection with "In today's...", "In the realm of...", "In an era of...", "As we explore...", or "[Topic] has become increasingly...". Start with the substance.
-- **No formulaic closings.** Do not use "Overall, ...," "In summary, ...," or "In conclusion, ..." to close a single paragraph by restating what it already said. These phrases are acceptable when they do genuine work: "In summary" and "In conclusion" in actual summary or conclusion sections, "Overall" when synthesizing across multiple data points or conditions (e.g., "Overall, the pattern held across all three groups").
+- **No formulaic closings.** Do not use "Overall, ...," "In summary, ...," or "In conclusion, ..." to close a single paragraph by restating what it already said. These phrases are acceptable when they do genuine work: "In summary" and "In conclusion" in actual summary or conclusion sections; "Overall" when synthesizing across multiple data points or conditions (e.g., "Overall, the pattern held across all three groups"); and "In summary, ..." when introducing an enumerated list that consolidates several preceding paragraphs of prose into a checklist (e.g., "In summary, our recommendation is to report: (1) X; (2) Y; (3) Z."). The diagnostic is whether the phrase consolidates content the reader has not yet seen in list form. If the next construct is a numbered or bulleted list distilling earlier prose, the opener earns its keep; if it introduces a sentence or two that just restates the paragraph above, it is filler.
 - **No rule-of-three defaults.** Do not reflexively group things in threes. If there are two items, list two. If there are four, list four.
 - **Keep enumerations short.** Examples introduced by "e.g.,", "such as", "including", or numbered markers like "(1) ... (2) ... (3) ..." should illustrate, not exhaustively iterate. Two or three representative items are almost always enough. If the full set matters, use a table, figure, or dedicated list. Do not pack it into a parenthetical or running sentence. When in doubt, cut the enumeration to the clearest examples and stop.
 - **No lists in prose.** Use running text, not bullet points, in the paper body. Tables and figures handle structured data.
@@ -126,6 +127,7 @@ Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / C
 - **Cite, do not gesture.** Replace "a growing body of work" with the actual works. Replace "recent studies suggest" with who found what.
 - **Ground every new citation.** Verify the cited paper actually says what you claim. Read the relevant section, not just the abstract. Add a LaTeX comment (`% GROUNDING: "..."`) after the `\cite{}` with a direct quote supporting the claim. These comments leave an audit trail for co-authors.
 - **Prefer `\citeauthor{}` over spelled-out author names.** When referring to authors in running text, use `\citeauthor{key}` (and `\citeyear{key}` where a year is needed) rather than typing names directly. This keeps author names synchronized with the BibTeX entry and avoids spelling or ordering errors. Write `\citeauthor{smith2020}` instead of "Smith et al." The same applies to possessives (`\citeauthor{smith2020}'s framework`) and first-mention full forms.
+- **Avoid citations in the abstract.** ACM, EMSE, and many IEEE-journal author guidelines prohibit references in abstracts; the abstract is intended to stand alone without bibliographic dependencies. When a proposed rewrite tempts a `\cite{}` into the abstract, rephrase to drop it — the underlying claim can move to the introduction. Check the venue's author guidelines before adding any reference to an abstract; the safe default is to keep abstracts citation-free.
 
 ## Related Work
 
@@ -186,7 +188,7 @@ Before presenting any written or edited text, scan it against these checks:
 2. **Em-dash count.** If more than 2 per page-equivalent (~350 words), replace some.
 3. **Colon count.** If more than 2 colons per page-equivalent appear in running prose, examine each. Any colon that could be replaced by a period with light rewriting should be replaced. Watch especially for colons that have crept in as substitutes for em-dashes or parentheses, and for colon-followed-by-list patterns repeating across paragraphs.
 4. **Sentence length variance.** If three consecutive sentences are within 5 words of each other in length, revise at least one.
-5. **Opening / closing patterns.** Verify no section starts with a formulaic opener or ends with "Overall, ..." or "In summary, ...".
+5. **Opening / closing patterns.** Verify no section starts with a formulaic opener or ends with "Overall, ..." or "In summary, ...". When `In summary,` / `In conclusion,` / `Overall,` does appear, confirm it introduces a real synthesis (an enumerated list distilling earlier prose, or a synthesis across multiple data points) rather than restating a single preceding paragraph.
 6. **Participial openings.** If more than one sentence per page starts with a present participle clause ("-ing, ..."), rewrite.
 7. **Hedging density.** If a paragraph contains more than two hedging phrases (may, might, could, perhaps, to some extent), evaluate whether each is evidence-based. Remove those that are not.
 8. **Passive voice.** If more than one-third of sentences in a paragraph are passive, rewrite the avoidable ones in active voice.

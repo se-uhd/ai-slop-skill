@@ -1,7 +1,7 @@
 ---
 name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
-version: 2026-05
+version: 2026-05_rev1
 homepage: https://github.com/se-uhd/ai-slop-skill
 license: CC-BY-4.0
 ---
@@ -37,21 +37,37 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 **Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning.
 
+**Trope catalog overrides.** Users can update the trope catalog before the review runs. Three opt-in mechanisms are supported, in order of precedence (the first that matches wins):
+
+- `--tropes=<path>` argument: load the catalog from that file instead of the live source or bundled fallback. The path can be absolute or relative to the working directory.
+- `--refresh-tropes` argument: re-fetch the upstream Gist and overwrite `../../shared/tropes-snapshot.md` before the review begins. Continue the rest of the workflow with the refreshed snapshot.
+- `--edit-tropes` argument (or a conversational request such as "let me update the tropes first", "I want to add a custom trope"): pause and let the user supply additions, edits, or a replacement catalog. Resolution order: if `./tropes.local.md` exists in the working directory, treat it as a user-maintained extension and **append** it to the catalog after the upstream/bundled content; otherwise prompt the user for the path or content they want to use, write it to `./tropes.local.md`, and append it. After the user signals they are done, continue with step 3.
+
+If none of the above apply, fall back to the live-fetch chain documented in step 4.
+
 ## Workflow
 
-1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Open the paper file (or extract text from PDF) and identify its sections (Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
+1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any trope-catalog overrides (`--tropes=<path>`, `--refresh-tropes`, `--edit-tropes`) from the user's arguments or message. Open the paper file (or extract text from PDF) and identify its sections (Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
 
-2. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 19-item self-check.
+2. **Apply trope-catalog overrides (optional).** If the user requested an override under "Trope catalog overrides", handle it before loading the catalog:
+   - `--refresh-tropes`: fetch `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` and write the body to `../../shared/tropes-snapshot.md`. If the fetch fails, tell the user and continue with the existing snapshot rather than aborting the review.
+   - `--tropes=<path>`: verify the file exists and is readable; record its path for step 4. Do not modify the bundled snapshot.
+   - `--edit-tropes` or an equivalent conversational request: open `./tropes.local.md` (creating it from a short template if it does not exist) and pause. Tell the user the file is ready for them to edit and ask them to confirm when they are done before continuing.
 
-3. **Load the AI-trope catalog.** Try `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` first (the upstream Gist served as `text/plain`). If that fails, try `https://tropes.fyi/tropes-md` (HTML viewer; extract the markdown). If both fail, read `../../shared/tropes-snapshot.md` for the bundled fallback.
+3. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 19-item self-check.
 
-4. **Per-section pass.** For each paper section, scan the prose against the rules and the trope catalog. For each violation, record:
+4. **Load the AI-trope catalog.** Resolve the catalog using the precedence from "Trope catalog overrides":
+   - If `--tropes=<path>` was supplied, read that file and skip the rest of this step.
+   - Otherwise, try `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` first (the upstream Gist served as `text/plain`). If that fails, try `https://tropes.fyi/tropes-md` (HTML viewer; extract the markdown). If both fail, read `../../shared/tropes-snapshot.md` for the bundled fallback.
+   - If `./tropes.local.md` exists (whether created by `--edit-tropes` or already in the working directory), append its contents to the catalog under a "User additions" heading so user-supplied tropes are checked alongside the upstream catalog.
+
+5. **Per-section pass.** For each paper section, scan the prose against the rules and the trope catalog. For each violation, record:
    - The rule or trope name.
    - The location (`file:line` for LaTeX; `Section: <name>` for PDF).
    - A short verbatim quote of the offending text, with enough surrounding context to make the quote unique within the paper.
    - A concrete suggested replacement that follows the rules.
 
-5. **Cross-cutting metrics.** Compute and record:
+6. **Cross-cutting metrics.** Compute and record:
    - Em-dash density (target: ≤ 2 per page-equivalent of ~350 words).
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
    - Restricted-word density per paragraph (flag paragraphs with more than 2 to 3 occurrences).
@@ -60,15 +76,15 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - American-vs-British spelling (flag British variants).
    - "Significant" audit (flag non-statistical uses).
 
-6. **Citations and BibTeX (LaTeX only).** Scan for:
+7. **Citations and BibTeX (LaTeX only).** Scan for:
    - Citation clusters with three or more `\cite{}` entries that do not explain what each cited work contributes.
    - `\cite{}` calls without a nearby `% GROUNDING: "..."` comment.
    - Spelled-out author names that should use `\citeauthor{}`.
    - `.bib` entries referenced by the paper that have missing or unverifiable required fields.
 
-7. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory **and** print the same content to the console. Use the report template below.
+8. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory **and** print the same content to the console. Use the report template below.
 
-8. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
+9. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
 
 ## Report template
 
@@ -78,7 +94,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05
+**Skill version:** 2026-05_rev1
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -144,7 +160,8 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 ## Bundled files
 
 - `../../shared/rules.md` for the SE-specific rule set.
-- `../../shared/tropes-snapshot.md` for the AI-trope catalog (fallback when the live Gist is unreachable).
+- `../../shared/tropes-snapshot.md` for the AI-trope catalog (fallback when the live Gist is unreachable; also the file overwritten by `--refresh-tropes`).
+- `./tropes.local.md` (working directory, optional, user-maintained) for project-local additions appended to the catalog when present.
 
 ## Constraints
 
