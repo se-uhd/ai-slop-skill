@@ -15,15 +15,16 @@ The bundle uses CalVer with the release date (`YYYY-MM-DD`). The canonical versi
 /plugin install ai-slop
 ```
 
-Three slash commands become available:
+Four slash commands become available:
 
 ```
 /ai-slop:review
 /ai-slop:review-diff
 /ai-slop:revise
+/ai-slop:init-writing
 ```
 
-Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX root (or PDF) in the current directory, walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the LaTeX source — the same report schema is used for both review modes. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts ("audit this draft for AI slop", "check my edits before I commit", "apply the review report").
+Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX root (or PDF) in the current directory, walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the LaTeX source — the same report schema is used for both review modes. `/ai-slop:init-writing` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and wires it into the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so co-authors and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "set up writing rules in this repo").
 
 To pick up a new release, refresh the marketplace catalog and reload plugins:
 
@@ -79,6 +80,12 @@ Given a previously generated report and the paper's LaTeX source, the revise ski
 
 Revise mode does not regenerate the report and does not commit. The user runs `git diff` to inspect and `git commit` to keep the changes.
 
+### `/ai-slop:init-writing`
+
+Init-writing is a one-shot setup command for new (or existing) paper repositories. It copies the bundled SE-specific writing rules from `shared/rules.md` into a project-local `WRITING.md` and either creates a `CLAUDE.md` that references it or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions through the standard mechanism, even when this plugin is not installed.
+
+`WRITING.md` is meant to be edited freely after generation — it is a starting point, not a synced replica of the bundled rules. The skill confirms before overwriting an existing `WRITING.md`, and the `CLAUDE.md` update is idempotent: if `CLAUDE.md` already references `WRITING.md`, nothing is appended on a re-run. Init-writing does not modify the paper itself and does not commit.
+
 ## Repository layout
 
 ```
@@ -92,6 +99,7 @@ plugins/
       review.md          /ai-slop:review slash command
       review-diff.md     /ai-slop:review-diff slash command
       revise.md          /ai-slop:revise slash command
+      init-writing.md    /ai-slop:init-writing slash command
     skills/
       review/
         SKILL.md         review-mode skill (assess a draft, write report)
@@ -99,6 +107,8 @@ plugins/
         SKILL.md         diff-mode skill (review only git-modified lines)
       revise/
         SKILL.md         revise-mode skill (apply a report to the LaTeX source)
+      init-writing/
+        SKILL.md         setup skill (emit WRITING.md, wire into CLAUDE.md)
     shared/              content shared by both skills
       rules.md           SE-specific rule set
       tropes-snapshot.md bundled fallback of the tropes.fyi Gist
