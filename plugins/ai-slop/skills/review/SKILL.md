@@ -1,7 +1,7 @@
 ---
 name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
-version: 2026-05_rev4
+version: 2026-05_rev5
 homepage: https://github.com/se-uhd/ai-slop-skill
 license: CC-BY-4.0
 ---
@@ -63,9 +63,8 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - "Significant" audit (flag non-statistical uses).
 
 6. **Citations and BibTeX (LaTeX only).** Scan for:
-   - Citation clusters with three or more `\cite{}` entries that do not explain what each cited work contributes.
-   - `\cite{}` calls without a nearby `% GROUNDING: "..."` comment.
-   - Spelled-out author names that should use `\citeauthor{}`.
+   - Citation clusters with three or more `\cite{}` entries, and `\cite{}` calls without a nearby `% GROUNDING: "..."` comment. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_citation_issues.py <root.tex> [<input1.tex> ...]` over the LaTeX root and any `\input`-ed files. Each stdout line is `<file>:<line>\t<issue>\t<keys>\t<context>` where `<issue>` is `cluster` or `missing-grounding`. For clusters, judge whether the surrounding prose explains each cited work — only flag the cluster as a finding if it does not. For missing-grounding, the script's exit is informational; whether to ask the author to add `% GROUNDING:` comments is a project-internal decision. The script prints a one-line summary to stderr (e.g. `scanned 41 cite call(s) across 1 file(s); 1 cluster(s), 41 missing-grounding`); use it to confirm the run completed. Known limitations: the script does not follow `\input`/`\include` itself (pass the file list explicitly), and "nearby grounding" is defined as same line or the next non-blank line — comments two or more blank-separated lines after the cite are not credited.
+   - Spelled-out author names that should use `\citeauthor{}`. (Manual scan; the script does not check this.)
    - `.bib` entries with missing required fields. To find the bib files, grep the LaTeX root (and any `\input`-ed files) for `\bibliography{...}` and `\addbibresource{...}` directives and resolve each path. If at least one is found, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfile1> <bibfile2> ...` and report each printed entry as a finding. The script uses standard BibTeX required-field semantics (Patashnik's `btxdoc`) and does not honor `crossref` inheritance — sanity-check flagged entries before reporting them, and skip the check entirely if no bib files are referenced. The script always prints a one-line summary to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field issue(s)`); use it to confirm the run completed.
 
 7. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory **and** print the same content to the console. Use the report template below.
@@ -80,7 +79,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev4 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-05_rev5 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -147,7 +146,7 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 
 - `../../shared/rules.md` for the SE-specific rule set.
 - `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the upstream Gist and tropes.fyi viewer are both unreachable.
-- `../../scripts/find_latex_root.py`, `../../scripts/fetch_tropes.py`, `../../scripts/check_bib_fields.py` implement the deterministic checks above; their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../scripts/find_latex_root.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py` implement the deterministic checks above; their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 
