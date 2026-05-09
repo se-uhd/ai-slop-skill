@@ -176,6 +176,28 @@ def test_check_bib_fields_flags_only_missing():
         assert 'good-book-with-editor' not in joined, f"bib: @book with editor was flagged: {lines!r}"
         # @online is BibLaTeX, unknown to standard BibTeX → must be silently skipped
         assert 'biblatex-only' not in joined, f"bib: unknown @online was flagged: {lines!r}"
+        # Fixture has 5 standard-BibTeX entries (article good/bad, inproceedings bad,
+        # misc, book); @online and @string are skipped. Of those, 2 are flagged.
+        assert 'checked 5 entries across 1 file(s), 2 missing-field issue(s)' in err, \
+            f"bib: stderr summary missing or wrong: {err!r}"
+
+
+def test_check_bib_fields_summary_on_clean_input():
+    with tempfile.TemporaryDirectory() as d:
+        bib = Path(d) / 'refs.bib'
+        write(bib, """
+@article{ok,
+  author = {Smith, J.},
+  title = {Hello},
+  journal = {J},
+  year = {2024}
+}
+""")
+        rc, out, err = run('check_bib_fields.py', str(bib))
+        assert rc == 0, f"clean bib: rc={rc} err={err!r}"
+        assert out == '', f"clean bib: expected empty stdout, got {out!r}"
+        assert 'checked 1 entries across 1 file(s), 0 missing-field issue(s)' in err, \
+            f"clean bib: stderr summary missing or wrong: {err!r}"
 
 
 # ---------- runner ----------
@@ -191,6 +213,7 @@ TESTS = [
     test_find_latex_root_root_with_includes,
     test_fetch_tropes_emits_body_and_source,
     test_check_bib_fields_flags_only_missing,
+    test_check_bib_fields_summary_on_clean_input,
 ]
 
 
