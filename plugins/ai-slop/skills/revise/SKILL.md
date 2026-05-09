@@ -1,7 +1,7 @@
 ---
 name: revise
 description: Apply the findings of an `/ai-slop:review` report to the paper, replacing each flagged quote with the suggested revision. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the LaTeX source.
-version: 2026-05_rev1
+version: 2026-05_rev2
 homepage: https://github.com/se-uhd/ai-slop-skill
 license: CC-BY-4.0
 ---
@@ -25,7 +25,7 @@ Do **not** invoke when the user wants a fresh review (use `/ai-slop:review` inst
 
 Both inputs default to the current working directory. No arguments are required.
 
-- **Report.** Defaults to `ai-slop-report.md` in the working directory. If that file does not exist, ask the user to point to the report (or to run `/ai-slop:review` first). The report must match the schema produced by `/ai-slop:review` (Findings by section, Cross-cutting metrics, Items requiring author judgment).
+- **Report.** Defaults to `ai-slop-report.md` in the working directory. If that file does not exist, ask the user to point to the report (or to run `/ai-slop:review` first). The report must match the schema produced by `/ai-slop:review` (i.e., Findings by section, Cross-cutting metrics, Items requiring author judgment).
 - **Paper.** Auto-detected by listing the `.tex` files in the working directory (non-recursive) and identifying the LaTeX root — the file containing `\documentclass{}` and `\begin{document}`. If exactly one root is found, use it. If multiple roots are found, prefer `main.tex` or `paper.tex`; otherwise list them and ask the user. If no `.tex` root is found, stop. PDF input is not supported; revise mode edits LaTeX directly.
 
 **Optional path overrides.** Paths can still be passed as arguments. The first argument is the report path; the second is the paper path.
@@ -41,7 +41,7 @@ Both inputs default to the current working directory. No arguments are required.
    - If the quote is found exactly: replace it with `Suggested revision` using the Edit tool. One Edit call per finding (do not bundle multiple findings into one edit; that makes diffs harder to review).
    - If the quote is not found (the paper may have been edited since review): log it as a skipped finding with the reason. Do not attempt fuzzy matching that could change the wrong text.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one: prefer the location closest to the hint and log the ambiguity in the summary.
-   - If the suggestion would break LaTeX (mismatched braces, undefined macros, broken `\cite{}` keys): log as skipped with the reason rather than apply.
+   - If the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys): log as skipped with the reason rather than apply.
 
 4. **Cross-cutting metrics.** These are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section". Do not invent new edits to balance a metric.
 

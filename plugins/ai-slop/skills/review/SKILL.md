@@ -1,7 +1,7 @@
 ---
 name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
-version: 2026-05_rev1
+version: 2026-05_rev2
 homepage: https://github.com/se-uhd/ai-slop-skill
 license: CC-BY-4.0
 ---
@@ -33,11 +33,11 @@ The skill auto-detects the paper in the current working directory. No path argum
 - LaTeX source (`.tex`): read the root and follow `\input{}` / `\include{}` for files inside the project tree. A flattened `.tex` works the same way.
 - PDF (`.pdf`): extract text using whatever tool is available in the environment (`pdftotext`, `mutool draw -F txt`, or a Python library). If no extractor is available, tell the user which one to install rather than failing silently.
 
-When both LaTeX source and PDF are available for the same paper, prefer the LaTeX source. It exposes LaTeX-specific artifacts (commented-out disclosures, `\todo{}` notes, missing `% GROUNDING:` comments, spelled-out author names that should use `\citeauthor{}`) that get lost in the PDF.
+When both LaTeX source and PDF are available for the same paper, prefer the LaTeX source. It exposes LaTeX-specific artifacts (e.g., commented-out disclosures, `\todo{}` notes, missing `% GROUNDING:` comments, spelled-out author names that should use `\citeauthor{}`) that get lost in the PDF.
 
 **Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning.
 
-**Trope catalog overrides (corner case).** The default catalog source is the live-fetch chain documented in step 4 (upstream Gist → tropes.fyi viewer → bundled `../../shared/tropes-snapshot.md`). Most users will never need to override it. The mechanisms below only apply when a user explicitly opts in for a particular run; nothing in the working directory is consulted otherwise.
+**Trope catalog overrides (corner case).** The default catalog source is the live-fetch chain documented in step 4 (upstream Gist -> tropes.fyi viewer -> bundled `../../shared/tropes-snapshot.md`). Most users will never need to override it. The mechanisms below only apply when a user explicitly opts in for a particular run; nothing in the working directory is consulted otherwise.
 
 - `--tropes=<path>` argument: load the catalog from that file for this run. The path can be absolute or relative to the working directory. The file is read as-is and not copied or modified.
 - `--refresh-tropes` argument: fetch the upstream Gist and write it to `./tropes-snapshot.cache.md` (creating or overwriting it), then run this review against that fresh copy.
@@ -47,12 +47,12 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 ## Workflow
 
-1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any trope-catalog overrides (`--tropes=<path>`, `--refresh-tropes`, `--edit-tropes`) from the user's arguments or message. Open the paper file (or extract text from PDF) and identify its sections (Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
+1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any trope catalog overrides (`--tropes=<path>`, `--refresh-tropes`, `--edit-tropes`) from the user's arguments or message. Open the paper file (or extract text from PDF) and identify its sections (e.g., Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
 
-2. **Apply trope-catalog overrides (rare).** Skip this step entirely unless the user explicitly opted in via one of the flags listed under "Trope catalog overrides" — the default flow goes straight from step 1 to step 3 with no working-directory file lookup. When an override is requested, all writes target `./tropes-snapshot.cache.md` in the working directory; never modify files inside the plugin install tree.
+2. **Apply trope catalog overrides (rare).** Skip this step entirely unless the user explicitly opted in via one of the flags listed under "Trope catalog overrides" — the default flow goes straight from step 1 to step 3 with no working-directory file lookup. When an override is requested, all writes target `./tropes-snapshot.cache.md` in the working directory; never modify files inside the plugin install tree.
    - `--refresh-tropes`: fetch `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` and write the body to `./tropes-snapshot.cache.md`, overwriting it if present. Record the cache path for step 4. If the fetch fails, tell the user and continue the review with the default live-fetch chain rather than aborting.
    - `--tropes=<path>`: verify the file exists and is readable; record its path for step 4. Do not seed or touch `./tropes-snapshot.cache.md`.
-   - `--edit-tropes` or an equivalent conversational request: ensure `./tropes-snapshot.cache.md` exists by seeding it from the live-fetch chain (upstream Gist → tropes.fyi viewer → bundled `../../shared/tropes-snapshot.md`) if missing; if it already exists, leave it alone. Pause and tell the user the file is ready for them to edit; once they confirm, record the cache path for step 4.
+   - `--edit-tropes` or an equivalent conversational request: ensure `./tropes-snapshot.cache.md` exists by seeding it from the live-fetch chain (upstream Gist -> tropes.fyi viewer -> bundled `../../shared/tropes-snapshot.md`) if missing; if it already exists, leave it alone. Pause and tell the user the file is ready for them to edit; once they confirm, record the cache path for step 4.
 
 3. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 19-item self-check.
 
@@ -91,7 +91,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev1
+**Skill version:** 2026-05_rev2
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -164,5 +164,5 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 
 - **Quote verbatim.** The `Quote` field must match the paper text exactly, with enough surrounding context to be unique. Revise mode relies on exact-match lookup.
 - **Suggest concrete revisions.** Avoid vague guidance ("rewrite to be clearer"). Where a rule has a specific replacement (a banned phrase, a restricted word, a tense correction), provide it. For judgment-call findings, put them in "Items requiring author judgment" rather than "Findings by section".
-- **Do not editorialize.** Do not flag stylistic choices the rules do not address (theoretical contribution, novelty argument, narrative structure, general readability), even if you notice them.
+- **Do not editorialize.** Do not flag stylistic choices the rules do not address (e.g., theoretical contribution, novelty argument, narrative structure, general readability), even if you notice them.
 - **Do not modify the paper.** Review mode writes only `ai-slop-report.md` in the working directory.
