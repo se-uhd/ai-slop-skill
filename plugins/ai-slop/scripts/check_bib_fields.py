@@ -6,9 +6,11 @@ BibTeX spec and print one tab-separated line per offending entry to stdout:
 
     <key>\\t<type>\\t<comma-separated-missing-fields>
 
-Empty stdout means all parsed entries are clean. Files that cannot be opened
-or entries that cannot be parsed are reported on stderr but do not abort the
-run.
+Empty stdout means all parsed entries are clean. A one-line summary is always
+printed to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field
+issue(s)`) so callers can confirm the run completed without parsing stdout.
+Files that cannot be opened or entries that cannot be parsed are reported on
+stderr but do not abort the run.
 
 Required-fields table is taken from Patashnik's btxdoc, the canonical BibTeX
 manual on CTAN: https://mirrors.ctan.org/biblio/bibtex/base/btxdoc.tex
@@ -153,12 +155,13 @@ def missing_fields(etype, fields):
     return sorted(missing)
 
 
-def check_file(path):
+def check_file(path, stats):
     try:
         text = Path(path).read_text(encoding='utf-8', errors='replace')
     except OSError as e:
         print(f"{path}: {e}", file=sys.stderr)
         return
+    stats['files'] += 1
     try:
         entries = list(find_entry_blocks(text))
     except ValueError as e:
@@ -175,7 +178,9 @@ def check_file(path):
         missing = missing_fields(etype, fields)
         if missing is None:
             continue  # unknown entry type — silently skip
+        stats['checked'] += 1
         if missing:
+            stats['flagged'] += 1
             print(f"{key}\t{etype}\t{','.join(missing)}")
 
 
@@ -183,8 +188,14 @@ def main(argv):
     if len(argv) < 2:
         print("usage: check_bib_fields.py <bibfile> [<bibfile> ...]", file=sys.stderr)
         return 2
+    stats = {'files': 0, 'checked': 0, 'flagged': 0}
     for path in argv[1:]:
-        check_file(path)
+        check_file(path, stats)
+    print(
+        f"checked {stats['checked']} entries across {stats['files']} file(s), "
+        f"{stats['flagged']} missing-field issue(s)",
+        file=sys.stderr,
+    )
     return 0
 
 
