@@ -216,9 +216,21 @@ A commented-out cite must not flag: % see \\cite{ghost,phantom,wraith}
 
 \\citet{textcite-cluster, more, three} should also be a cluster.
 
-\\citeauthor{styleonly} \\cite{styleonly} % GROUNDING: "styleonly was groundedly cited"
+\\citeauthor{styleonly} \\cite{styleonly} % GROUNDING: "styleonly says hi"
 
 \\nocite{ignore} should not be scanned at all.
+
+A biblatex \\textcite{bib1, bib2, bib3} cluster.
+
+\\fullcite{biblatex-grounded}. % GROUNDING: "biblatex-grounded says hi"
+
+A capitalized sentence-starter \\Citet{cap1, cap2, cap3} cluster.
+
+A starred natbib form~\\citet*{star1, star2, star3} should also be a cluster.
+
+\\Citeauthor{capskip} is a capitalized style-only helper and must be skipped.
+
+A non-cite command \\textbf{not, a, cite} must not flag.
 """
 
 
@@ -233,28 +245,34 @@ def test_find_citation_issues_basic():
         clusters = [l for l in lines if '\tcluster\t' in l]
         missing = [l for l in lines if '\tmissing-grounding\t' in l]
 
-        # Two clusters: \cite{x, y, z} and \citet{textcite-cluster, more, three}.
-        assert len(clusters) == 2, f"cite: expected 2 clusters, got {len(clusters)}: {clusters!r}"
-        assert any('x,y,z' in c for c in clusters), f"cite: x,y,z cluster missing: {clusters!r}"
-        assert any('textcite-cluster,more,three' in c for c in clusters), \
-            f"cite: textcite cluster missing: {clusters!r}"
+        # Five clusters: \cite{x,y,z}, \citet{textcite-cluster,...},
+        # \textcite{bib1,bib2,bib3}, \Citet{cap1,cap2,cap3}, \citet*{star1,star2,star3}.
+        assert len(clusters) == 5, f"cite: expected 5 clusters, got {len(clusters)}: {clusters!r}"
+        for expected in ('x,y,z', 'textcite-cluster,more,three', 'bib1,bib2,bib3',
+                         'cap1,cap2,cap3', 'star1,star2,star3'):
+            assert any(expected in c for c in clusters), \
+                f"cite: cluster {expected} missing: {clusters!r}"
 
-        # Missing-grounding: \cite{a, b}, \cite{x, y, z}, and \citet{textcite-cluster,...}.
-        # Grounded: ok2024 (same line), follow2025 (next non-blank), styleonly (same line).
-        # The commented-out cite and \nocite must not appear at all.
-        for grounded_key in ('ok2024', 'follow2025', 'styleonly'):
+        # Grounded (must NOT appear in missing): ok2024, follow2025, styleonly, biblatex-grounded.
+        # Ignored entirely (must NOT appear anywhere): ghost, phantom, wraith, ignore, \textbf args.
+        for grounded_key in ('ok2024', 'follow2025', 'styleonly', 'biblatex-grounded'):
             assert not any(grounded_key in m for m in missing), \
                 f"cite: {grounded_key} should be grounded, found in missing: {missing!r}"
-        for ghost_key in ('ghost', 'phantom', 'wraith', 'ignore'):
+        for ghost_key in ('ghost', 'phantom', 'wraith', 'ignore', 'not,a,cite', 'capskip'):
             assert not any(ghost_key in l for l in lines), \
-                f"cite: {ghost_key} should be ignored, found in output: {lines!r}"
-        assert any('a,b' in m for m in missing), f"cite: a,b missing-grounding not flagged: {missing!r}"
-        assert any('x,y,z' in m for m in missing), f"cite: x,y,z missing-grounding not flagged: {missing!r}"
+                f"cite: {ghost_key} should not be detected, found in output: {lines!r}"
+        for missing_key in ('a,b', 'x,y,z', 'bib1,bib2,bib3', 'cap1,cap2,cap3', 'star1,star2,star3'):
+            assert any(missing_key in m for m in missing), \
+                f"cite: missing-grounding {missing_key} not flagged: {missing!r}"
 
-        # Stderr summary: cite count is everything except \nocite, \citeauthor, and the
-        # commented-out cite. That is: ok2024, (a,b), (x,y,z), follow2025,
-        # (textcite-cluster,more,three), styleonly = 6 cite calls.
-        assert 'scanned 6 cite call(s) across 1 file(s); 2 cluster(s)' in err, \
+        # Considered: every cite call in GROUNDED_COMMANDS that resolved to >=1 key.
+        # ok2024, (a,b), (x,y,z), follow2025, (textcite-cluster,more,three), styleonly,
+        # (bib1,bib2,bib3), biblatex-grounded, (cap1,cap2,cap3), (star1,star2,star3) = 10.
+        # Missing-grounding: every considered cite without a grounding comment.
+        # (a,b), (x,y,z), (textcite-cluster,more,three), (bib1,bib2,bib3),
+        # (cap1,cap2,cap3), (star1,star2,star3) = 6.
+        assert ('considered 10 cite call(s) across 1 file(s); 5 cluster(s), '
+                '6 missing-grounding') in err, \
             f"cite: stderr summary missing or wrong: {err!r}"
 
 
@@ -265,7 +283,7 @@ def test_find_citation_issues_no_findings():
         rc, out, err = run('find_citation_issues.py', str(tex))
         assert rc == 0, f"clean cite: rc={rc} err={err!r}"
         assert out == '', f"clean cite: expected empty stdout, got {out!r}"
-        assert 'scanned 1 cite call(s) across 1 file(s); 0 cluster(s), 0 missing-grounding' in err, \
+        assert 'considered 1 cite call(s) across 1 file(s); 0 cluster(s), 0 missing-grounding' in err, \
             f"clean cite: stderr summary missing or wrong: {err!r}"
 
 
@@ -281,6 +299,25 @@ def test_find_citation_issues_optional_args():
         # must not be parsed as part of the key list.
         assert any('cluster' in l and 'a,b,c' in l for l in lines), \
             f"optargs: cluster not detected: {lines!r}"
+
+
+def test_find_citation_issues_truncate_respects_120_chars():
+    long_line = 'A long line with text ' * 20 + '\\cite{a, b, c}'
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'paper.tex'
+        write(tex, long_line + '\n')
+        rc, out, err = run('find_citation_issues.py', str(tex))
+        assert rc == 0, f"truncate: rc={rc} err={err!r}"
+        lines = [line for line in out.strip().split('\n') if line]
+        assert lines, f"truncate: no findings, expected cluster + missing-grounding"
+        for line in lines:
+            parts = line.split('\t')
+            assert len(parts) == 4, f"truncate: bad TSV ({len(parts)} cols): {line!r}"
+            context = parts[3]
+            assert len(context) <= 120, \
+                f"truncate: context exceeds 120 chars ({len(context)}): {context!r}"
+            assert context.endswith('...'), \
+                f"truncate: long line should end with ...: {context!r}"
 
 
 # ---------- runner ----------
@@ -300,6 +337,7 @@ TESTS = [
     test_find_citation_issues_basic,
     test_find_citation_issues_no_findings,
     test_find_citation_issues_optional_args,
+    test_find_citation_issues_truncate_respects_120_chars,
 ]
 
 
