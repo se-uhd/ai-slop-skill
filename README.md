@@ -14,7 +14,7 @@ This scheme replaced an earlier date-string convention (`YYYY-MM-DD`); historica
 
 The skills shell out to small Python 3 helpers under `plugins/ai-slop/scripts/` for deterministic checks (LaTeX root detection, trope-catalog fetch chain, BibTeX required-field verification). Requirements:
 
-- `python3` ≥ 3.9, no third-party packages (stdlib only). Present by default on macOS 12+ and modern Linux distributions.
+- `python3` (latest stable; CI pins to 3.14), no third-party packages (stdlib only).
 
 No other runtime dependencies. Smoke tests for the helpers live at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
 
