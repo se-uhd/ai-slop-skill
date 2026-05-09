@@ -2,7 +2,7 @@
 
 An [Agent Skill](https://agentskills.io/home) bundle that applies rules for writing and reviewing empirical software engineering research papers in LaTeX. The bundle catches AI slop in research drafts and enforces SE-specific conventions for voice and tense, vocabulary, statistical reporting, citations, and BibTeX. Agent Skills is an open standard originally developed by Anthropic and now read by Cursor, GitHub Copilot, OpenAI Codex, Gemini CLI, Claude Code, and JetBrains Junie, among others; see the [client list](https://agentskills.io/clients).
 
-The skill keeps a curated set of SE-specific rules in `rules.md` and fetches the general AI-trope catalog (banned words, formulaic openings, formatting tics, anaphora and tricolon abuse) at runtime from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is). A snapshot of that catalog is bundled as a fallback.
+The skill keeps a curated set of SE-specific rules in `rules.md` and fetches the general AI-trope catalog (e.g., banned words, formulaic openings, formatting tics, anaphora and tricolon abuse) at runtime from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is). A snapshot of that catalog is bundled as a fallback.
 
 ## Versioning
 
@@ -15,14 +15,15 @@ The bundle uses CalVer with the release date (`YYYY-MM-DD`). The canonical versi
 /plugin install ai-slop
 ```
 
-Two slash commands become available:
+Three slash commands become available:
 
 ```
 /ai-slop:review
+/ai-slop:review-diff
 /ai-slop:revise
 ```
 
-Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX root (or PDF) in the current directory, walks the draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:revise` reads that report and applies its suggested revisions to the LaTeX source. Explicit paths can still be passed as arguments to override the auto-detection. The two skills also auto-trigger on matching prompts ("audit this draft for AI slop", "apply the review report").
+Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX root (or PDF) in the current directory, walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the LaTeX source — the same report schema is used for both review modes. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts ("audit this draft for AI slop", "check my edits before I commit", "apply the review report").
 
 To pick up a new release, refresh the marketplace catalog and reload plugins:
 
@@ -32,6 +33,8 @@ To pick up a new release, refresh the marketplace catalog and reload plugins:
 ```
 
 The marketplace update reports `(1 plugin bumped)` when a new version is found and installs it; `/reload-plugins` activates the new commands and skills in the running session.
+
+To skip the manual refresh, enable auto-update for the marketplace: run `/plugin`, open the **Marketplaces** tab, select `ai-slop`, and choose **Enable auto-update**. Claude Code then refreshes the marketplace and installs the latest plugin version at startup.
 
 ## Use in other Agent Skills clients
 
@@ -57,6 +60,12 @@ Given a paper (`.tex` or `.pdf`), the review skill:
 
 Review mode does not modify the paper. The report is the only output.
 
+### `/ai-slop:review-diff`
+
+Diff mode is a variant of `/ai-slop:review` for git-versioned papers. Instead of walking the full draft, it runs `git diff <base>` (default `HEAD`) and restricts the rule and trope checks to the lines you added or modified in `.tex` files. The output is the same `ai-slop-report.md` schema with one extra header line (`**Diff scope:** base=<ref>, files=<list>`), so `/ai-slop:revise` can apply the suggestions unchanged.
+
+A finding is in scope only when at least one line of its quote falls inside the changed-line set; pre-existing issues on untouched lines are not surfaced. Cross-cutting metrics that need full-paper context (e.g., em-dash *density* per page, sentence-length variance over runs of three sentences) are skipped, and only newly added or modified `\cite{}` calls are checked. Diff mode requires a git working tree; outside one, fall back to `/ai-slop:review`.
+
 ### `/ai-slop:revise`
 
 Given a previously generated report and the paper's LaTeX source, the revise skill:
@@ -81,10 +90,13 @@ plugins/
       plugin.json        plugin manifest
     commands/
       review.md          /ai-slop:review slash command
+      review-diff.md     /ai-slop:review-diff slash command
       revise.md          /ai-slop:revise slash command
     skills/
       review/
         SKILL.md         review-mode skill (assess a draft, write report)
+      review-diff/
+        SKILL.md         diff-mode skill (review only git-modified lines)
       revise/
         SKILL.md         revise-mode skill (apply a report to the LaTeX source)
     shared/              content shared by both skills
