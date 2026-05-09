@@ -82,9 +82,9 @@ Revise mode does not regenerate the report and does not commit. The user runs `g
 
 ### `/ai-slop:init-writing`
 
-Init-writing is a one-shot setup command for new (or existing) paper repositories. It copies the bundled SE-specific writing rules from `shared/rules.md` into a project-local `WRITING.md` and either creates a `CLAUDE.md` that references it or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions through the standard mechanism, even when this plugin is not installed.
+Init-writing is a one-shot setup command for new (or existing) paper repositories. It builds a project-local `WRITING.md` by concatenating the bundled SE-specific writing rules from `shared/rules.md` with the AI-trope catalog (fetched live from the upstream Gist, with the tropes.fyi viewer and the bundled `shared/tropes-snapshot.md` as fallbacks), then either creates a `CLAUDE.md` that references the file or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions and the trope catalog through the standard mechanism, even when this plugin is not installed and even offline.
 
-`WRITING.md` is meant to be edited freely after generation — it is a starting point, not a synced replica of the bundled rules. The skill confirms before overwriting an existing `WRITING.md`, and the `CLAUDE.md` update is idempotent: if `CLAUDE.md` already references `WRITING.md`, nothing is appended on a re-run. Init-writing does not modify the paper itself and does not commit.
+`WRITING.md` is meant to be edited freely after generation — it is a starting point, not a synced replica. The skill confirms before overwriting an existing `WRITING.md`, and the `CLAUDE.md` update is idempotent: if `CLAUDE.md` already references `WRITING.md`, nothing is appended on a re-run. Init-writing does not modify the paper itself and does not commit.
 
 ## Repository layout
 
