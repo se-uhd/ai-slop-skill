@@ -123,10 +123,11 @@ plugins/
       rules.md           SE-specific rule set
       tropes-snapshot.md bundled fallback of the tropes.fyi Gist
     scripts/             deterministic helpers invoked by the skills
-      find_latex_root.py    LaTeX root detection
-      fetch_tropes.py       trope-catalog fetch chain (Gist → viewer → bundled)
-      check_bib_fields.py   BibTeX required-field verification
-      tests/run_smoke.py    smoke harness (asserts exit codes + stdout/stderr)
+      find_latex_root.py       LaTeX root detection
+      fetch_tropes.py          trope-catalog fetch chain (Gist → viewer → bundled)
+      find_citation_issues.py  cite-cluster + missing-grounding scan
+      check_bib_fields.py      BibTeX required-field verification
+      tests/run_smoke.py       smoke harness (asserts exit codes + stdout/stderr)
 ```
 
 ## Maintainer notes
