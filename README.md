@@ -6,7 +6,17 @@ The skill keeps a curated set of SE-specific rules in `rules.md` and fetches the
 
 ## Versioning
 
-The bundle uses CalVer with the release date (`YYYY-MM-DD`). The canonical version lives in `plugins/ai-slop/.claude-plugin/plugin.json` and is mirrored in `.claude-plugin/marketplace.json` and the `version` field of each `SKILL.md`.
+The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The canonical version lives in `plugins/ai-slop/.claude-plugin/plugin.json` and is mirrored in `.claude-plugin/marketplace.json` and the `version` field of each `SKILL.md`. Going-forward git tags follow the same scheme.
+
+This scheme replaced an earlier date-string convention (`YYYY-MM-DD`); historical tags from before the switch (`2026-05`, `2026-05_rev1`) are kept under their original names.
+
+## Dependencies
+
+The skills shell out to small Python 3 helpers under `plugins/ai-slop/scripts/` for deterministic checks (LaTeX root detection, trope-catalog fetch chain, BibTeX required-field verification). Requirements:
+
+- `python3` ≥ 3.9, no third-party packages (stdlib only). Present by default on macOS 12+ and modern Linux distributions.
+
+No other runtime dependencies. Smoke tests for the helpers live at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
 
 ## Install as a Claude Code plugin
 
@@ -39,7 +49,7 @@ To skip the manual refresh, enable auto-update for the marketplace: run `/plugin
 
 ## Use in other Agent Skills clients
 
-The skill files live under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/revise/`, and `plugins/ai-slop/shared/`. Each `SKILL.md` references the shared bundle via `../../shared/...`. To consume the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so the relative paths resolve. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
+The skill files live under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/revise/`, and `plugins/ai-slop/skills/init-writing/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To consume the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
 
 ## Use as a system prompt
 
@@ -54,7 +64,7 @@ Conventions specific to one paper, such as the venue's structural requirements (
 Given a paper (`.tex` or `.pdf`), the review skill:
 
 1. **Loads the rule set** from `shared/rules.md`: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting per APA/IEEE/ACM, figures and tables, threats to validity, BibTeX verification, and a 19-item self-check.
-2. **Loads the AI-trope catalog** from the upstream Gist (`https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/`), falling back to the rendered viewer at `https://tropes.fyi/tropes-md` and then to the bundled `shared/tropes-snapshot.md`. As an opt-in corner case for a single run, users can pass `--tropes=<path>` to use a custom file, `--refresh-tropes` to fetch the upstream Gist into `./tropes-snapshot.cache.md` in the working directory, or `--edit-tropes` to seed and pause on the same cache file for editing. The cache is never read implicitly — pass `--tropes=./tropes-snapshot.cache.md` to reuse it.
+2. **Loads the AI-trope catalog** via `scripts/fetch_tropes.py`, which tries the upstream Gist (`https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/`), then the rendered viewer at `https://tropes.fyi/tropes-md`, then the bundled `shared/tropes-snapshot.md`. To override for a single run, pass `--tropes=<path>` (repeatable for multiple files); the named files replace the live fetch and are concatenated in the order given.
 3. **Walks the paper section by section**, recording each violation as a finding with `Rule`, `Location` (`file:line` for LaTeX), `Quote` (verbatim, unique within the paper), and `Suggested revision` (concrete replacement text).
 4. **Computes cross-cutting metrics** (em-dash density, colon density, restricted-word density per paragraph, sentence-length variance, verb-tense compliance, American-vs-British spelling, the "significant" audit, citation grounding).
 5. **Writes `ai-slop-report.md`** in the working directory with a stable schema so revise mode can act on it.
@@ -109,9 +119,14 @@ plugins/
         SKILL.md         revise-mode skill (apply a report to the LaTeX source)
       init-writing/
         SKILL.md         setup skill (emit WRITING.md, wire into CLAUDE.md)
-    shared/              content shared by both skills
+    shared/              content shared across skills
       rules.md           SE-specific rule set
       tropes-snapshot.md bundled fallback of the tropes.fyi Gist
+    scripts/             deterministic helpers invoked by the skills
+      find_latex_root.py    LaTeX root detection
+      fetch_tropes.py       trope-catalog fetch chain (Gist → viewer → bundled)
+      check_bib_fields.py   BibTeX required-field verification
+      tests/run_smoke.py    smoke harness (asserts exit codes + stdout/stderr)
 ```
 
 ## Maintainer notes
@@ -125,7 +140,7 @@ curl -sSf https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c63
   -o plugins/ai-slop/shared/tropes-snapshot.md
 ```
 
-Bump the version (today's date in `YYYY-MM-DD`) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`.
+Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter — count tags matching this month's prefix and add one) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init-writing/SKILL.md`'s WRITING.md header.
 
 ### Validating the manifests
 

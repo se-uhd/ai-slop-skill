@@ -1,7 +1,7 @@
 ---
 name: revise
 description: Apply the findings of an `/ai-slop:review` report to the paper, replacing each flagged quote with the suggested revision. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the LaTeX source.
-version: 2026-05_rev3
+version: 2026-05_rev4
 homepage: https://github.com/se-uhd/ai-slop-skill
 license: CC-BY-4.0
 ---
@@ -26,7 +26,7 @@ Do **not** invoke when the user wants a fresh review (use `/ai-slop:review` inst
 Both inputs default to the current working directory. No arguments are required.
 
 - **Report.** Defaults to `ai-slop-report.md` in the working directory. If that file does not exist, ask the user to point to the report (or to run `/ai-slop:review` first). The report must match the schema produced by `/ai-slop:review` (i.e., Findings by section, Cross-cutting metrics, Items requiring author judgment).
-- **Paper.** Auto-detected by listing the `.tex` files in the working directory (non-recursive) and identifying the LaTeX root — the file containing `\documentclass{}` and `\begin{document}`. If exactly one root is found, use it. If multiple roots are found, prefer `main.tex` or `paper.tex`; otherwise list them and ask the user. If no `.tex` root is found, stop. PDF input is not supported; revise mode edits LaTeX directly.
+- **Paper.** Auto-detected by running `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 → use the printed path; exit 2 → multiple candidates printed, ask the user; exit 1 → no `.tex` root, stop. PDF input is not supported; revise mode edits LaTeX directly.
 
 **Optional path overrides.** Paths can still be passed as arguments. The first argument is the report path; the second is the paper path.
 
@@ -54,7 +54,10 @@ Both inputs default to the current working directory. No arguments are required.
 
 ## Bundled files
 
-Revise mode does not need the rule set or the trope catalog at runtime; the report already contains the suggested revisions. If the user asks why a particular finding was flagged, refer them to the rule name in the finding and to `../../shared/rules.md`.
+- `../../shared/rules.md` — referenced only as a fallback when the user asks *why* a finding was flagged; revise mode trusts the report's suggested revisions and does not re-derive them from the rules.
+- `../../scripts/find_latex_root.py` — used by the Inputs section to locate the LaTeX root.
+
+Revise mode does not load the trope catalog at runtime: the report already contains every suggested revision, so no trope source is needed.
 
 ## Constraints
 
