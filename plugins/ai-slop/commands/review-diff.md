@@ -12,7 +12,7 @@ The base ref is positional. Default is `HEAD` (uncommitted working-tree changes)
 - `/ai-slop:review-diff main` — working tree vs `main` (the whole branch's worth of changes).
 - `/ai-slop:review-diff abc1234` — working tree vs a specific commit.
 
-The trope catalog override flags from `/ai-slop:review` (`--tropes=<path>`, `--refresh-tropes`, `--edit-tropes`) work the same way here. They remain a rare corner case.
+The `--tropes=<path>` override flag (repeatable) from `/ai-slop:review` works the same way here.
 
 If the working directory is not inside a git repository, fall back to telling the user to run `/ai-slop:review` instead — diff mode has nothing to compare against.
 

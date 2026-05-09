@@ -1,7 +1,7 @@
 ---
 name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
-version: 2026-05_rev3
+version: 2026-05_rev4
 homepage: https://github.com/se-uhd/ai-slop-skill
 license: CC-BY-4.0
 ---
@@ -26,7 +26,7 @@ Do **not** invoke for unrelated SE work that happens to mention writing. If the 
 
 The skill auto-detects the paper in the current working directory. No path argument is required.
 
-**Auto-detection.** List the `.tex` files in the working directory (non-recursive) and identify the LaTeX root — the file containing `\documentclass{}` and `\begin{document}`. If exactly one root is found, use it. If multiple roots are found, prefer `main.tex` or `paper.tex`; otherwise list them and ask the user. If no `.tex` files are found, list `.pdf` files; if exactly one is present, use it, and if multiple are present, ask the user. If neither `.tex` nor `.pdf` is present, stop and tell the user (e.g., "No `.tex` or `.pdf` found in the current directory.").
+**Auto-detection.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 means the printed path is the LaTeX root — use it. Exit 2 means multiple candidate roots were printed (none named `main.tex` or `paper.tex`); list them to the user and ask which to review. Exit 1 means no `.tex` root exists in the tree; fall back to listing `.pdf` files in the working directory — if exactly one is present, use it; if multiple, ask the user; if none, stop and tell the user (e.g., "No `.tex` or `.pdf` found in the current directory.").
 
 **Reading the paper.**
 
@@ -37,34 +37,23 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 **Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning.
 
-**Trope catalog overrides (corner case).** The default catalog source is the live-fetch chain documented in step 4 (upstream Gist -> tropes.fyi viewer -> bundled `../../shared/tropes-snapshot.md`). Most users will never need to override it. The mechanisms below only apply when a user explicitly opts in for a particular run; nothing in the working directory is consulted otherwise.
-
-- `--tropes=<path>` argument: load the catalog from that file for this run. The path can be absolute or relative to the working directory. The file is read as-is and not copied or modified.
-- `--refresh-tropes` argument: fetch the upstream Gist and write it to `./tropes-snapshot.cache.md` (creating or overwriting it), then run this review against that fresh copy.
-- `--edit-tropes` argument (or a conversational request such as "let me update the tropes first", "I want to add a custom trope"): seed `./tropes-snapshot.cache.md` from upstream (or the bundled fallback if upstream is unreachable) when it does not yet exist, then pause and let the user edit it. Once the user confirms they are done, run this review against the edited cache.
-
-`./tropes-snapshot.cache.md` is a per-workspace artifact written only by the two flags above; it is never read implicitly. To reuse it on a later run the user passes `--tropes=./tropes-snapshot.cache.md` explicitly. None of the override flags ever modify files inside the plugin install tree.
+**Trope catalog override.** `--tropes=<path>` (repeatable) replaces the default fetch with one or more user-supplied files. Paths can be absolute or relative to the working directory; each file is read as-is and the contents are concatenated in the order given to form the catalog for this run. When `--tropes` is not passed (the common case), the catalog is fetched live — see step 3.
 
 ## Workflow
 
-1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any trope catalog overrides (`--tropes=<path>`, `--refresh-tropes`, `--edit-tropes`) from the user's arguments or message. Open the paper file (or extract text from PDF) and identify its sections (e.g., Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
+1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any `--tropes=<path>` arguments from the user's message; collect them as a list. Open the paper file (or extract text from PDF) and identify its sections (e.g., Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
 
-2. **Apply trope catalog overrides (rare).** Skip this step entirely unless the user explicitly opted in via one of the flags listed under "Trope catalog overrides" — the default flow goes straight from step 1 to step 3 with no working-directory file lookup. When an override is requested, all writes target `./tropes-snapshot.cache.md` in the working directory; never modify files inside the plugin install tree.
-   - `--refresh-tropes`: fetch `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` and write the body to `./tropes-snapshot.cache.md`, overwriting it if present. Record the cache path for step 4. If the fetch fails, tell the user and continue the review with the default live-fetch chain rather than aborting.
-   - `--tropes=<path>`: verify the file exists and is readable; record its path for step 4. Do not seed or touch `./tropes-snapshot.cache.md`.
-   - `--edit-tropes` or an equivalent conversational request: ensure `./tropes-snapshot.cache.md` exists by seeding it from the live-fetch chain (upstream Gist -> tropes.fyi viewer -> bundled `../../shared/tropes-snapshot.md`) if missing; if it already exists, leave it alone. Pause and tell the user the file is ready for them to edit; once they confirm, record the cache path for step 4.
+2. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 19-item self-check.
 
-3. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 19-item self-check.
+3. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given; that is the catalog for this run. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the upstream Gist, then the tropes.fyi viewer, then the bundled fallback, and always emits a non-empty body; it prints one line to stderr identifying which source was used.
 
-4. **Load the AI-trope catalog.** If step 2 recorded an override path (from `--tropes=<path>`, `--refresh-tropes`, or `--edit-tropes`), read that file and skip the rest of this step. Otherwise — the common case — try `https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/` first (the upstream Gist served as `text/plain`); if that fails, try `https://tropes.fyi/tropes-md` (HTML viewer; extract the markdown); if both fail, read `../../shared/tropes-snapshot.md` for the bundled fallback. Do not consult `./tropes-snapshot.cache.md` unless the user explicitly opted in.
-
-5. **Per-section pass.** For each paper section, scan the prose against the rules and the trope catalog. For each violation, record:
+4. **Per-section pass.** For each paper section, scan the prose against the rules and the trope catalog. For each violation, record:
    - The rule or trope name.
    - The location (`file:line` for LaTeX; `Section: <name>` for PDF).
    - A short verbatim quote of the offending text, with enough surrounding context to make the quote unique within the paper.
    - A concrete suggested replacement that follows the rules.
 
-6. **Cross-cutting metrics.** Compute and record:
+5. **Cross-cutting metrics.** Compute and record:
    - Em-dash density (target: ≤ 2 per page-equivalent of ~350 words).
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
    - Restricted-word density per paragraph (flag paragraphs with more than 2 to 3 occurrences).
@@ -73,15 +62,15 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - American-vs-British spelling (flag British variants).
    - "Significant" audit (flag non-statistical uses).
 
-7. **Citations and BibTeX (LaTeX only).** Scan for:
+6. **Citations and BibTeX (LaTeX only).** Scan for:
    - Citation clusters with three or more `\cite{}` entries that do not explain what each cited work contributes.
    - `\cite{}` calls without a nearby `% GROUNDING: "..."` comment.
    - Spelled-out author names that should use `\citeauthor{}`.
-   - `.bib` entries referenced by the paper that have missing or unverifiable required fields.
+   - `.bib` entries with missing required fields. To find the bib files, grep the LaTeX root (and any `\input`-ed files) for `\bibliography{...}` and `\addbibresource{...}` directives and resolve each path. If at least one is found, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfile1> <bibfile2> ...` and report each printed entry as a finding. The script uses standard BibTeX required-field semantics (Patashnik's `btxdoc`) and does not honor `crossref` inheritance — sanity-check flagged entries before reporting them, and skip the check entirely if no bib files are referenced.
 
-8. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory **and** print the same content to the console. Use the report template below.
+7. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory **and** print the same content to the console. Use the report template below.
 
-9. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
+8. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
 
 ## Report template
 
@@ -91,7 +80,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev3
+**Skill version:** 2026-05_rev4 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -157,8 +146,8 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 ## Bundled files
 
 - `../../shared/rules.md` for the SE-specific rule set.
-- `../../shared/tropes-snapshot.md` for the AI-trope catalog. Together with the live Gist and the tropes.fyi viewer, this is the default catalog source — the common case for every review run.
-- `./tropes-snapshot.cache.md` (working directory, optional) is written only when the user opts in via `--refresh-tropes` or `--edit-tropes`, and read only when an override flag points at it. It is not a default lookup location.
+- `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the upstream Gist and tropes.fyi viewer are both unreachable.
+- `../../scripts/find_latex_root.py`, `../../scripts/fetch_tropes.py`, `../../scripts/check_bib_fields.py` implement the deterministic checks above; their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 
