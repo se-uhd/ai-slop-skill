@@ -23,6 +23,7 @@ Tropes.fyi covers general AI vocabulary. The phrases below are the ones that rec
 - "navigating the complexities of"
 - "plays a crucial / pivotal / significant role"
 - "paving the way for"
+- "keyed to" (use "specific to" or "for")
 - "a growing body of work" (cite the actual works)
 - "recent studies suggest" (say who found what)
 
