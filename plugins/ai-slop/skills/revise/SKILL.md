@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the paper, replacing each flagged quote with the suggested revision. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the LaTeX source.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev6"
+  version: "2026-05_rev7"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
