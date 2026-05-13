@@ -1,6 +1,6 @@
 {
   "name": "ai-slop",
-  "version": "2026-05_rev10",
+  "version": "2026-05_rev11",
   "description": "Writing rules for empirical SE research papers in LaTeX. Combines SE-specific conventions (voice and tense, restricted vocabulary with alternatives, statistical reporting per APA/IEEE/ACM, citations, BibTeX verification) with the community-maintained AI-trope catalog at tropes.fyi.",
   "homepage": "https://github.com/se-uhd/ai-slop-skill",
   "repository": "https://github.com/se-uhd/ai-slop-skill",
