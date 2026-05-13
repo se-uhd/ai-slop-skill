@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned paper for AI slop and violations of the SE writing rules. Use when the user has uncommitted edits or a feature branch in a LaTeX paper repo and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev9"
+  version: "2026-05_rev10"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -51,7 +51,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 5. **Identify sections.** For each changed paragraph, walk backward in the new file to the nearest preceding `\section{}` or `\subsection{}` to map the paragraph to its section. This drives section-aware rules (e.g., verb tense, threats-to-validity specificity).
 
-6. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, restricted vocabulary with alternatives, the "significant" caveat, terminology consistency, voice and tense by section, punctuation limits, citation style, statistical reporting, BibTeX verification, and the 19-item self-check.
+6. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, restricted vocabulary with alternatives, the "significant" caveat, terminology consistency, voice and tense by section, punctuation (em-dash, colon, and semicolon caps; capitalization after a colon; the combined pause-punctuation budget), citation style, statistical reporting, BibTeX verification, and the 24-item self-check.
 
 7. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the upstream Gist, then the tropes.fyi viewer, then the bundled fallback, and always emits a non-empty body.
 
@@ -72,7 +72,11 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 10. **Citations and BibTeX, scoped to the diff.** On changed lines, scan for newly added or modified `\cite{}` calls. Apply the same checks as `/ai-slop:review` step 6 (citation clusters with three or more entries lacking per-work explanation, missing `% GROUNDING:` comments, spelled-out author names that should use `\citeauthor{}`). For BibTeX field checks scoped to newly cited keys: identify the `.bib` files via `\bibliography{...}` / `\addbibresource{...}` directives, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfiles>`, and report only entries whose keys appear in newly added `\cite{}` calls. Do not flag pre-existing citations the diff did not touch. Standard BibTeX semantics apply (no `crossref` inheritance) — sanity-check flagged entries.
 
-11. **Write the report.** Save `ai-slop-report.md` in the working directory. Then Read the file back and quote its contents verbatim in your reply — do **not** regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
+11. **Write the report.** Save `ai-slop-report.md` in the working directory.
+
+    Then run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/lint_markdown.py --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations; after the third pass proceed regardless of the linter's state. The lint loop is internal quality control — do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
+
+    Then Read the file back and quote its contents verbatim in your reply — do **not** regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
 
     ```
     **Diff scope:** base=<base ref>, files=<list of changed .tex files>
