@@ -320,6 +320,66 @@ def test_find_citation_issues_truncate_respects_120_chars():
                 f"truncate: long line should end with ...: {context!r}"
 
 
+# ---------- version-string consistency ----------
+
+def test_version_strings_in_sync():
+    """All version references — both manifests, every SKILL.md frontmatter, the
+    report-template `**Skill version:**` line in review/SKILL.md, and the
+    `skill version <X>` reference in the WRITING.md header in init/SKILL.md —
+    must equal the canonical version in plugins/ai-slop/.claude-plugin/plugin.json.
+
+    Guards against the rev7-style drift where SKILL.md files got bumped but the
+    two manifests were left behind. See README "Maintainer notes" for the list
+    of files this enforces.
+    """
+    import json
+    import re
+
+    plugin_root = SCRIPTS.parent           # plugins/ai-slop
+    repo_root = plugin_root.parent.parent  # repo root
+
+    canonical = json.loads(
+        (plugin_root / '.claude-plugin' / 'plugin.json').read_text(encoding='utf-8')
+    )['version']
+
+    mismatches = []
+    def check(label, value):
+        if value != canonical:
+            mismatches.append(f"{label}: {value!r} != canonical {canonical!r}")
+
+    mp = json.loads(
+        (repo_root / '.claude-plugin' / 'marketplace.json').read_text(encoding='utf-8')
+    )
+    ai_slop_entries = [e for e in mp.get('plugins', []) if e.get('name') == 'ai-slop']
+    assert ai_slop_entries, "marketplace.json: no plugins[] entry named 'ai-slop'"
+    for entry in ai_slop_entries:
+        check("marketplace.json plugins[ai-slop].version", entry.get('version'))
+
+    skills_dir = plugin_root / 'skills'
+    skill_files = sorted(skills_dir.glob('*/SKILL.md'))
+    assert skill_files, f"no SKILL.md files found under {skills_dir}"
+    for skill_md in skill_files:
+        text = skill_md.read_text(encoding='utf-8')
+        m = re.search(r'^\s*version:\s*"([^"]+)"', text, re.MULTILINE)
+        rel = skill_md.relative_to(repo_root)
+        check(f"{rel} frontmatter version", m.group(1) if m else None)
+
+    review_text = (skills_dir / 'review' / 'SKILL.md').read_text(encoding='utf-8')
+    m = re.search(r'\*\*Skill version:\*\*\s*(\S+)', review_text)
+    check("review/SKILL.md report-template **Skill version:** line",
+          m.group(1) if m else None)
+
+    init_text = (skills_dir / 'init' / 'SKILL.md').read_text(encoding='utf-8')
+    m = re.search(r'skill version\s+([^\s)]+)\)', init_text)
+    check("init/SKILL.md WRITING.md header `skill version <X>` reference",
+          m.group(1) if m else None)
+
+    assert not mismatches, (
+        "Version drift detected (see README \"Maintainer notes\"):\n  "
+        + "\n  ".join(mismatches)
+    )
+
+
 # ---------- runner ----------
 
 TESTS = [
@@ -338,6 +398,7 @@ TESTS = [
     test_find_citation_issues_no_findings,
     test_find_citation_issues_optional_args,
     test_find_citation_issues_truncate_respects_120_chars,
+    test_version_strings_in_sync,
 ]
 
 
