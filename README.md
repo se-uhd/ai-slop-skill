@@ -31,10 +31,10 @@ Four slash commands become available:
 /ai-slop:review
 /ai-slop:review-diff
 /ai-slop:revise
-/ai-slop:init-writing
+/ai-slop:init
 ```
 
-Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX root (or PDF) in the current directory, walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the LaTeX source — the same report schema is used for both review modes. `/ai-slop:init-writing` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and wires it into the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so co-authors and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "set up writing rules in this repo").
+Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX root (or PDF) in the current directory, walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the LaTeX source — the same report schema is used for both review modes. `/ai-slop:init` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and wires it into the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so co-authors and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "set up writing rules in this repo").
 
 To pick up a new release, refresh the marketplace catalog and reload plugins:
 
@@ -49,7 +49,7 @@ To skip the manual refresh, enable auto-update for the marketplace: run `/plugin
 
 ## Use in other Agent Skills clients
 
-The skill files live under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/revise/`, and `plugins/ai-slop/skills/init-writing/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To consume the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
+The skill files live under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/revise/`, and `plugins/ai-slop/skills/init/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To consume the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
 
 ## Use as a system prompt
 
@@ -90,11 +90,11 @@ Given a previously generated report and the paper's LaTeX source, the revise ski
 
 Revise mode does not regenerate the report and does not commit. The user runs `git diff` to inspect and `git commit` to keep the changes.
 
-### `/ai-slop:init-writing`
+### `/ai-slop:init`
 
-Init-writing is a one-shot setup command for new (or existing) paper repositories. It builds a project-local `WRITING.md` by concatenating the bundled SE-specific writing rules from `shared/rules.md` with the AI-trope catalog (fetched live from the upstream Gist, with the tropes.fyi viewer and the bundled `shared/tropes-snapshot.md` as fallbacks), then either creates a `CLAUDE.md` that references the file or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions and the trope catalog through the standard mechanism, even when this plugin is not installed and even offline.
+The init skill is a one-shot setup command for new (or existing) paper repositories. It builds a project-local `WRITING.md` by concatenating the bundled SE-specific writing rules from `shared/rules.md` with the AI-trope catalog (fetched live from the upstream Gist, with the tropes.fyi viewer and the bundled `shared/tropes-snapshot.md` as fallbacks), then either creates a `CLAUDE.md` that references the file or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions and the trope catalog through the standard mechanism, even when this plugin is not installed and even offline.
 
-`WRITING.md` is meant to be edited freely after generation — it is a starting point, not a synced replica. The skill confirms before overwriting an existing `WRITING.md`, and the `CLAUDE.md` update is idempotent: if `CLAUDE.md` already references `WRITING.md`, nothing is appended on a re-run. Init-writing does not modify the paper itself and does not commit.
+`WRITING.md` is meant to be edited freely after generation — it is a starting point, not a synced replica. The skill confirms before overwriting an existing `WRITING.md`, and the `CLAUDE.md` update is idempotent: if `CLAUDE.md` already references `WRITING.md`, nothing is appended on a re-run. The init skill does not modify the paper itself and does not commit.
 
 ## Repository layout
 
@@ -109,7 +109,7 @@ plugins/
       review.md          /ai-slop:review slash command
       review-diff.md     /ai-slop:review-diff slash command
       revise.md          /ai-slop:revise slash command
-      init-writing.md    /ai-slop:init-writing slash command
+      init.md            /ai-slop:init slash command
     skills/
       review/
         SKILL.md         review-mode skill (assess a draft, write report)
@@ -117,7 +117,7 @@ plugins/
         SKILL.md         diff-mode skill (review only git-modified lines)
       revise/
         SKILL.md         revise-mode skill (apply a report to the LaTeX source)
-      init-writing/
+      init/
         SKILL.md         setup skill (emit WRITING.md, wire into CLAUDE.md)
     shared/              content shared across skills
       rules.md           SE-specific rule set
@@ -141,7 +141,7 @@ curl -sSf https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c63
   -o plugins/ai-slop/shared/tropes-snapshot.md
 ```
 
-Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter — count tags matching this month's prefix and add one) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init-writing/SKILL.md`'s WRITING.md header.
+Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter — count tags matching this month's prefix and add one) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init/SKILL.md`'s WRITING.md header.
 
 ### Validating the manifests
 
