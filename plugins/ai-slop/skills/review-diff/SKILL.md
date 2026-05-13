@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned paper for AI slop and violations of the SE writing rules. Use when the user has uncommitted edits or a feature branch in a LaTeX paper repo and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev7"
+  version: "2026-05_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -72,7 +72,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 10. **Citations and BibTeX, scoped to the diff.** On changed lines, scan for newly added or modified `\cite{}` calls. Apply the same checks as `/ai-slop:review` step 6 (citation clusters with three or more entries lacking per-work explanation, missing `% GROUNDING:` comments, spelled-out author names that should use `\citeauthor{}`). For BibTeX field checks scoped to newly cited keys: identify the `.bib` files via `\bibliography{...}` / `\addbibresource{...}` directives, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfiles>`, and report only entries whose keys appear in newly added `\cite{}` calls. Do not flag pre-existing citations the diff did not touch. Standard BibTeX semantics apply (no `crossref` inheritance) — sanity-check flagged entries.
 
-11. **Write the report.** Save `ai-slop-report.md` in the working directory and print the same content to the console. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
+11. **Write the report.** Save `ai-slop-report.md` in the working directory. Then Read the file back and quote its contents verbatim in your reply — do **not** regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
 
     ```
     **Diff scope:** base=<base ref>, files=<list of changed .tex files>
