@@ -12,22 +12,22 @@ This scheme replaced an earlier date-string convention (`YYYY-MM-DD`); historica
 
 ## Dependencies
 
-The skills shell out to small Python 3 helpers under `plugins/ai-slop/scripts/` for deterministic checks (LaTeX root detection, trope-catalog fetch chain, BibTeX required-field verification). Requirements:
+The skills shell out to small Python 3 helpers under `plugins/ai-slop/scripts/` for deterministic checks (LaTeX root detection, trope-catalog fetch chain, BibTeX required-field verification, Markdown linting of the generated report and bundled rules). Requirements:
 
-- `python3` (latest stable; CI pins to 3.14), no third-party packages (stdlib only).
+- `python3` (latest stable; CI pins to 3.14). The first-party helpers are stdlib-only. The Markdown linter is [PyMarkdown](https://github.com/jackdewinter/pymarkdown), vendored pure-Python under `plugins/ai-slop/scripts/_vendor/`; users do not need to `pip install` anything.
 
 No other runtime dependencies. Smoke tests for the helpers live at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
 
 ## Install as a Claude Code plugin
 
-```
+```text
 /plugin marketplace add se-uhd/ai-slop-skill
 /plugin install ai-slop
 ```
 
 Four slash commands become available:
 
-```
+```text
 /ai-slop:review
 /ai-slop:review-diff
 /ai-slop:revise
@@ -38,7 +38,7 @@ Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX roo
 
 To pick up a new release, refresh the marketplace catalog and reload plugins:
 
-```
+```text
 /plugin marketplace update ai-slop
 /reload-plugins
 ```
@@ -63,7 +63,7 @@ Conventions specific to one paper, such as the venue's structural requirements (
 
 Given a paper (`.tex` or `.pdf`), the review skill:
 
-1. **Loads the rule set** from `shared/rules.md`: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting per APA/IEEE/ACM, figures and tables, threats to validity, BibTeX verification, and a 19-item self-check.
+1. **Loads the rule set** from `shared/rules.md`: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting per APA/IEEE/ACM, figures and tables, threats to validity, BibTeX verification, and a 25-item self-check.
 2. **Loads the AI-trope catalog** via `scripts/fetch_tropes.py`, which tries the upstream Gist (`https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/`), then the rendered viewer at `https://tropes.fyi/tropes-md`, then the bundled `shared/tropes-snapshot.md`. To override for a single run, pass `--tropes=<path>` (repeatable for multiple files); the named files replace the live fetch and are concatenated in the order given.
 3. **Walks the paper section by section**, recording each violation as a finding with `Rule`, `Location` (`file:line` for LaTeX), `Quote` (verbatim, unique within the paper), and `Suggested revision` (concrete replacement text).
 4. **Computes cross-cutting metrics** (em-dash density, colon density, restricted-word density per paragraph, sentence-length variance, verb-tense compliance, American-vs-British spelling, the "significant" audit, citation grounding).
@@ -98,7 +98,7 @@ The init skill is a one-shot setup command for new (or existing) paper repositor
 
 ## Repository layout
 
-```
+```text
 .claude-plugin/
   marketplace.json       marketplace entry (single-plugin)
 plugins/
@@ -140,6 +140,16 @@ The bundled snapshot is a copy of the upstream Gist. To refresh it:
 curl -sSf https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/ \
   -o plugins/ai-slop/shared/tropes-snapshot.md
 ```
+
+### Refreshing the vendored Markdown linter
+
+The bundled `_vendor/` tree under `plugins/ai-slop/scripts/` holds PyMarkdown plus its pure-Python deps. To pull a newer release:
+
+```bash
+python3 plugins/ai-slop/scripts/refresh_vendor.py
+```
+
+The script creates a clean venv, installs `pymarkdownlnt` with `--no-binary :all:` so every dep is built from source (pure-Python where the package supports it), copies the resolved tree into `_vendor/`, replaces `pyjson5/` with a stdlib shim (PyMarkdown is always invoked with `--no-json5`, so the C-extension is never reached), asserts no compiled extensions land in the tree, and regenerates `_vendor/NOTICE` from each package's dist-info. Pin to a specific version with `--version pymarkdownlnt==0.9.37`.
 
 Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter — count tags matching this month's prefix and add one) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init/SKILL.md`'s WRITING.md header.
 
