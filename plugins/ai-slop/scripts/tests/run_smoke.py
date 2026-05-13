@@ -336,36 +336,22 @@ def test_lint_markdown_clean_file():
         assert out == '', f"clean: stdout should be empty, got {out!r}"
 
 
-def test_lint_markdown_crlf_line_endings():
-    with tempfile.TemporaryDirectory() as d:
-        p = _write_md(d, 'doc.md', b"# Title\r\nbody\r\n")
-        rc, out, err = run('lint_markdown.py', str(p))
-        assert rc == 1, f"crlf: rc={rc}"
-        assert 'crlf-line-endings' in out, f"crlf: rule missing: {out!r}"
-
-
 def test_lint_markdown_trailing_whitespace():
+    # PyMarkdown MD009 default allows 0 or 2 trailing spaces (markdown
+    # hard-break syntax), so use 3 to provoke the rule.
     with tempfile.TemporaryDirectory() as d:
-        p = _write_md(d, 'doc.md', b"# Title  \nbody\n")
+        p = _write_md(d, 'doc.md', b"# Title\n\nbody   \n")
         rc, out, err = run('lint_markdown.py', str(p))
-        assert rc == 1, f"trail: rc={rc}"
-        assert 'trailing-whitespace' in out, f"trail: rule missing: {out!r}"
+        assert rc == 1, f"trail: rc={rc} out={out!r}"
+        assert 'md009' in out, f"trail: md009 missing: {out!r}"
 
 
 def test_lint_markdown_eof_newline_missing():
     with tempfile.TemporaryDirectory() as d:
-        p = _write_md(d, 'doc.md', b"# Title\nbody")
+        p = _write_md(d, 'doc.md', b"# Title\n\nbody")
         rc, out, err = run('lint_markdown.py', str(p))
         assert rc == 1, f"eof missing: rc={rc}"
-        assert 'eof-newline' in out, f"eof missing: rule missing: {out!r}"
-
-
-def test_lint_markdown_eof_newline_extra():
-    with tempfile.TemporaryDirectory() as d:
-        p = _write_md(d, 'doc.md', b"# Title\nbody\n\n")
-        rc, out, err = run('lint_markdown.py', str(p))
-        assert rc == 1, f"eof extra: rc={rc}"
-        assert 'eof-newline' in out, f"eof extra: rule missing: {out!r}"
+        assert 'md047' in out, f"eof missing: md047 missing: {out!r}"
 
 
 def test_lint_markdown_multiple_blank_lines():
@@ -373,23 +359,7 @@ def test_lint_markdown_multiple_blank_lines():
         p = _write_md(d, 'doc.md', b"# Title\n\n\n\nbody\n")
         rc, out, err = run('lint_markdown.py', str(p))
         assert rc == 1, f"blanks: rc={rc}"
-        assert 'multiple-blank-lines' in out, f"blanks: rule missing: {out!r}"
-
-
-def test_lint_markdown_unclosed_fence():
-    with tempfile.TemporaryDirectory() as d:
-        p = _write_md(d, 'doc.md', b"# Title\n\n```python\nfoo\n")
-        rc, out, err = run('lint_markdown.py', str(p))
-        assert rc == 1, f"fence: rc={rc}"
-        assert 'unclosed-fence' in out, f"fence: rule missing: {out!r}"
-
-
-def test_lint_markdown_unclosed_frontmatter():
-    with tempfile.TemporaryDirectory() as d:
-        p = _write_md(d, 'doc.md', b"---\nname: foo\n# Title\nbody\n")
-        rc, out, err = run('lint_markdown.py', str(p))
-        assert rc == 1, f"frontmatter: rc={rc}"
-        assert 'unclosed-frontmatter' in out, f"frontmatter: rule missing: {out!r}"
+        assert 'md012' in out, f"blanks: md012 missing: {out!r}"
 
 
 def test_lint_markdown_heading_level_jump():
@@ -397,15 +367,24 @@ def test_lint_markdown_heading_level_jump():
         p = _write_md(d, 'doc.md', b"# Title\n\n### Subsection\n\nbody\n")
         rc, out, err = run('lint_markdown.py', str(p))
         assert rc == 1, f"jump: rc={rc}"
-        assert 'heading-level-jump' in out, f"jump: rule missing: {out!r}"
+        assert 'md001' in out, f"jump: md001 missing: {out!r}"
 
 
 def test_lint_markdown_multiple_h1():
     with tempfile.TemporaryDirectory() as d:
-        p = _write_md(d, 'doc.md', b"# One\n\n# Two\n\nbody\n")
+        p = _write_md(d, 'doc.md', b"# One\n\nbody\n\n# Two\n\nmore\n")
         rc, out, err = run('lint_markdown.py', str(p))
         assert rc == 1, f"h1: rc={rc}"
-        assert 'multiple-h1' in out, f"h1: rule missing: {out!r}"
+        assert 'md025' in out, f"h1: md025 missing: {out!r}"
+
+
+def test_lint_markdown_blanks_around_headings():
+    # MD022 — the rule that flags headings without blank lines around them.
+    with tempfile.TemporaryDirectory() as d:
+        p = _write_md(d, 'doc.md', b"# Title\nimmediately after H1\n")
+        rc, out, err = run('lint_markdown.py', str(p))
+        assert rc == 1, f"md022: rc={rc}"
+        assert 'md022' in out, f"md022: missing: {out!r}"
 
 
 def test_lint_markdown_finding_block_missing_label():
@@ -424,8 +403,10 @@ def test_lint_markdown_finding_block_missing_label():
 
 
 def test_lint_markdown_finding_block_clean_passes():
+    # Heading-to-list spacing satisfies MD022/MD032 (blank lines around
+    # headings and lists); only the schema check is under test here.
     content = (b"# AI Slop Review\n\n## Findings by section\n\n"
-               b"### Abstract\n\n#### Finding 1\n"
+               b"### Abstract\n\n#### Finding 1\n\n"
                b"- **Rule:** test\n- **Location:** foo.tex:1\n"
                b"- **Quote:** bar\n- **Suggested revision:** baz\n")
     with tempfile.TemporaryDirectory() as d:
@@ -459,53 +440,32 @@ def test_lint_markdown_writing_md_no_tropes_section():
 
 
 def test_lint_markdown_fix_mode_normalizes():
-    # CRLF + trailing whitespace + run of 4 blank lines + extra trailing newline.
-    content = b"# Title  \r\n\r\n\r\n\r\nbody\r\n\r\n"
+    # Run of 4 blank lines, missing trailing newline. PyMarkdown's `fix`
+    # collapses md012 (multiple blanks) and inserts the trailing newline
+    # for md047. Lines with trailing whitespace under MD009's 2-space
+    # hard-break allowance are normalised to 0 or 2.
+    content = b"# Title\n\n\n\n\nbody   \nmore"
     with tempfile.TemporaryDirectory() as d:
         p = _write_md(d, 'doc.md', content)
         rc, out, err = run('lint_markdown.py', '--fix', str(p))
         assert rc == 0, f"fix: rc={rc} out={out!r} err={err!r}"
-        # The fixed file should be pure LF, no trailing whitespace, at most
-        # 2 consecutive blank lines, exactly one trailing newline.
         fixed = p.read_bytes()
-        assert b'\r' not in fixed, f"fix: CR still present: {fixed!r}"
-        assert b' \n' not in fixed, f"fix: trailing whitespace still present: {fixed!r}"
-        assert not fixed.endswith(b'\n\n'), \
-            f"fix: extra trailing newlines: {fixed!r}"
         assert fixed.endswith(b'\n'), f"fix: missing trailing newline: {fixed!r}"
-        # No run of 4+ consecutive newlines (i.e., no >2 blank lines).
         import re as _re
         assert not _re.search(rb'\n{4,}', fixed), \
             f"fix: still has >2 consecutive blank lines: {fixed!r}"
 
 
 def test_lint_markdown_fix_mode_preserves_structural_findings():
-    # A heading-level jump survives --fix (it is not auto-fixable).
-    content = b"# Title  \n\n### Sub\nbody\n"
+    # MD025 (multiple top-level headings) is not auto-fixable, so it
+    # survives `--fix` and is still reported on the rescan.
+    content = b"# One\n\nbody\n\n# Two\n\nmore\n"
     with tempfile.TemporaryDirectory() as d:
         p = _write_md(d, 'doc.md', content)
         rc, out, err = run('lint_markdown.py', '--fix', str(p))
         assert rc == 1, f"fix-structural: rc={rc}"
-        assert 'heading-level-jump' in out, \
+        assert 'md025' in out, \
             f"fix-structural: structural finding lost: {out!r}"
-        # Trailing whitespace was the only auto-fixable issue and is gone.
-        assert 'trailing-whitespace' not in out, \
-            f"fix-structural: auto-fixable still flagged: {out!r}"
-
-
-def test_lint_markdown_nested_quad_backtick_fences():
-    # The review/SKILL.md template uses 4-backtick outer fences around
-    # 3-backtick inner code. The linter must NOT report the inner 3-backtick
-    # lines as fence opens/closes while inside the 4-backtick block.
-    content = (b"# Title\n\n````markdown\n"
-               b"Inner example:\n\n"
-               b"```python\nprint('hi')\n```\n"
-               b"````\n\nafter\n")
-    with tempfile.TemporaryDirectory() as d:
-        p = _write_md(d, 'doc.md', content)
-        rc, out, err = run('lint_markdown.py', str(p))
-        assert rc == 0, \
-            f"nested fence: rc={rc} out={out!r}"
 
 
 # ---------- version-string consistency ----------
@@ -587,22 +547,18 @@ TESTS = [
     test_find_citation_issues_optional_args,
     test_find_citation_issues_truncate_respects_120_chars,
     test_lint_markdown_clean_file,
-    test_lint_markdown_crlf_line_endings,
     test_lint_markdown_trailing_whitespace,
     test_lint_markdown_eof_newline_missing,
-    test_lint_markdown_eof_newline_extra,
     test_lint_markdown_multiple_blank_lines,
-    test_lint_markdown_unclosed_fence,
-    test_lint_markdown_unclosed_frontmatter,
     test_lint_markdown_heading_level_jump,
     test_lint_markdown_multiple_h1,
+    test_lint_markdown_blanks_around_headings,
     test_lint_markdown_finding_block_missing_label,
     test_lint_markdown_finding_block_clean_passes,
     test_lint_markdown_writing_md_h1_in_tropes_section,
     test_lint_markdown_writing_md_no_tropes_section,
     test_lint_markdown_fix_mode_normalizes,
     test_lint_markdown_fix_mode_preserves_structural_findings,
-    test_lint_markdown_nested_quad_backtick_fences,
     test_version_strings_in_sync,
 ]
 

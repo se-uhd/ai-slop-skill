@@ -10,3 +10,8 @@
 
 # Local Claude Code state
 .claude/
+
+# Python bytecode (from running scripts locally; the vendored tree under
+# scripts/_vendor/ is committed but its __pycache__ is regenerated on use).
+__pycache__/
+*.py[cod]

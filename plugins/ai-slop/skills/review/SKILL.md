@@ -3,7 +3,7 @@ name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev11"
+  version: "2026-05_rev12"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -44,7 +44,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any `--tropes=<path>` arguments from the user's message; collect them as a list. Open the paper file (or extract text from PDF) and identify its sections (e.g., Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
 
-2. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash, colon, and semicolon caps; capitalization after a colon; the combined pause-punctuation budget), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 24-item self-check.
+2. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash, colon, and semicolon caps; capitalization after a colon; the combined pause-punctuation budget), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 25-item self-check.
 
 3. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given; that is the catalog for this run. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the upstream Gist, then the tropes.fyi viewer, then the bundled fallback, and always emits a non-empty body; it prints one line to stderr identifying which source was used.
 
@@ -93,11 +93,11 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev11 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-05_rev12 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
-> https://github.com/se-uhd/ai-slop-skill as a self-check.
+> <https://github.com/se-uhd/ai-slop-skill> as a self-check.
 > Findings are revision suggestions; nothing is grounds for rejection.
 
 ## Summary
@@ -109,6 +109,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 ### <Section name, e.g., Abstract>
 
 #### Finding <N>
+
 - **Rule:** <rule name from rules.md, or trope name from tropes.fyi>
 - **Location:** `<file:line>` or `Section: <name>` if line not available
 - **Quote:** `<verbatim quote of the offending text, with enough surrounding context to be unique>`
