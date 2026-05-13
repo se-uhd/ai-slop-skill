@@ -1,0 +1,19 @@
+extensions:
+  front-matter:
+    enabled: true
+  markdown-tables:
+    enabled: true
+  markdown-task-list-items:
+    enabled: true
+  markdown-strikethrough:
+    enabled: true
+  markdown-extended-autolinks:
+    enabled: true
+
+plugins:
+  md013:
+    enabled: false
+  md033:
+    enabled: false
+  md041:
+    enabled: false
