@@ -124,6 +124,7 @@ Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / C
 - **Be concrete.** Instead of "provides valuable insights into X," state the actual finding.
 - **Hedge from evidence, not from timidity.** "Our data suggests X" is appropriate when the data is ambiguous. "One could argue that X" is filler unless you then explain who argues it and why.
 - **Take positions.** When the evidence points one direction, say so. Do not present artificial balance.
+- **No author-voice metacommentary in published prose.** Asides like "reader beware," "the reader is warned," "we shall see," "spoiler alert," or "(more on this below)" break the formal register and address the reader directly about the act of reading. They belong inside editorial comment-commands (`\todo{}`, `\sba{}`, `\as{}`, or `%` comments) where they do not render, or they should be removed. Treat them as a clear finding when they appear in rendered body text, not as a stylistic judgment call. Forward references to later sections are fine as `\autoref{}` / `\Cref{}` pointers, not as winks.
 
 ## Citations
 
@@ -132,6 +133,7 @@ Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / C
 - **Ground every new citation.** Verify the cited paper actually says what you claim. Read the relevant section, not just the abstract. Add a LaTeX comment (`% GROUNDING: "..."`) after the `\cite{}` with a direct quote supporting the claim. These comments leave an audit trail for co-authors.
 - **Prefer `\citeauthor{}` over spelled-out author names.** When referring to authors in running text, use `\citeauthor{key}` (and `\citeyear{key}` where a year is needed) rather than typing names directly. This keeps author names synchronized with the BibTeX entry and avoids spelling or ordering errors. Write `\citeauthor{smith2020}` instead of "Smith et al." The same applies to possessives (`\citeauthor{smith2020}'s framework`) and first-mention full forms.
 - **Avoid citations in the abstract.** ACM, EMSE, and many IEEE-journal author guidelines prohibit references in abstracts; the abstract is intended to stand alone without bibliographic dependencies. When a proposed rewrite tempts a `\cite{}` into the abstract, rephrase to drop it — the underlying claim can move to the introduction. Check the venue's author guidelines before adding any reference to an abstract; the safe default is to keep abstracts citation-free.
+- **Re-introduce acronyms in the body, even if defined in the abstract.** The abstract is self-contained — readers, indexers, and search engines may consume it independently of the paper — so any acronym it introduces is local to that abstract. Define the acronym again on its first occurrence in the body (typically in the introduction). Do not flag a second `Term (TLA)` in the body as redundant when the first occurrence sits in the abstract; that re-definition is required, not a duplication.
 
 ## Related Work
 
