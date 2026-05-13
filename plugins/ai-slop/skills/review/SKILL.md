@@ -3,7 +3,7 @@ name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev9"
+  version: "2026-05_rev10"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -44,7 +44,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any `--tropes=<path>` arguments from the user's message; collect them as a list. Open the paper file (or extract text from PDF) and identify its sections (e.g., Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
 
-2. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 19-item self-check.
+2. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash and colon limits, capitalization after a colon), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 22-item self-check.
 
 3. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given; that is the catalog for this run. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the upstream Gist, then the tropes.fyi viewer, then the bundled fallback, and always emits a non-empty body; it prints one line to stderr identifying which source was used.
 
@@ -62,6 +62,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - Verb-tense compliance by section (compare against the table in `rules.md`).
    - American-vs-British spelling (flag British variants).
    - "Significant" audit (flag non-statistical uses).
+   - Capitalization after a colon in running prose (flag colons whose post-colon clause is a complete sentence beginning lowercase, and flag colons whose post-colon text is a fragment or list beginning uppercase).
 
 6. **Citations and BibTeX (LaTeX only).** Scan for:
    - Citation clusters with three or more keys, and `\cite{}` calls without a nearby `% GROUNDING: "..."` comment. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_citation_issues.py <root.tex> [<input1.tex> ...]` over the LaTeX root and any `\input`-ed files. Each stdout line is `<file>:<line>\t<issue>\t<keys>\t<context>` where `<issue>` is `cluster` or `missing-grounding`. The script prints a stderr summary (e.g. `considered 41 cite call(s) across 1 file(s); 1 cluster(s), 41 missing-grounding`). Use it to confirm the run completed. Known limitations of the scan:
@@ -86,7 +87,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev9 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-05_rev10 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -133,6 +134,10 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 
 ### "Significant" audit
 - Non-statistical uses: <list>
+
+### Capitalization after a colon
+- Colons followed by a complete sentence with a lowercase first word: <list>
+- Colons followed by a fragment or list with an uppercase first word: <list>
 
 ### Citations
 - Citation clusters lacking per-work explanation: <list>
