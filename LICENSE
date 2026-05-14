@@ -1,3 +1,15 @@
+Scope
+-----
+
+This license applies to the first-party content of this repository.
+
+Third-party software bundled under `plugins/ai-slop/scripts/_vendor/`
+is distributed verbatim under its own licenses (MIT, BSD-3-Clause,
+Apache-2.0, PSF-2.0). See `plugins/ai-slop/scripts/_vendor/NOTICE` for
+per-package attribution and full license texts.
+
+=======================================================================
+
 Attribution 4.0 International
 
 =======================================================================
