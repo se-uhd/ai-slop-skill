@@ -34,7 +34,7 @@ Four slash commands become available:
 /ai-slop:init
 ```
 
-Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX root (or PDF) in the current directory, walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the LaTeX source — the same report schema is used for both review modes. `/ai-slop:init` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and wires it into the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so co-authors and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "set up writing rules in this repo").
+Run them from the directory of your paper. `/ai-slop:review` finds the LaTeX root (or PDF) in the current directory, walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the LaTeX source; the same report schema is used for both review modes. `/ai-slop:init` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and wires it into the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so co-authors and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "set up writing rules in this repo").
 
 To pick up a new release, refresh the marketplace catalog and reload plugins:
 
@@ -49,7 +49,7 @@ To skip the manual refresh, enable auto-update for the marketplace: run `/plugin
 
 ## Use in other Agent Skills clients
 
-The skill files live under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/revise/`, and `plugins/ai-slop/skills/init/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To consume the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
+The skills are laid out per the [Agent Skills specification](https://agentskills.io/specification): each `SKILL.md` is self-contained and ships under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/revise/`, and `plugins/ai-slop/skills/init/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To consume the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
 
 ## Use as a system prompt
 
@@ -94,7 +94,7 @@ Revise mode does not regenerate the report and does not commit. The user runs `g
 
 The init skill is a one-shot setup command for new (or existing) paper repositories. It builds a project-local `WRITING.md` by concatenating the bundled SE-specific writing rules from `shared/rules.md` with the AI-trope catalog (fetched live from the upstream Gist, with the tropes.fyi viewer and the bundled `shared/tropes-snapshot.md` as fallbacks), then either creates a `CLAUDE.md` that references the file or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions and the trope catalog through the standard mechanism, even when this plugin is not installed and even offline.
 
-`WRITING.md` is meant to be edited freely after generation — it is a starting point, not a synced replica. The skill confirms before overwriting an existing `WRITING.md`, and the `CLAUDE.md` update is idempotent: if `CLAUDE.md` already references `WRITING.md`, nothing is appended on a re-run. The init skill does not modify the paper itself and does not commit.
+`WRITING.md` is meant to be edited freely after generation; it is a starting point, not a synced replica. The skill confirms before overwriting an existing `WRITING.md`, and the `CLAUDE.md` update is idempotent: if `CLAUDE.md` already references `WRITING.md`, nothing is appended on a re-run. The init skill does not modify the paper itself and does not commit.
 
 ## Repository layout
 
@@ -120,14 +120,20 @@ plugins/
       init/
         SKILL.md         setup skill (emit WRITING.md, wire into CLAUDE.md)
     shared/              content shared across skills
-      rules.md           SE-specific rule set
-      tropes-snapshot.md bundled fallback of the tropes.fyi Gist
+      rules.md                       SE-specific rule set
+      tropes-snapshot.md             bundled fallback of the tropes.fyi Gist
+      tropes-snapshot.ATTRIBUTION.md provenance and licensing of the snapshot
     scripts/             deterministic helpers invoked by the skills
-      find_latex_root.py       LaTeX root detection
-      fetch_tropes.py          trope-catalog fetch chain (Gist → viewer → bundled)
-      find_citation_issues.py  cite-cluster + missing-grounding scan
-      check_bib_fields.py      BibTeX required-field verification
-      tests/run_smoke.py       smoke harness (asserts exit codes + stdout/stderr)
+      find_latex_root.py             LaTeX root detection
+      fetch_tropes.py                trope-catalog fetch chain (Gist → viewer → bundled)
+      find_citation_issues.py        cite-cluster + missing-grounding scan
+      check_bib_fields.py            BibTeX required-field verification
+      lint_markdown.py               Markdown linter wrapping vendored PyMarkdown
+      lint_markdown.yaml             linter policy
+      refresh_vendor.py              maintainer-only refresh of the _vendor tree
+      _vendor/                       vendored PyMarkdown + pure-Python deps
+      licenses_manual/               third-party license attributions
+      tests/run_smoke.py             smoke harness (asserts exit codes + stdout/stderr)
 ```
 
 ## Maintainer notes
@@ -151,7 +157,7 @@ python3 plugins/ai-slop/scripts/refresh_vendor.py
 
 The script creates a clean venv, installs `pymarkdownlnt` with `--no-binary :all:` so every dep is built from source (pure-Python where the package supports it), copies the resolved tree into `_vendor/`, replaces `pyjson5/` with a stdlib shim (PyMarkdown is always invoked with `--no-json5`, so the C-extension is never reached), asserts no compiled extensions land in the tree, and regenerates `_vendor/NOTICE` from each package's dist-info. Pin to a specific version with `--version pymarkdownlnt==0.9.37`.
 
-Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter — count tags matching this month's prefix and add one) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init/SKILL.md`'s WRITING.md header.
+Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter; count tags matching this month's prefix and add one) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init/SKILL.md`'s WRITING.md header.
 
 ### Validating the manifests
 
@@ -170,4 +176,8 @@ The general AI-trope catalog is the work of [Ossama Chaib](https://ossama.is) at
 
 ## License
 
-Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See `LICENSE`.
+First-party content is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [`LICENSE`](LICENSE).
+
+Third-party software bundled under `plugins/ai-slop/scripts/_vendor/` is distributed verbatim under its own licenses (MIT, BSD-3-Clause, Apache-2.0, PSF-2.0). See [`plugins/ai-slop/scripts/_vendor/NOTICE`](plugins/ai-slop/scripts/_vendor/NOTICE) for per-package attribution and full license texts.
+
+The AI-trope catalog bundled at `plugins/ai-slop/shared/tropes-snapshot.md` is third-party content by [Ossama Chaib](https://ossama.is) at [tropes.fyi](https://tropes.fyi). The upstream gist does not declare an explicit license; the snapshot is bundled here with attribution and used consistently with upstream's stated intent ("Add this file to your AI assistant's system prompt or context"). All rights to the catalog remain with the original author. See [`plugins/ai-slop/shared/tropes-snapshot.ATTRIBUTION.md`](plugins/ai-slop/shared/tropes-snapshot.ATTRIBUTION.md) for the full provenance note; the snapshot itself is kept bit-identical to upstream so refreshes are a straightforward copy. The runtime fetcher (`plugins/ai-slop/scripts/fetch_tropes.py`) prefers the live upstream when reachable and falls back to the snapshot offline.

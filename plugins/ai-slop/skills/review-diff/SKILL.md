@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned paper for AI slop and violations of the SE writing rules. Use when the user has uncommitted edits or a feature branch in a LaTeX paper repo and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev12"
+  version: "2026-05_rev13"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
