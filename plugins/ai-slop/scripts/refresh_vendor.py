@@ -24,7 +24,9 @@ CLI
 Exit codes
 ----------
   0  success.
-  1  vendoring produced compiled extensions (aborts before overwriting).
+  1  vendoring produced compiled extensions, or one or more vendored
+     packages had no license text in their dist-info and no entry
+     under `bundled_licenses/` (aborts before overwriting `_vendor/`).
   2  pip install failed.
 """
 import argparse
@@ -76,6 +78,19 @@ SKIP_ENTRIES = frozenset({
     "wheel", "distutils-precedence.pth", "__pycache__",
 })
 
+# Distribution-name (case-insensitive) -> SPDX-style label overrides.
+# Used when a wheel's METADATA declares a license that disagrees with the
+# bundled LICENSE text, or when METADATA omits the License: field but the
+# upstream project has a known license. Examples:
+#   - sly 0.5: METADATA classifies as MIT but the shipped LICENSE is a
+#     3-clause BSD-style notice with a non-endorsement clause.
+#   - Columnar 1.4.1: METADATA's License: field is absent; classifiers
+#     and the upstream LICENSE.txt confirm MIT.
+LICENSE_LABEL_OVERRIDES = {
+    "sly": "BSD-3-Clause",
+    "columnar": "MIT",
+}
+
 
 def find_site_packages(venv_dir: Path) -> Path:
     """Return the venv's site-packages directory (versioned subpath)."""
@@ -114,8 +129,17 @@ def install_pyjson5_shim(vendor_dir: Path) -> None:
     (target / "__init__.py").write_text(PYJSON5_SHIM, encoding="utf-8")
 
 
-def collect_notice(site_packages: Path, vendor_dir: Path) -> str:
-    """Build a NOTICE body from each vendored package's dist-info metadata."""
+def collect_notice(
+    site_packages: Path, vendor_dir: Path, bundled_dir: Path,
+) -> tuple[str, list[str]]:
+    """Build a NOTICE body from each vendored package's dist-info metadata.
+
+    Returns (body, missing) where `missing` is the list of "name version"
+    entries for which no license text could be located — neither in the
+    package's dist-info nor in `bundled_dir`. The caller is expected to
+    abort if `missing` is non-empty so the bundle is never published
+    without attribution.
+    """
     vendored_names = {
         p.name for p in vendor_dir.iterdir()
         if p.is_dir() or (p.is_file() and p.suffix == ".py")
@@ -125,9 +149,12 @@ def collect_notice(site_packages: Path, vendor_dir: Path) -> str:
         "",
         "Each package below is included verbatim except `pyjson5`, which is",
         "replaced by a stdlib shim (see pyjson5/__init__.py). License texts",
-        "are reproduced from the upstream `dist-info` metadata.",
+        "are reproduced from the upstream `dist-info` metadata, or from",
+        "`bundled_licenses/` when the upstream wheel does not ship a",
+        "LICENSE file.",
         "",
     ]
+    missing: list[str] = []
     dist_info_dirs = sorted(
         d for d in site_packages.iterdir()
         if d.is_dir() and d.name.endswith(".dist-info")
@@ -161,6 +188,9 @@ def collect_notice(site_packages: Path, vendor_dir: Path) -> str:
         # Skip dist-infos whose top-level entries aren't in the vendored tree.
         if top_levels and not any(t in vendored_names for t in top_levels):
             continue
+        override = LICENSE_LABEL_OVERRIDES.get(name.lower())
+        if override:
+            license_field = override
         sections.append(f"## {name} {version}")
         if license_field:
             sections.append(f"License: {license_field}")
@@ -184,13 +214,45 @@ def collect_notice(site_packages: Path, vendor_dir: Path) -> str:
                             encoding="utf-8", errors="replace").rstrip())
                 if parts:
                     license_text = "\n".join(parts)
+        if license_text is None and bundled_dir.is_dir():
+            # Maintainer-supplied text for packages whose wheel does not
+            # ship a LICENSE file in its dist-info (e.g. Columnar 1.4.1).
+            for candidate in (f"{name}.txt", f"{name.lower()}.txt"):
+                entry = bundled_dir / candidate
+                if entry.is_file():
+                    body = entry.read_text(
+                        encoding="utf-8", errors="replace").rstrip()
+                    # Match the `--- filename ---` style used by the
+                    # licenses/-subdir branch so dist-info and
+                    # bundled_licenses entries render consistently.
+                    license_text = f"--- {candidate} ---\n{body}"
+                    break
         if license_text:
             sections.append("")
             sections.append("```")
             sections.append(license_text)
             sections.append("```")
+        else:
+            missing.append(f"{name} {version}")
+        # Apache-2.0 §4(d) requires reproducing any upstream NOTICE file.
+        # We do this unconditionally — it's a no-op for packages that don't
+        # ship one — so future Apache-licensed additions don't silently
+        # miss the obligation.
+        for candidate in ("NOTICE", "NOTICE.txt", "NOTICE.md"):
+            nf = di / candidate
+            if nf.is_file():
+                notice_text = nf.read_text(
+                    encoding="utf-8", errors="replace").rstrip()
+                if notice_text:
+                    sections.append("")
+                    sections.append(f"NOTICE ({candidate}):")
+                    sections.append("")
+                    sections.append("```")
+                    sections.append(notice_text)
+                    sections.append("```")
+                break
         sections.append("")
-    return "\n".join(sections) + "\n"
+    return "\n".join(sections) + "\n", missing
 
 
 def main() -> int:
@@ -260,7 +322,21 @@ def main() -> int:
             shutil.rmtree(staging)
             return 1
 
-        notice = collect_notice(site_packages, staging)
+        bundled_dir = scripts_dir / "bundled_licenses"
+        notice, missing = collect_notice(site_packages, staging, bundled_dir)
+        if missing:
+            sys.stderr.write(
+                "refusing to vendor: no license text found for "
+                f"{len(missing)} package(s):\n"
+            )
+            for entry in missing:
+                sys.stderr.write(f"  {entry}\n")
+            sys.stderr.write(
+                f"add the missing LICENSE text under {bundled_dir} "
+                f"(one <package-name>.txt per package) and re-run.\n"
+            )
+            shutil.rmtree(staging)
+            return 1
         (staging / "NOTICE").write_text(notice, encoding="utf-8")
 
         # Swap.
