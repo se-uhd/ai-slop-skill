@@ -3,7 +3,7 @@ name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev13"
+  version: "2026-05_rev14"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -93,7 +93,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev13 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-05_rev14 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
