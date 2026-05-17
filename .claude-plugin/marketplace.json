@@ -10,7 +10,7 @@
       "name": "ai-slop",
       "source": "./plugins/ai-slop",
       "description": "Apply rules for writing and reviewing empirical SE research papers when editing .tex files, drafting prose, or auditing a draft for AI slop. Combines SE-specific conventions with the community-maintained tropes.fyi catalog of general AI writing patterns.",
-      "version": "2026-05_rev13",
+      "version": "2026-05_rev14",
       "homepage": "https://github.com/se-uhd/ai-slop-skill",
       "license": "CC-BY-4.0"
     }
