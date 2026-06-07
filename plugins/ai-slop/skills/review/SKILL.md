@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes — and, for research papers, statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev20"
+  version: "2026-05_rev21"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -75,6 +75,8 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - American-vs-British spelling (flag British variants).
    - "Significant" audit (flag non-statistical uses).
 
+   These counts are secondary signals, not the findings. A page can sit within every target above and still contain an individual mark that is the wrong choice. When a specific em-dash, colon, or semicolon should be a different mark, record it as a per-section finding under step 4 (with the corrected punctuation as the suggested revision), regardless of the per-page count. The most common case is a semicolon joining two independent clauses that a period would separate, especially when the second clause opens with we, it, this, they, or these. An em-dash standing in for a period, and a colon used as a generic mid-sentence pause, are promoted the same way.
+
 6. **Citations and BibTeX (LaTeX only).** Scan for:
    - Citation clusters with three or more keys, and `\cite{}` calls without a nearby `% GROUNDING: "..."` comment. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_citation_issues.py <root.tex> [<input1.tex> ...]` over the LaTeX root and any `\input`-ed files. Each stdout line is `<file>:<line>\t<issue>\t<keys>\t<context>` where `<issue>` is `cluster` or `missing-grounding`. The script prints a stderr summary (e.g. `considered 41 cite call(s) across 1 file(s); 1 cluster(s), 41 missing-grounding`). Use it to confirm the run completed. Known limitations of the scan:
      - The script does not follow `\input` / `\include`. Pass the file list explicitly.
@@ -103,7 +105,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev20 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-05_rev21 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
