@@ -1,16 +1,19 @@
-# Rationale for the research writing rules
+# Rationale for the writing rules
 
-This file records the *why* behind the rules in `rules.md`. It is documentation
-only: the `ai-slop:review`, `ai-slop:review-diff`, `ai-slop:init`, and
-`ai-slop:revise` skills load `rules.md` (and the trope catalog) by explicit
-path, and none of them read this file. Keeping the justification here lets
-`rules.md` carry only the operative directive, example, and exception for each
-rule, while the explanatory background that does not change how a rule is
-applied lives in one place a maintainer can consult.
+This file records the *why* behind the rules in the three rule layers
+(`rules-general.md`, `rules-scientific.md`, `rules-latex.md`). It is
+documentation only: the `ai-slop:review`, `ai-slop:review-diff`, `ai-slop:init`,
+and `ai-slop:revise` skills load the layers their scope calls for (and the trope
+catalog) by explicit path, and none of them read this file. Keeping the
+justification here lets the layers carry only the operative directive, example,
+and exception for each rule, while the explanatory background that does not
+change how a rule is applied lives in one place a maintainer can consult.
 
-When a rule changes, update both files: the directive in `rules.md` and the
-justification here. Section headings below mirror the section headings in
-`rules.md`.
+When a rule changes, update both: the directive in the relevant layer and the
+justification here. The sections below are grouped by topic; each topic lives in
+the general layer (any prose), the scientific layer (research articles), or the
+LaTeX layer (markup mechanics), and several cross-cutting topics state a
+principle in a lower layer and its mechanics in the LaTeX layer.
 
 ## Sources
 
@@ -27,7 +30,7 @@ The rules draw on three bodies of evidence:
 
 The general AI-trope catalog (banned words, formulaic openings, formatting
 tics, anaphora and tricolon abuse) is fetched at runtime from the upstream
-sources; `rules.md` carries only the research-specific additions.
+sources; the rule layers carry only the additions beyond that catalog.
 
 ## Language
 
@@ -73,13 +76,15 @@ the paper exists in the reader's hands now, while the study happened in the past
 Most punctuation rules target the same underlying phenomenon: AI text leans on
 mid-sentence pause marks (em dashes, colons, semicolons) far more than human
 text, and restricting one mark merely displaces the load onto the others. The
-per-page caps and the combined-budget rule exist to catch that displacement.
+primary test is per mark — is each pause genuinely the right choice? — and the
+per-page counts are a secondary signal of over-reliance, since a raw count
+cannot tell a well-placed dash from a lazy one.
 
 - **Em dashes.** An em dash (and the parenthesis it is often swapped for) usually
   signals a sentence trying to do too much; splitting into two sentences is the
   fix. The carve-outs (comma-bearing appositives, nested-parenthesis avoidance,
   quoted material) are cases where the dash does structural work the commas or
-  parentheses cannot, so they do not count against the cap.
+  parentheses cannot, so they do not count as over-reliance.
 - **Colons.** AI text falls back to colons for a generic mid-sentence pause and
   reaches for the colon-then-list shape reflexively, which is why both are flagged
   even when each individual colon is defensible.
@@ -89,7 +94,8 @@ per-page caps and the combined-budget rule exist to catch that displacement.
   the visual break of a blank line or list markers lets a period feel complete on
   its own and quietly substitutes for the colon's syntactic job; and a period
   commits to nothing about what follows, which RLHF tends to reward. The mechanical
-  test in `rules.md` resolves each case without relying on this background.
+  test in the introducer-punctuation rule resolves each case without relying on
+  this background.
 - **Caption punctuation.** The run-in caption default (`.`, switching to `:` before
   a list or grammatical continuation) follows the same training-data bias toward
   the period.

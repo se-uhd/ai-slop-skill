@@ -528,6 +528,109 @@ def test_version_strings_in_sync():
     )
 
 
+# ---------- detect_scope.py ----------
+
+def test_detect_scope_file_tex():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'paper.tex'
+        write(p, LATEX_BODY)
+        rc, out, err = run('detect_scope.py', str(p))
+        assert rc == 0 and out.strip() == 'latex', f"tex file: rc={rc} out={out!r}"
+
+
+def test_detect_scope_file_pdf():
+    # A PDF is not LaTeX source, so it detects as general; --scientific is what
+    # pulls in the research-article rules for a non-LaTeX paper.
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'paper.pdf'
+        write(p, 'pdf')
+        rc, out, err = run('detect_scope.py', str(p))
+        assert out.strip() == 'general', f"pdf file: out={out!r}"
+
+
+def test_detect_scope_file_markdown():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'notes.md'
+        write(p, '# hi\n')
+        rc, out, err = run('detect_scope.py', str(p))
+        assert out.strip() == 'general', f"md file: out={out!r}"
+
+
+def test_detect_scope_dir_latex():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'main.tex', LATEX_BODY)
+        rc, out, err = run('detect_scope.py', d)
+        assert out.strip() == 'latex', f"latex dir: out={out!r}"
+
+
+def test_detect_scope_dir_pdf():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'draft.pdf', 'pdf')
+        rc, out, err = run('detect_scope.py', d)
+        assert out.strip() == 'general', f"pdf dir: out={out!r}"
+
+
+def test_detect_scope_dir_general():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'README.md', '# hi\n')
+        rc, out, err = run('detect_scope.py', d)
+        assert out.strip() == 'general', f"general dir: out={out!r}"
+
+
+def test_detect_scope_dir_empty_defaults_general():
+    with tempfile.TemporaryDirectory() as d:
+        rc, out, err = run('detect_scope.py', d)
+        assert out.strip() == 'general', f"empty dir: out={out!r}"
+
+
+def test_detect_scope_commented_tex_is_not_latex():
+    # find_latex_root ignores commented-out \documentclass, so a dir whose only
+    # .tex is fully commented out is not LaTeX and resolves to general.
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'stub.tex', COMMENTED)
+        rc, out, err = run('detect_scope.py', d)
+        assert out.strip() == 'general', f"commented tex: out={out!r}"
+
+
+# ---------- rule-layer structure ----------
+
+RULE_LAYERS = ('rules-general.md', 'rules-scientific.md', 'rules-latex.md')
+
+
+def test_rule_layers_exist():
+    """The rules ship as three layered files plus a rationale doc; the old
+    monolithic rules.md must be gone so nothing loads a stale path."""
+    shared = SCRIPTS.parent / 'shared'
+    for name in RULE_LAYERS + ('rules-rationale.md',):
+        assert (shared / name).is_file(), f"missing rule layer: {name}"
+    assert not (shared / 'rules.md').exists(), \
+        "rules.md still present; it was split into the three layer files"
+
+
+def test_rule_layers_lint_clean():
+    """Each rule layer and the rationale doc must pass the Markdown linter."""
+    shared = SCRIPTS.parent / 'shared'
+    for name in RULE_LAYERS + ('rules-rationale.md',):
+        rc, out, err = run('lint_markdown.py', str(shared / name))
+        assert rc == 0, f"{name}: lint rc={rc} out={out!r} err={err!r}"
+
+
+def test_no_dangling_rules_md_references():
+    """No first-party doc may reference the removed monolithic rules.md. The
+    layer filenames (rules-general.md, etc.) do not contain the substring
+    'rules.md', so a plain substring scan flags only stale references."""
+    plugin_root = SCRIPTS.parent
+    repo_root = plugin_root.parent.parent
+    docs = [repo_root / 'README.md']
+    docs += sorted(plugin_root.glob('commands/*.md'))
+    docs += sorted(plugin_root.glob('skills/*/SKILL.md'))
+    docs += [plugin_root / 'shared' / n
+             for n in RULE_LAYERS + ('rules-rationale.md',)]
+    offenders = [str(d.relative_to(repo_root)) for d in docs
+                 if d.is_file() and 'rules.md' in d.read_text(encoding='utf-8')]
+    assert not offenders, f"stale 'rules.md' references in: {offenders}"
+
+
 # ---------- runner ----------
 
 TESTS = [
@@ -560,6 +663,17 @@ TESTS = [
     test_lint_markdown_fix_mode_normalizes,
     test_lint_markdown_fix_mode_preserves_structural_findings,
     test_version_strings_in_sync,
+    test_detect_scope_file_tex,
+    test_detect_scope_file_pdf,
+    test_detect_scope_file_markdown,
+    test_detect_scope_dir_latex,
+    test_detect_scope_dir_pdf,
+    test_detect_scope_dir_general,
+    test_detect_scope_dir_empty_defaults_general,
+    test_detect_scope_commented_tex_is_not_latex,
+    test_rule_layers_exist,
+    test_rule_layers_lint_clean,
+    test_no_dangling_rules_md_references,
 ]
 
 

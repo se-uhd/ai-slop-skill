@@ -3,7 +3,7 @@ name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev16"
+  version: "2026-05_rev17"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -36,7 +36,7 @@ The skill auto-detects the paper in the current working directory. No path argum
 
 When both LaTeX source and PDF are available for the same paper, prefer the LaTeX source. It exposes LaTeX-specific artifacts (e.g., commented-out disclosures, `\todo{}` notes, missing `% GROUNDING:` comments, spelled-out author names that should use `\citeauthor{}`) that get lost in the PDF.
 
-**Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning.
+**Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning. A path to a plain-text file (`.md`, `.txt`, or similar) is also accepted and reviewed with the general layer (add `--scientific` to include the research-article rules; see step 2), so the skill works on prose that is not a LaTeX or PDF paper.
 
 **Trope catalog override.** `--tropes=<path>` (repeatable) replaces the default fetch with one or more user-supplied files. Paths can be absolute or relative to the working directory; each file is read as-is and the contents are concatenated in the order given to form the catalog for this run. When `--tropes` is not passed (the common case), the catalog is fetched live — see step 3.
 
@@ -44,7 +44,16 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any `--tropes=<path>` arguments from the user's message; collect them as a list. Open the paper file (or extract text from PDF) and identify its sections (e.g., Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
 
-2. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, the restricted-vocabulary table with alternatives, the "significant" statistical caveat, terminology consistency, voice and verb tense by section, punctuation (em-dash, colon, and semicolon caps; capitalization after a colon; the combined pause-punctuation budget), structure, tone, citation style, statistical reporting, figures and tables, threats to validity, BibTeX verification, and the 28-item self-check.
+2. **Determine which rule layers to load.** Three layers live under `../../shared/`:
+   - `rules-general.md` — always loaded (language, restricted vocabulary, terminology, active voice, punctuation, structure, tone, prose self-check).
+   - `rules-scientific.md` — research-article conventions (research-coded phrases, the "significant" caveat, verb tense by section, citations, numbers and statistics, figures and tables, threats to validity).
+   - `rules-latex.md` — LaTeX-source mechanics (LaTeX quotes, run-in caption punctuation, cross-reference and `\citeauthor` macros, `% GROUNDING` comments, BibTeX).
+
+   Decide as follows:
+   - **Is it LaTeX?** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <resolved-paper-path>`. Output `latex` means LaTeX source: load all three layers (a LaTeX paper is a research article, so the scientific layer comes along automatically). Output `general` means anything else — Markdown, plain text, or PDF.
+   - **Research article?** For `general` input, also load `rules-scientific.md` when the user passed `--scientific`, to treat a non-LaTeX manuscript (a Markdown or PDF paper) as a research article. Without the flag, load `rules-general.md` only.
+
+   Read each selected layer file. Each contributes its own rules and its own self-check section; apply them together. A finding's `Rule` name comes from whichever layer defines it.
 
 3. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given; that is the catalog for this run. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the upstream Gist, then the tropes.fyi viewer, then the bundled fallback, and always emits a non-empty body; it prints one line to stderr identifying which source was used.
 
@@ -54,7 +63,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - A short verbatim quote of the offending text, with enough surrounding context to make the quote unique within the paper.
    - A concrete suggested replacement that follows the rules.
 
-5. **Cross-cutting metrics.** Compute and record:
+5. **Cross-cutting metrics.** Compute and record the metrics whose layer is in scope (skip the scientific ones — verb-tense compliance, the "significant" audit — when only the general layer is loaded):
    - Em-dash density (target: ≤ 2 per page-equivalent of ~350 words).
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
    - Capitalization after a colon in running prose (flag colons whose post-colon clause is a complete sentence beginning lowercase, and flag colons whose post-colon text is a fragment or list beginning uppercase).
@@ -62,7 +71,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - Combined pause-punctuation budget (combined em-dash + colon + semicolon count per page-equivalent; target ≤ 5).
    - Restricted-word density per paragraph (flag paragraphs with more than 2 to 3 occurrences).
    - Sentence-length variance (flag stretches of three or more consecutive sentences within 5 words of each other in length).
-   - Verb-tense compliance by section (compare against the table in `rules.md`).
+   - Verb-tense compliance by section (compare against the table in the scientific layer; only when that layer is in scope).
    - American-vs-British spelling (flag British variants).
    - "Significant" audit (flag non-statistical uses).
 
@@ -77,7 +86,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - Spelled-out author names that should use `\citeauthor{}`. The script does not check this. Scan manually.
    - `.bib` entries with missing required fields. To find the bib files, grep the LaTeX root (and any `\input`-ed files) for `\bibliography{...}` and `\addbibresource{...}` directives and resolve each path. If at least one is found, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfile1> <bibfile2> ...` and report each printed entry as a finding. The script uses standard BibTeX required-field semantics (Patashnik's `btxdoc`) and does not honor `crossref` inheritance, so sanity-check flagged entries before reporting them, and skip the check entirely if no bib files are referenced. The script always prints a one-line summary to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field issue(s)`). Use it to confirm the run completed.
 
-7. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory.
+7. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory. The report is a generated artifact and must never be committed: if the working directory is inside a git repository and its `.gitignore` does not already list `ai-slop-report.md`, append that line (creating `.gitignore` if absent).
 
    Then run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/lint_markdown.py --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations; after the third pass proceed regardless of the linter's state. The lint loop is internal quality control — do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
@@ -93,7 +102,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev16 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-05_rev17 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -110,7 +119,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 
 #### Finding <N>
 
-- **Rule:** <rule name from rules.md, or trope name from tropes.fyi>
+- **Rule:** <rule name from a rule layer, or trope name from tropes.fyi>
 - **Location:** `<file:line>` or `Section: <name>` if line not available
 - **Quote:** `<verbatim quote of the offending text, with enough surrounding context to be unique>`
 - **Suggested revision:** `<concrete replacement text>`
@@ -171,7 +180,7 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 
 ## Bundled files
 
-- `../../shared/rules.md` for the SE-specific rule set.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers (general prose; research-article conventions; LaTeX mechanics). Load the subset the scope calls for (step 2).
 - `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the upstream Gist and tropes.fyi viewer are both unreachable.
 - `../../scripts/find_latex_root.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py` implement the deterministic checks above; their module docstrings document inputs, outputs, exit codes, and known limitations.
 
