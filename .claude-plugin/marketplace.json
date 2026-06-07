@@ -10,7 +10,7 @@
       "name": "ai-slop",
       "source": "./plugins/ai-slop",
       "description": "Catch AI slop and apply writing conventions to any prose — drafting Markdown, documentation, or a blog post — and add empirical software engineering paper rules plus LaTeX checks when editing .tex files or auditing a manuscript for AI slop. Combines these with the community-maintained tropes.fyi catalog of general AI writing patterns.",
-      "version": "2026-05_rev17",
+      "version": "2026-05_rev18",
       "homepage": "https://github.com/se-uhd/ai-slop-skill",
       "license": "CC-BY-4.0"
     }
