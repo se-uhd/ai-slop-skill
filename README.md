@@ -22,11 +22,11 @@ The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the firs
 
 ## Dependencies
 
-The skills call small Python 3 helpers under `plugins/ai-slop/scripts/` for deterministic checks (LaTeX root and scope detection, trope-catalog fetch chain, BibTeX required-field verification, Markdown linting of the generated report and bundled rules). Requirements:
+The skills call small Python 3 helpers under `plugins/ai-slop/scripts/` for deterministic checks (LaTeX root and scope detection, trope-catalog fetch chain, BibTeX required-field verification, reference verification against CrossRef and DBLP, Markdown linting of the generated report and bundled rules). Requirements:
 
 - `python3` (latest stable; CI pins to 3.14). The first-party helpers are stdlib-only. The Markdown linter is [PyMarkdown](https://github.com/jackdewinter/pymarkdown), vendored pure-Python under `plugins/ai-slop/scripts/_vendor/`; users do not need to `pip install` anything.
 
-No other runtime dependencies. Smoke tests for the helpers live at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
+No other runtime dependencies. The reference check (`verify_references.py`) is the only helper that reaches the network (CrossRef and DBLP); with no network it reports those entries as `unchecked-offline` and the review still completes. Smoke tests for the helpers live at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
 
 ## Install as a Claude Code plugin
 
@@ -78,7 +78,7 @@ Given a document (LaTeX, PDF, or plain text), the review skill:
 1. **Loads the rule layers** the scope calls for — `shared/rules-general.md` (language, restricted vocabulary, terminology, active voice, punctuation, structure, tone), `shared/rules-scientific.md` (the "significant" caveat, verb tense by section, citation style, statistical reporting per APA/IEEE/ACM, figures and tables, threats to validity), and `shared/rules-latex.md` (LaTeX quotes, caption punctuation, cross-reference and `\citeauthor` macros, `% GROUNDING`, BibTeX) — each carrying its own self-check. `scripts/detect_scope.py` detects LaTeX source and loads all three layers for it; any other input loads the general layer, plus the scientific layer when `--scientific` is passed.
 2. **Loads the AI-trope catalog** via `scripts/fetch_tropes.py`, which tries the upstream Gist (`https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/`), then the rendered viewer at `https://tropes.fyi/tropes-md`, then the bundled `shared/tropes-snapshot.md`. To override for a single run, pass `--tropes=<path>` (repeatable for multiple files); the named files replace the live fetch and are concatenated in the order given.
 3. **Walks the document section by section**, recording each violation as a finding with `Rule`, `Location` (`file:line` for text source, `Section: <name>` for PDF), `Quote` (verbatim, unique within the document), and `Suggested revision` (concrete replacement text).
-4. **Computes cross-cutting metrics** (em-dash density, colon density, restricted-word density per paragraph, sentence-length variance, verb-tense compliance, American-vs-British spelling, the "significant" audit, citation grounding).
+4. **Computes cross-cutting metrics** (em-dash density, colon density, restricted-word density per paragraph, sentence-length variance, verb-tense compliance, American-vs-British spelling, the "significant" audit, citation grounding) and, for LaTeX, a grounding to-do list of ungrounded `\cite{}` calls plus a CrossRef/DBLP reference check for hallucinated or mismatched citations.
 5. **Writes `ai-slop-report.md`** in the working directory with a stable schema so revise mode can act on it.
 
 Review mode does not modify the document. The report is the only output.
@@ -96,9 +96,10 @@ Given a previously generated report and the document's source, the revise skill:
 1. **Parses the report**, extracting the per-section findings.
 2. **Locates each `Quote` in the document** using the report's `Location` hint to disambiguate.
 3. **Applies the `Suggested revision`** with one Edit call per finding (so each change is one diff hunk).
-4. **Skips findings** whose `Quote` cannot be located uniquely or whose suggestion would break the markup (e.g., LaTeX), with reasons logged in the summary.
-5. **Skips items in "Items requiring author judgment"** (they need manual decisions).
-6. **Prints a summary** of applied, skipped, and author-judgment-required findings.
+4. **Inserts `% GROUNDING: TODO verify <key>` stubs** after the ungrounded `\cite{}` calls listed in the report's grounding to-do, for the author to fill.
+5. **Skips findings** whose `Quote` cannot be located uniquely or whose suggestion would break the markup (e.g., LaTeX), with reasons logged in the summary.
+6. **Skips items in "Items requiring author judgment"** (they need manual decisions).
+7. **Prints a summary** of applied, skipped, and author-judgment-required findings.
 
 Revise mode does not regenerate the report and does not commit. The user runs `git diff` to inspect and `git commit` to keep the changes.
 
@@ -110,7 +111,7 @@ The init skill is a one-shot setup command for new (or existing) project reposit
 
 ## Repository layout
 
-The plugin lives under `plugins/ai-slop/`: `commands/` holds the four slash commands, `skills/` the four `SKILL.md` workflows (review, review-diff, revise, init), `shared/` the three rule layers plus the rationale doc and the bundled trope snapshot, and `scripts/` the stdlib Python helpers — scope and LaTeX root detection, the trope fetch chain, citation and BibTeX checks, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
+The plugin lives under `plugins/ai-slop/`: `commands/` holds the four slash commands, `skills/` the four `SKILL.md` workflows (review, review-diff, revise, init), `shared/` the three rule layers plus the rationale doc and the bundled trope snapshot, and `scripts/` the stdlib Python helpers — scope and LaTeX root detection, the trope fetch chain, citation, BibTeX, and reference checks, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
 
 ## Maintainer notes
 
@@ -133,7 +134,7 @@ python3 plugins/ai-slop/scripts/refresh_vendor.py
 
 The script creates a clean venv, installs `pymarkdownlnt` with `--no-binary :all:` so every dep is built from source (pure-Python where the package supports it), copies the resolved tree into `_vendor/`, replaces `pyjson5/` with a stdlib shim (PyMarkdown is always invoked with `--no-json5`, so the C-extension is never reached), asserts no compiled extensions land in the tree, and regenerates `_vendor/NOTICE` from each package's dist-info. Pin to a specific version with `--version pymarkdownlnt==0.9.37`.
 
-Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter; count tags matching this month's prefix and add one) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init/SKILL.md`'s WRITING.md header.
+Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter; count tags matching this month's prefix and add one) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init/SKILL.md`'s WRITING.md header. After committing the bump, create the matching tag (`git tag YYYY-MM_revN`) and push it; every release commit gets one, and tags must stay ancestors of `main`. Never amend or rebase a commit that has already been tagged or pushed — additional work is a new rev, not a re-cut of the released one.
 
 ### Validating the manifests
 

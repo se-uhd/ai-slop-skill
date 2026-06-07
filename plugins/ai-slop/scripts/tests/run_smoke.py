@@ -592,6 +592,75 @@ def test_detect_scope_commented_tex_is_not_latex():
         assert out.strip() == 'general', f"commented tex: out={out!r}"
 
 
+# ---------- verify_references.py ----------
+
+sys.path.insert(0, str(SCRIPTS))
+import verify_references as vref  # noqa: E402
+
+_REC = {'title': 'A Study of Code Review', 'year': '2020', 'venue': 'ICSE'}
+
+
+def test_verify_references_parses_bib():
+    text = ('@inproceedings{smith2020,\n'
+            '  title = {A Study of Code Review},\n'
+            '  author = {Smith, Jane},\n'
+            '  booktitle = {ICSE},\n'
+            '  year = {2020},\n'
+            '  doi = {10.1145/1234.5678}\n}\n')
+    entries = list(vref.bib_entries(text))
+    assert len(entries) == 1, entries
+    e = entries[0]
+    assert e['key'] == 'smith2020' and e['doi'] == '10.1145/1234.5678', e
+    assert e['title'] == 'A Study of Code Review' and e['year'] == '2020', e
+    assert e['venue'] == 'ICSE', e
+
+
+def test_verify_references_compare_verdicts():
+    ok = vref.compare_entry({'title': 'a study of code review', 'year': '2020', 'venue': 'ICSE'}, _REC)
+    assert ok[0] == 'ok', ok
+    assert vref.compare_entry({'title': 'totally different work', 'year': '2020'}, _REC)[0] == 'title-mismatch'
+    assert vref.compare_entry({'title': 'a study of code review', 'year': '2019'}, _REC)[0] == 'year-mismatch'
+    assert vref.compare_entry({'title': 'a study of code review', 'year': '2020', 'venue': 'NeurIPS'}, _REC)[0] == 'venue-mismatch'
+
+
+def test_verify_references_doi_paths():
+    def hit(_):
+        return dict(_REC)
+
+    def miss(_):
+        return None
+    assert vref.verify_entry({'doi': '10.1/x', 'title': 'a study of code review'},
+                             hit, lambda t: [], lambda t: [])[0] == 'ok'
+    assert vref.verify_entry({'doi': '10.1/x', 'title': 'foo'},
+                             miss, lambda t: [], lambda t: [])[0] == 'doi-not-found'
+
+
+def test_verify_references_offline():
+    def boom(*_a):
+        raise vref.NetworkError('no network')
+    assert vref.verify_entry({'doi': '10.1/x'}, boom, lambda t: [], lambda t: [])[0] == 'unchecked-offline'
+    assert vref.verify_entry({'title': 'something'}, lambda d: None, boom, boom)[0] == 'unchecked-offline'
+
+
+def test_verify_references_no_doi_paths():
+    assert vref.verify_entry({'title': 'a study of code review', 'year': '2020'},
+                             lambda d: None, lambda t: [dict(_REC)], lambda t: [])[0] == 'ok'
+    assert vref.verify_entry({'title': 'an unmatched unique title zzz'},
+                             lambda d: None, lambda t: [], lambda t: [])[0] == 'not-found'
+
+
+def test_verify_references_subprocess_unchecked_no_network():
+    # An entry with neither DOI nor title needs no lookup, so the script runs
+    # fully offline and reports `unchecked`.
+    with tempfile.TemporaryDirectory() as d:
+        bib = Path(d) / 'refs.bib'
+        write(bib, '@misc{nodata,\n  note = {placeholder}\n}\n')
+        rc, out, err = run('verify_references.py', str(bib))
+        assert rc == 0, f"rc={rc} err={err!r}"
+        assert 'nodata\tunchecked' in out, f"out={out!r}"
+        assert 'checked 1 reference' in err, f"err={err!r}"
+
+
 # ---------- rule-layer structure ----------
 
 RULE_LAYERS = ('rules-general.md', 'rules-scientific.md', 'rules-latex.md')
@@ -674,6 +743,12 @@ TESTS = [
     test_rule_layers_exist,
     test_rule_layers_lint_clean,
     test_no_dangling_rules_md_references,
+    test_verify_references_parses_bib,
+    test_verify_references_compare_verdicts,
+    test_verify_references_doi_paths,
+    test_verify_references_offline,
+    test_verify_references_no_doi_paths,
+    test_verify_references_subprocess_unchecked_no_network,
 ]
 
 

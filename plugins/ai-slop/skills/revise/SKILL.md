@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the paper, replacing each flagged quote with the suggested revision. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the LaTeX source.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev17"
+  version: "2026-05_rev18"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -44,14 +44,16 @@ Both inputs default to the current working directory. No arguments are required.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one: prefer the location closest to the hint and log the ambiguity in the summary.
    - If the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys): log as skipped with the reason rather than apply.
 
-4. **Cross-cutting metrics.** These are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section". Do not invent new edits to balance a metric.
+4. **Insert grounding stubs.** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment immediately after that `\cite{}` call (one Edit per cite, matching the surrounding indentation and comment placement). These are TODO markers for the author to fill with a supporting quote — never invent the quote. Skip and log any cite whose location cannot be matched.
 
-5. **Summarize.** Print a summary to the console with three lists:
-   - **Applied:** findings whose `Quote` was located and replaced.
+5. **Cross-cutting metrics.** These are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section". Do not invent new edits to balance a metric.
+
+6. **Summarize.** Print a summary to the console with three lists:
+   - **Applied:** findings whose `Quote` was located and replaced, plus grounding stubs inserted.
    - **Skipped:** findings whose `Quote` could not be uniquely located, or whose suggestion was unsafe to apply, with reasons.
    - **Author judgment required:** findings copied from the "Items requiring author judgment" section, so the user knows what still needs manual attention.
 
-6. **Stop.** Do not regenerate the report. Do not commit the changes. The user runs `git diff` to inspect and `git commit` when satisfied.
+7. **Stop.** Do not regenerate the report. Do not commit the changes. The user runs `git diff` to inspect and `git commit` when satisfied.
 
 ## Bundled files
 
