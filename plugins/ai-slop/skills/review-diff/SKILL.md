@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned paper for AI slop and violations of the SE writing rules. Use when the user has uncommitted edits or a feature branch in a LaTeX paper repo and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev15"
+  version: "2026-05_rev16"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -51,7 +51,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 5. **Identify sections.** For each changed paragraph, walk backward in the new file to the nearest preceding `\section{}` or `\subsection{}` to map the paragraph to its section. This drives section-aware rules (e.g., verb tense, threats-to-validity specificity).
 
-6. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, restricted vocabulary with alternatives, the "significant" caveat, terminology consistency, voice and tense by section, punctuation (em-dash, colon, and semicolon caps; capitalization after a colon; the combined pause-punctuation budget), citation style, statistical reporting, BibTeX verification, and the 25-item self-check.
+6. **Load the rule set.** Read `../../shared/rules.md` for the SE-specific rules: language conventions, restricted vocabulary with alternatives, the "significant" caveat, terminology consistency, voice and tense by section, punctuation (em-dash, colon, and semicolon caps; capitalization after a colon; the combined pause-punctuation budget), citation style, statistical reporting, BibTeX verification, and the 28-item self-check.
 
 7. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the upstream Gist, then the tropes.fyi viewer, then the bundled fallback, and always emits a non-empty body.
 
