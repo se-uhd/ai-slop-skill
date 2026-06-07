@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev20"
+  version: "2026-05_rev21"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -69,6 +69,8 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
    - "Significant" audit on changed lines.
 
    Skip metrics that need full-paper context (e.g., em-dash *density* per page, sentence-length variance over runs of three sentences spanning untouched prose, paragraph-restricted-word density when the diff touched only a fraction of the paragraph). Note the scoping in the report's Summary.
+
+   Density needs full-paper context, but a single mark that is the wrong choice does not. On a changed line, treat a semicolon joining two independent clauses a period would separate (especially when the second opens with we, it, this, they, or these), an em-dash standing in for a period, or a colon used as a generic mid-sentence pause as a per-section finding, with the corrected punctuation as the suggested revision.
 
 10. **Citations and BibTeX, scoped to the diff.** On changed lines, scan for newly added or modified `\cite{}` calls. Apply the same checks as `/ai-slop:review` step 6 (citation clusters with three or more entries lacking per-work explanation, missing `% GROUNDING:` comments, spelled-out author names that should use `\citeauthor{}`). For BibTeX field checks scoped to newly cited keys: identify the `.bib` files via `\bibliography{...}` / `\addbibresource{...}` directives, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfiles>`, and report only entries whose keys appear in newly added `\cite{}` calls. Do not flag pre-existing citations the diff did not touch. Standard BibTeX semantics apply (no `crossref` inheritance) — sanity-check flagged entries. Always list changed `\cite{}` calls that lack a `% GROUNDING:` comment under **Grounding to-do** (the same always-on list as `/ai-slop:review`, restricted to changed cites). For newly cited keys, also run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/verify_references.py <bibfiles> [--mailto you@example.org]` and report flagged entries whose keys appear in newly added `\cite{}` calls under **Reference verification** (advisory and online-first, exactly as in `/ai-slop:review` step 6).
 
