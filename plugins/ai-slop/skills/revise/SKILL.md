@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the paper, replacing each flagged quote with the suggested revision. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the LaTeX source.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev16"
+  version: "2026-05_rev17"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -55,14 +55,14 @@ Both inputs default to the current working directory. No arguments are required.
 
 ## Bundled files
 
-- `../../shared/rules.md` — referenced only as a fallback when the user asks *why* a finding was flagged; revise mode trusts the report's suggested revisions and does not re-derive them from the rules.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md` — the rule layers, referenced only as a fallback when the user asks *why* a finding was flagged; revise mode trusts the report's suggested revisions and does not re-derive them from the rules.
 - `../../scripts/find_latex_root.py` — used by the Inputs section to locate the LaTeX root.
 
 Revise mode does not load the trope catalog at runtime: the report already contains every suggested revision, so no trope source is needed.
 
 ## Constraints
 
-- **Trust the report's suggested revisions.** Do not re-derive them from `rules.md` or tropes.fyi. If a suggestion looks wrong, flag it in the "Skipped" list with the reason rather than silently substituting your own.
+- **Trust the report's suggested revisions.** Do not re-derive them from the rule layers or tropes.fyi. If a suggestion looks wrong, flag it in the "Skipped" list with the reason rather than silently substituting your own.
 - **Edit only what the report asks for.** Do not "improve" prose that was not flagged. Do not add or remove citations, change figures, or restructure sections.
 - **Reformulate, do not delete.** Apply each suggested revision as written. If a finding's suggested revision would delete a substantive statement (a claim, example, or qualification, not mere filler) and nothing indicates the author asked for a cut, treat it as a suggestion that looks wrong: log it in the "Skipped" list with the reason rather than delete. Genuine filler flagged by the concision rules may be removed.
 - **One Edit call per finding.** Bundling makes diffs harder to review.
