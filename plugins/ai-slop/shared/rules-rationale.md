@@ -143,9 +143,13 @@ cannot tell a well-placed dash from a lazy one.
   trail lets co-authors verify without re-reading the source.
 - **No citations in the abstract.** Many ACM, EMSE, and IEEE author guidelines
   require the abstract to stand alone, so references move to the introduction.
-- **Re-introducing acronyms in the body.** The abstract is consumed independently
-  by readers, indexers, and search engines, so an acronym defined there is local
-  to it and must be defined again on first use in the body.
+- **The body must stand independent of the abstract.** The abstract is consumed
+  independently by readers, indexers, and search engines, and a body reader may
+  skip it, so no section of the body can depend on it. Anything the abstract
+  introduces — an acronym, term, definition, or notation — must be introduced
+  again at its first occurrence in the body; the re-introduction is required, not
+  duplication, which is also why the abstract is exempt from the cross-section
+  restatement rule. (Acronyms are the common case.)
 
 ## Numbers, statistics, figures, threats, and BibTeX
 
