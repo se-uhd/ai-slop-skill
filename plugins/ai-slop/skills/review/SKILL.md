@@ -1,15 +1,15 @@
 ---
 name: review
-description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
+description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes — and, for research papers, statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev18"
+  version: "2026-05_rev19"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
 # AI Slop Review — Review Mode
 
-This skill checks a paper draft for AI slop and violations of the SE writing rules and produces a structured report. The bundled files live at `../../shared/`.
+This skill checks a document (LaTeX, PDF, or plain prose) for AI slop and rule violations and produces a structured report. The bundled files live at `../../shared/`.
 
 **Audience and tone.** The default user is an author reviewing their own draft. Frame findings as suggestions for clearer prose, not as violations. If a co-author or reviewer invokes this skill, treat the output as a starting point for revision, not as a rejection rubric.
 
@@ -17,8 +17,8 @@ This skill checks a paper draft for AI slop and violations of the SE writing rul
 
 Invoke this skill when the user:
 
-1. Asks to check a paper draft for AI slop, prose tics, or rule violations.
-2. Hands you a path to a `.tex` or `.pdf`, or runs `/ai-slop:review` from the paper's directory.
+1. Asks to check a draft for AI slop, prose tics, or rule violations.
+2. Hands you a path to a `.tex`, `.pdf`, or text file, or runs `/ai-slop:review` from the project directory.
 3. Is preparing a draft for submission and wants a final pass.
 
 Do **not** invoke for unrelated SE work that happens to mention writing. If the user wants to apply an existing report's findings, switch to `/ai-slop:revise`.
@@ -68,7 +68,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
    - Capitalization after a colon in running prose (flag colons whose post-colon clause is a complete sentence beginning lowercase, and flag colons whose post-colon text is a fragment or list beginning uppercase).
    - Semicolon density in running prose (target: ≤ 1 to 2 per page-equivalent).
-   - Combined pause-punctuation budget (combined em-dash + colon + semicolon count per page-equivalent; target ≤ 5).
+   - Combined pause-punctuation signal (combined em-dash + colon + semicolon count per page-equivalent; a page near all three caps at once is over-punctuated).
    - Restricted-word density per paragraph (flag paragraphs with more than 2 to 3 occurrences).
    - Sentence-length variance (flag stretches of three or more consecutive sentences within 5 words of each other in length).
    - Verb-tense compliance by section (compare against the table in the scientific layer; only when that layer is in scope).
@@ -103,7 +103,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev18 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-05_rev19 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -148,7 +148,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 - Per-page-equivalent count: <N> (target: ≤ 1 to 2)
 - Locations: <list>
 
-### Combined pause-punctuation budget
+### Combined pause-punctuation signal
 - Per-page-equivalent count (em-dash + colon + semicolon): <N> (target: ≤ 5)
 - Pages over the combined cap: <list>
 
