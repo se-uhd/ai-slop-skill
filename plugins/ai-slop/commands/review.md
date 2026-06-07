@@ -1,5 +1,5 @@
 ---
-description: Review a paper draft for AI slop and violations of the SE writing rules. Generates a structured Markdown report with concrete suggested revisions.
+description: Review any prose for AI slop and rule violations. The general rules apply by default; the scientific and LaTeX layers are auto-applied for a manuscript or `.tex` paper, adding citations, statistics, BibTeX, a reference check, and a grounding to-do. Generates a structured Markdown report with concrete suggested revisions.
 ---
 
 Use the `ai-slop:review` skill.
@@ -8,4 +8,4 @@ The skill's workflow and report template live in `skills/review/SKILL.md`. By de
 
 By default the review fetches the trope catalog from the live source (upstream Gist → tropes.fyi viewer → bundled `shared/tropes-snapshot.md`). To override for a single run, pass `--tropes=<path>` (repeatable). Each named file is read as-is and the contents are concatenated in the order given to form the catalog.
 
-Do not modify the user's paper; the only output is `ai-slop-report.md` in the working directory.
+Do not modify the user's document; the only output is `ai-slop-report.md` in the working directory.

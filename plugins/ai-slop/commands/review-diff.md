@@ -1,5 +1,5 @@
 ---
-description: Review only the modified parts of a git-versioned paper for AI slop and violations of the SE writing rules. Generates a structured Markdown report scoped to the diff.
+description: Review only the git-modified parts of a document for AI slop and rule violations, using the same layered rules and report schema as `/ai-slop:review`. Generates a structured Markdown report scoped to the diff.
 ---
 
 Use the `ai-slop:review-diff` skill.
@@ -16,4 +16,4 @@ The `--tropes=<path>` override flag (repeatable) from `/ai-slop:review` works th
 
 If the working directory is not inside a git repository, fall back to telling the user to run `/ai-slop:review` instead — diff mode has nothing to compare against.
 
-Do not modify the user's paper; the only output is `ai-slop-report.md` in the working directory.
+Do not modify the user's document; the only output is `ai-slop-report.md` in the working directory.
