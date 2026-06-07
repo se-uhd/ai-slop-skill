@@ -3,7 +3,7 @@ name: review
 description: Review a paper draft (LaTeX source or PDF) for AI slop and violations of the SE writing rules. Use when the user names a paper, hands you a path to a `.tex` or `.pdf`, asks to check, audit, or review a draft for AI tropes, statistical reporting, citation style, voice and tense, BibTeX correctness, or APA/IEEE/ACM conventions. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-05_rev17"
+  version: "2026-05_rev18"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -82,9 +82,10 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
      - Biblatex multi-cite forms (`\textcites`, `\autocites`, `\fullcites`) read only the first key group.
      - "Nearby grounding" means same line or the next non-blank line. A comment placed two or more blank-separated lines after the cite is not credited.
    - For each cluster, only flag it as a finding if the surrounding prose does not explain what each cited work contributes. A cluster followed by sentences that distinguish each work is fine.
-   - For missing-grounding, the output is informational. Whether to ask the author to add `% GROUNDING:` comments is a project-internal decision.
+   - For missing-grounding, always surface the result as a **Grounding to-do** list in the report: every `\cite{}` lacking a `% GROUNDING:` comment, by `file:line` and key. This list is always emitted, not a project-internal decision.
    - Spelled-out author names that should use `\citeauthor{}`. The script does not check this. Scan manually.
    - `.bib` entries with missing required fields. To find the bib files, grep the LaTeX root (and any `\input`-ed files) for `\bibliography{...}` and `\addbibresource{...}` directives and resolve each path. If at least one is found, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfile1> <bibfile2> ...` and report each printed entry as a finding. The script uses standard BibTeX required-field semantics (Patashnik's `btxdoc`) and does not honor `crossref` inheritance, so sanity-check flagged entries before reporting them, and skip the check entirely if no bib files are referenced. The script always prints a one-line summary to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field issue(s)`). Use it to confirm the run completed.
+   - Hallucinated or mismatched references. After the field check, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/verify_references.py <bibfile1> [<bibfile2> ...] [--mailto you@example.org]` over the same `.bib` files. It looks each entry up in CrossRef (by DOI, then title) and DBLP (by title) and prints one tab-separated line per entry that is not cleanly verified: `<key>\t<verdict>\t<detail>`, where `<verdict>` is `doi-not-found`, `title-mismatch`, `year-mismatch`, `venue-mismatch`, `not-found`, `unchecked-offline`, or `unchecked`. Report these under **Reference verification**. This check is advisory and online-first: with no network every entry returns `unchecked-offline` and the run still exits 0. Never assert a reference is fabricated from eyeballing — treat `doi-not-found` and `not-found` as likely-fabricated only after a sanity check, and for entries the databases cannot confirm, do a web search to validate before flagging. DBLP's curated BibTeX is the canonical record for CS/SE venues; prefer the publisher/DOI metadata only when DBLP holds just a preprint of a now-published paper. For an exhaustive non-LLM audit of someone else's submission, point the user to the `hallucite` skill.
 
 7. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory. The report is a generated artifact and must never be committed: if the working directory is inside a git repository and its `.gitignore` does not already list `ai-slop-report.md`, append that line (creating `.gitignore` if absent).
 
@@ -102,7 +103,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-05_rev17 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-05_rev18 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -165,11 +166,17 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 
 ### Citations
 - Citation clusters lacking per-work explanation: <list>
-- Missing `% GROUNDING:` comments: <list>
 - Spelled-out author names that should use `\citeauthor{}`: <list>
+
+### Grounding to-do
+- `\cite{}` calls with no `% GROUNDING:` comment (always listed): <file:line — keys>
 
 ### BibTeX (if applicable)
 - Entries with missing or unverifiable required fields: <list>
+
+### Reference verification (if applicable)
+- Entries flagged by `verify_references.py`, with verdict and detail: <list>
+- Entries returned `unchecked-offline` (no network at review time): <list>
 
 ## Items requiring author judgment
 

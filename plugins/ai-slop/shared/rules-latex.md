@@ -22,7 +22,7 @@ the skills do not load.
 ## Citations
 
 - **Prefer `\citeauthor{}` over spelled-out author names.** When referring to authors in running text, use `\citeauthor{key}` (and `\citeyear{key}` where a year is needed) rather than typing names directly. This keeps author names synchronized with the BibTeX entry and avoids spelling or ordering errors. Write `\citeauthor{smith2020}` instead of "Smith et al." The same applies to possessives (`\citeauthor{smith2020}'s framework`) and first-mention full forms.
-- **Leave a grounding comment on every new citation.** This is the LaTeX mechanism for the scientific layer's **Ground every claim you attribute to a citation** rule. Add a LaTeX comment (`% GROUNDING: "..."`) after the `\cite{}` with a direct quote supporting the claim. These comments leave an audit trail for co-authors.
+- **Leave a grounding comment on every new citation.** This is the LaTeX mechanism for the scientific layer's **Ground every claim you attribute to a citation** rule. Add a LaTeX comment (`% GROUNDING: "..."`) after the `\cite{}` with a direct quote supporting the claim. These comments leave an audit trail for co-authors. A review always lists every `\cite{}` still missing a `% GROUNDING:` comment as a grounding to-do, and revise inserts `% GROUNDING: TODO verify <key>` stubs for the author to fill.
 
 ## Editorial comments
 
@@ -30,7 +30,7 @@ the skills do not load.
 
 ## BibTeX
 
-- **Verify every entry.** AI-generated BibTeX entries frequently contain wrong years, wrong venues, invented page numbers, or hallucinated DOIs. Every entry must be checked against a reliable source before it goes into the `.bib` file.
+- **Verify every entry.** AI-generated BibTeX entries frequently contain wrong years, wrong venues, invented page numbers, or hallucinated DOIs. Every entry must be checked against a reliable source before it goes into the `.bib` file. A review runs an automated reference check (CrossRef by DOI then title, DBLP by title) that flags unresolvable DOIs and title/year/venue mismatches; its output is advisory — confirm before acting, and never call a reference fabricated from eyeballing.
 - **Source priority.** (1) DBLP, if the work appears there. DBLP entries are curated and consistently formatted. (2) The publisher page, if a DOI is provided; resolve the DOI and pull metadata from the landing page. (3) Google Scholar or a general web search as a last resort, cross-checked against the actual paper.
 - **Check at minimum.** Author names and ordering, title (exact, including capitalization in the original), year, venue name (full and abbreviated), volume / number / pages, and DOI.
 - **Do not invent fields.** If a field (e.g., pages, volume) cannot be confirmed, omit it. A missing field is better than a wrong one.
@@ -43,6 +43,6 @@ Apply these in addition to the general- and scientific-layer self-checks:
 2. **LaTeX quotation marks.** Replace straight `"` and `'` with <code>``...''</code> and <code>`...'</code>.
 3. **Cross-reference macros.** Verify cross-references are capitalized and use `\autoref{}` / `\ref{}` / `\Cref{}`, not lowercase or hard-coded numbers.
 4. **Author names.** Replace spelled-out author names in running text with `\citeauthor{}` (and `\citeyear{}` where a year is needed).
-5. **Grounding comments.** For every new `\cite{}`, verify a `% GROUNDING: "..."` comment follows it with a direct quote from the cited paper.
+5. **Grounding comments.** List every `\cite{}` that lacks a `% GROUNDING: "..."` comment as a grounding to-do (always, not conditionally); a complete grounding comment carries a direct quote from the cited paper.
 6. **Metacommentary placement.** Move any author-voice aside or note-to-self out of body text into a `\todo{}` / `\sba{}` / `%` comment.
-7. **BibTeX verification (if applicable).** Verify each entry against DBLP (preferred), the publisher page via DOI, or Google Scholar. Confirm author names, title, year, venue, and DOI. Omit any field that cannot be confirmed.
+7. **BibTeX verification (if applicable).** Verify each entry against DBLP (preferred), the publisher page via DOI, or Google Scholar. Confirm author names, title, year, venue, and DOI. Omit any field that cannot be confirmed. Run `verify_references.py` to flag unresolvable DOIs and metadata mismatches; sanity-check before treating an entry as fabricated.

@@ -84,7 +84,7 @@ Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / C
 
 ## References
 
-- **Verify every reference.** AI-generated references frequently contain wrong years, wrong venues, invented page numbers, or hallucinated DOIs. Check each one against a reliable source (DBLP, the publisher page via DOI, or the actual paper) before it goes into the manuscript.
+- **Verify every reference.** AI-generated references frequently contain wrong years, wrong venues, invented page numbers, or hallucinated DOIs. Check each one against a reliable source (DBLP, the publisher page via DOI, or the actual paper) before it goes into the manuscript. DBLP's curated record is the gold standard for CS/SE venues; fall back to the publisher/DOI metadata when DBLP holds only a preprint of a paper that has since been published.
 - **Do not invent fields.** If a bibliographic field (e.g., pages, volume) cannot be confirmed, omit it. A missing field is better than a wrong one.
 
 ## Numbers and Statistics
