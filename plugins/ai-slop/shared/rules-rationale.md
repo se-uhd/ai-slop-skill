@@ -140,7 +140,11 @@ cannot tell a well-placed dash from a lazy one.
 
 - **Grounding.** AI-generated citations frequently misattribute claims, so each
   new citation carries a `% GROUNDING` comment with a supporting quote; the audit
-  trail lets co-authors verify without re-reading the source.
+  trail lets co-authors verify without re-reading the source. The grounding check
+  reads the whole cited paper when its full text is available, not just the
+  abstract: an abstract drops the caveats, scope conditions, and negative results
+  that decide whether a claim is supported, so a sentence that matches the
+  abstract can still misstate what the study found.
 - **No citations in the abstract.** Many ACM, EMSE, and IEEE author guidelines
   require the abstract to stand alone, so references move to the introduction.
 - **The body must stand independent of the abstract.** The abstract is consumed

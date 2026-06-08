@@ -74,7 +74,7 @@ Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / C
 
 - **No vague citation clusters.** Never write "several studies have shown [1,2,3,4,5]" or "prior work has found [X to Z]." If citing more than two works together, state what each contributes. A citation that does not tell the reader why it is there is dead weight.
 - **Cite, do not gesture.** Replace "a growing body of work" with the actual works. Replace "recent studies suggest" with who found what.
-- **Ground every claim you attribute to a citation.** Verify the cited work actually says what you claim. Read the relevant section, not just the abstract.
+- **Ground every claim you attribute to a citation.** Verify the cited work actually says what you claim. Read the whole paper when its full text is available, not just the abstract; the abstract compresses away the caveats, scope conditions, and negative results that decide whether a claim holds. Fall back to the relevant section only when the full text cannot be obtained.
 - **Avoid citations in the abstract.** ACM, EMSE, and many IEEE-journal author guidelines prohibit references in abstracts; the abstract is intended to stand alone without bibliographic dependencies. When a proposed rewrite tempts a reference into the abstract, rephrase to drop it — the underlying claim can move to the introduction. Check the venue's author guidelines before adding any reference to an abstract; the safe default is to keep abstracts citation-free.
 
 ## Related Work
@@ -132,7 +132,7 @@ Apply these in addition to the general-layer self-check:
 
 1. **"Significant" audit.** If any use of "significant / significantly / significance" is not reporting a statistical test, replace it.
 2. **Citation clusters.** Verify that any citation cluster with three or more references explains what each cited work contributes.
-3. **Grounding.** Verify each claim attributed to a citation is supported by the cited work, not just plausibly associated with it.
+3. **Grounding.** Verify each claim attributed to a citation is supported by the cited work, not just plausibly associated with it. Read the whole paper where its full text is available, not just the abstract.
 4. **Related work tone.** Scan for complimentary language ("seminal," "pioneering," "impressive") that describes prior work without analyzing it. Rewrite to be analytical.
 5. **Threats specificity (if applicable).** Verify each threat names a specific risk to this study and describes a concrete mitigation. Remove generic threats.
 6. **Verb tense consistency.** Check that each section uses the tense prescribed by the verb-tense table. Fix unmotivated tense shifts within a paragraph.
