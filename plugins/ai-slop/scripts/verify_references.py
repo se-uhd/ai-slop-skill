@@ -22,7 +22,9 @@ Verdicts:
                        lookup cap was reached
 
 Cleanly verified entries (`ok`) are not printed. A one-line summary is always
-printed to stderr.
+printed to stderr. The run exits 0 when at least one bib file is read (network
+reachable or not), and exits 2 only when none of the given paths could be read,
+so nothing was checked.
 
 This is advisory. It confirms, or fails to confirm; it never asserts a reference
 is fabricated except where a DOI provably does not resolve. For an exhaustive,
@@ -36,6 +38,7 @@ Future (not yet wired): an optional local DBLP dump ($AI_SLOP_DBLP) for offline
 and faster bulk checks; richer venue-abbreviation matching.
 """
 import argparse
+import errno
 import json
 import re
 import sys
@@ -288,6 +291,24 @@ def _cache_key(entry):
     return ('title', ' '.join(_tokens(entry.get('title', ''))))
 
 
+def report_unreadable(path, err):
+    """Print a friendly stderr warning for an unreadable path. Truncates the
+    path so a runaway argument cannot flood the terminal, and adds a hint when
+    the argument looks like several paths collapsed into one (the classic
+    unquoted-variable-in-zsh mistake)."""
+    shown = str(path)
+    if len(shown) > 80:
+        shown = shown[:77] + '...'
+    print(f"warning: cannot read {shown!r}: {err.strerror or err}", file=sys.stderr)
+    if getattr(err, 'errno', None) == errno.ENAMETOOLONG or '\n' in str(path):
+        print(
+            "  hint: this argument looks like several paths joined into one. "
+            "Pass each file as a separate argument (in zsh, unquoted variables "
+            "are not split on spaces; use an array or xargs).",
+            file=sys.stderr,
+        )
+
+
 def main(argv):
     p = argparse.ArgumentParser(description="Verify BibTeX references against CrossRef and DBLP.")
     p.add_argument('bibfiles', nargs='+')
@@ -302,13 +323,14 @@ def main(argv):
         return crossref_by_title(t, args.mailto)
 
     cache = {}
-    checked = flagged = lookups = capped = 0
+    checked = flagged = lookups = capped = files_read = 0
     for path in args.bibfiles:
         try:
             text = Path(path).read_text(encoding='utf-8', errors='replace')
         except OSError as e:
-            print(f"{path}: {e}", file=sys.stderr)
+            report_unreadable(path, e)
             continue
+        files_read += 1
         try:
             entries = list(bib_entries(text))
         except ValueError as e:
@@ -337,6 +359,13 @@ def main(argv):
     if capped:
         summary += f"; {capped} skipped after the {MAX_LOOKUPS}-lookup cap"
     print(summary, file=sys.stderr)
+    if files_read == 0:
+        print(
+            f"error: none of the {len(args.bibfiles)} bib file(s) given could be read; "
+            "nothing was checked",
+            file=sys.stderr,
+        )
+        return 2
     return 0
 
 

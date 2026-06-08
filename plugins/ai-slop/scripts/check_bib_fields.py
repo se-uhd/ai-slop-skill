@@ -10,7 +10,11 @@ Empty stdout means all parsed entries are clean. A one-line summary is always
 printed to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field
 issue(s)`) so callers can confirm the run completed without parsing stdout.
 Files that cannot be opened or entries that cannot be parsed are reported on
-stderr but do not abort the run.
+stderr but do not abort the run, as long as at least one file is read. The
+script exits 2 on a usage error: no arguments, or none of the given paths
+could be read (so nothing was checked) — this keeps a shell mishap that
+collapses the file list into one unreadable argument from masquerading as a
+clean run. Otherwise it exits 0.
 
 Required-fields table is taken from Patashnik's btxdoc, the canonical BibTeX
 manual on CTAN: https://mirrors.ctan.org/biblio/bibtex/base/btxdoc.tex
@@ -30,6 +34,7 @@ Notes:
     flagged. Sanity-check flagged entries.
   - Assumes BibTeX keys contain no tabs (true in practice).
 """
+import errno
 import re
 import sys
 from pathlib import Path
@@ -155,11 +160,29 @@ def missing_fields(etype, fields):
     return sorted(missing)
 
 
+def report_unreadable(path, err):
+    """Print a friendly stderr warning for an unreadable path. Truncates the
+    path so a runaway argument cannot flood the terminal, and adds a hint when
+    the argument looks like several paths collapsed into one (the classic
+    unquoted-variable-in-zsh mistake)."""
+    shown = str(path)
+    if len(shown) > 80:
+        shown = shown[:77] + '...'
+    print(f"warning: cannot read {shown!r}: {err.strerror or err}", file=sys.stderr)
+    if getattr(err, 'errno', None) == errno.ENAMETOOLONG or '\n' in str(path):
+        print(
+            "  hint: this argument looks like several paths joined into one. "
+            "Pass each file as a separate argument (in zsh, unquoted variables "
+            "are not split on spaces; use an array or xargs).",
+            file=sys.stderr,
+        )
+
+
 def check_file(path, stats):
     try:
         text = Path(path).read_text(encoding='utf-8', errors='replace')
     except OSError as e:
-        print(f"{path}: {e}", file=sys.stderr)
+        report_unreadable(path, e)
         return
     stats['files'] += 1
     try:
@@ -189,13 +212,20 @@ def main(argv):
         print("usage: check_bib_fields.py <bibfile> [<bibfile> ...]", file=sys.stderr)
         return 2
     stats = {'files': 0, 'checked': 0, 'flagged': 0}
-    for path in argv[1:]:
+    paths = argv[1:]
+    for path in paths:
         check_file(path, stats)
     print(
         f"checked {stats['checked']} entries across {stats['files']} file(s), "
         f"{stats['flagged']} missing-field issue(s)",
         file=sys.stderr,
     )
+    if stats['files'] == 0:
+        print(
+            f"error: none of the {len(paths)} path(s) given could be read; nothing was checked",
+            file=sys.stderr,
+        )
+        return 2
     return 0
 
 
