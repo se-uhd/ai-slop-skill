@@ -35,10 +35,15 @@ Comment handling: lines whose code portion (before the first unescaped `%`)
 contains no recognized cite call are skipped. Cite calls inside comments do
 not count.
 
-Always exits 0. Non-empty stdout signals that findings were emitted; an
-empty stdout means no findings. A one-line summary is always printed to
-stderr (e.g. `considered 41 cite call(s) across 1 file(s); 1 cluster(s),
-41 missing-grounding`). "Considered" counts cite calls in
+Exits 0 when at least one input file was read, whether or not findings were
+emitted. Exits 2 on a usage error: no arguments, or none of the given paths
+could be read (nothing was scanned). The exit-2 case guards against a shell
+mishap that collapses the whole file list into one unreadable argument — in
+zsh, an unquoted variable is not word-split — which would otherwise look like
+a clean "no findings" run. Non-empty stdout signals that findings were
+emitted; an empty stdout means no findings. A one-line summary is always
+printed to stderr (e.g. `considered 41 cite call(s) across 1 file(s);
+1 cluster(s), 41 missing-grounding`). "Considered" counts cite calls in
 GROUNDED_COMMANDS that resolved to at least one parsed key. Calls in
 SKIPPED_COMMANDS, IGNORED_COMMANDS, or with empty `{}` are excluded.
 
@@ -65,6 +70,7 @@ Known limitations:
     A grounding comment placed two or more blank-separated lines after the
     cite is not credited.
 """
+import errno
 import re
 import sys
 from pathlib import Path
@@ -135,13 +141,31 @@ def truncate(text, limit=120):
     return text if len(text) <= limit else text[: limit - 3] + '...'
 
 
+def report_unreadable(path, err):
+    """Print a friendly stderr warning for an unreadable path. Truncates the
+    path so a runaway argument cannot flood the terminal, and adds a hint when
+    the argument looks like several paths collapsed into one (the classic
+    unquoted-variable-in-zsh mistake)."""
+    shown = str(path)
+    if len(shown) > 80:
+        shown = shown[:77] + '...'
+    print(f"warning: cannot read {shown!r}: {err.strerror or err}", file=sys.stderr)
+    if getattr(err, 'errno', None) == errno.ENAMETOOLONG or '\n' in str(path):
+        print(
+            "  hint: this argument looks like several paths joined into one. "
+            "Pass each file as a separate argument (in zsh, unquoted variables "
+            "are not split on spaces; use an array or xargs).",
+            file=sys.stderr,
+        )
+
+
 def scan_file(path, stats):
     """Scan one .tex file for cite-cluster and missing-grounding findings,
     print one TSV row per finding to stdout, and update `stats` in place."""
     try:
         text = Path(path).read_text(encoding='utf-8', errors='replace')
     except OSError as e:
-        print(f"{path}: {e}", file=sys.stderr)
+        report_unreadable(path, e)
         return
     stats['files'] += 1
     lines = text.splitlines()
@@ -174,13 +198,20 @@ def main(argv):
         print("usage: find_citation_issues.py <texfile> [<texfile> ...]", file=sys.stderr)
         return 2
     stats = {'files': 0, 'considered': 0, 'clusters': 0, 'missing_grounding': 0}
-    for path in argv[1:]:
+    paths = argv[1:]
+    for path in paths:
         scan_file(path, stats)
     print(
         f"considered {stats['considered']} cite call(s) across {stats['files']} file(s); "
         f"{stats['clusters']} cluster(s), {stats['missing_grounding']} missing-grounding",
         file=sys.stderr,
     )
+    if stats['files'] == 0:
+        print(
+            f"error: none of the {len(paths)} path(s) given could be read; nothing was scanned",
+            file=sys.stderr,
+        )
+        return 2
     return 0
 
 
