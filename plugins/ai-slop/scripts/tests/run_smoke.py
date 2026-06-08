@@ -200,6 +200,26 @@ def test_check_bib_fields_summary_on_clean_input():
             f"clean bib: stderr summary missing or wrong: {err!r}"
 
 
+def test_check_bib_fields_all_unreadable_exits_2():
+    # No path can be read -> the run scanned nothing and must fail loudly (rc 2),
+    # not report a clean "0 issues" with rc 0.
+    with tempfile.TemporaryDirectory() as d:
+        rc, out, err = run('check_bib_fields.py', str(Path(d) / 'missing.bib'))
+        assert rc == 2, f"unreadable bib: rc={rc} err={err!r}"
+        assert 'none of the 1 path(s)' in err, f"unreadable bib: no error line: {err!r}"
+
+
+def test_check_bib_fields_partial_read_exits_0():
+    # One readable + one missing file is partial success: exit 0, file count 1.
+    # Guards against a regression that counts given paths instead of files read.
+    with tempfile.TemporaryDirectory() as d:
+        bib = Path(d) / 'refs.bib'
+        write(bib, '@article{ok,\n  author = {A},\n  title = {T},\n  journal = {J},\n  year = {2024}\n}\n')
+        rc, out, err = run('check_bib_fields.py', str(bib), str(Path(d) / 'gone.bib'))
+        assert rc == 0, f"partial bib: rc={rc} err={err!r}"
+        assert 'across 1 file(s)' in err, f"partial bib: wrong file count: {err!r}"
+
+
 # ---------- find_citation_issues.py ----------
 
 CITE_FIXTURE = """\
@@ -318,6 +338,28 @@ def test_find_citation_issues_truncate_respects_120_chars():
                 f"truncate: context exceeds 120 chars ({len(context)}): {context!r}"
             assert context.endswith('...'), \
                 f"truncate: long line should end with ...: {context!r}"
+
+
+def test_find_citation_issues_all_unreadable_exits_2():
+    # The original footgun: a whole file list collapsed into one over-long,
+    # unreadable argument. Nothing gets scanned, so the run must exit 2 (with a
+    # shell-quoting hint), not exit 0 with a misleading "0 findings" summary.
+    joined = ' '.join(f'file{i}.tex' for i in range(60))
+    rc, out, err = run('find_citation_issues.py', joined)
+    assert rc == 2, f"unreadable cite arg: rc={rc} err={err!r}"
+    assert 'none of the 1 path(s)' in err, f"unreadable cite arg: no error line: {err!r}"
+    assert 'hint:' in err, f"unreadable cite arg: missing shell-quoting hint: {err!r}"
+
+
+def test_find_citation_issues_partial_read_exits_0():
+    # One readable file plus one missing file is a partial success: the missing
+    # path is warned about, but the run still exits 0 because something was read.
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'paper.tex'
+        write(tex, 'A clean cite~\\cite{ok}. % GROUNDING: "ok"\n')
+        rc, out, err = run('find_citation_issues.py', str(tex), str(Path(d) / 'gone.tex'))
+        assert rc == 0, f"partial read: rc={rc} err={err!r}"
+        assert 'across 1 file(s)' in err, f"partial read: wrong file count: {err!r}"
 
 
 # ---------- lint_markdown.py ----------
@@ -466,6 +508,15 @@ def test_lint_markdown_fix_mode_preserves_structural_findings():
         assert rc == 1, f"fix-structural: rc={rc}"
         assert 'md025' in out, \
             f"fix-structural: structural finding lost: {out!r}"
+
+
+def test_lint_markdown_unreadable_exits_2():
+    # A missing path must fail with the documented exit code 2 ("could not read
+    # or run the linter"), not a silent pass. Locks in the existing contract.
+    with tempfile.TemporaryDirectory() as d:
+        rc, out, err = run('lint_markdown.py', str(Path(d) / 'missing.md'))
+        assert rc == 2, f"missing md: rc={rc} err={err!r}"
+        assert 'cannot read' in err, f"missing md: no error line: {err!r}"
 
 
 # ---------- version-string consistency ----------
@@ -661,6 +712,26 @@ def test_verify_references_subprocess_unchecked_no_network():
         assert 'checked 1 reference' in err, f"err={err!r}"
 
 
+def test_verify_references_all_unreadable_exits_2():
+    # An unreadable bib file is distinct from "offline": there is nothing to
+    # verify, so the run exits 2 rather than the offline-tolerant 0.
+    with tempfile.TemporaryDirectory() as d:
+        rc, out, err = run('verify_references.py', str(Path(d) / 'missing.bib'))
+        assert rc == 2, f"unreadable refs: rc={rc} err={err!r}"
+        assert 'none of the 1 bib file(s)' in err, f"unreadable refs: no error line: {err!r}"
+
+
+def test_verify_references_partial_read_exits_0():
+    # One readable bib (no DOI/title -> no network needed) plus one missing file
+    # is partial success: exit 0. Guards against counting given paths vs reads.
+    with tempfile.TemporaryDirectory() as d:
+        bib = Path(d) / 'refs.bib'
+        write(bib, '@misc{nodata,\n  note = {placeholder}\n}\n')
+        rc, out, err = run('verify_references.py', str(bib), str(Path(d) / 'gone.bib'))
+        assert rc == 0, f"partial refs: rc={rc} err={err!r}"
+        assert 'checked 1 reference' in err, f"partial refs: wrong count: {err!r}"
+
+
 # ---------- rule-layer structure ----------
 
 RULE_LAYERS = ('rules-general.md', 'rules-scientific.md', 'rules-latex.md')
@@ -714,10 +785,14 @@ TESTS = [
     test_fetch_tropes_emits_body_and_source,
     test_check_bib_fields_flags_only_missing,
     test_check_bib_fields_summary_on_clean_input,
+    test_check_bib_fields_all_unreadable_exits_2,
+    test_check_bib_fields_partial_read_exits_0,
     test_find_citation_issues_basic,
     test_find_citation_issues_no_findings,
     test_find_citation_issues_optional_args,
     test_find_citation_issues_truncate_respects_120_chars,
+    test_find_citation_issues_all_unreadable_exits_2,
+    test_find_citation_issues_partial_read_exits_0,
     test_lint_markdown_clean_file,
     test_lint_markdown_trailing_whitespace,
     test_lint_markdown_eof_newline_missing,
@@ -731,6 +806,7 @@ TESTS = [
     test_lint_markdown_writing_md_no_tropes_section,
     test_lint_markdown_fix_mode_normalizes,
     test_lint_markdown_fix_mode_preserves_structural_findings,
+    test_lint_markdown_unreadable_exits_2,
     test_version_strings_in_sync,
     test_detect_scope_file_tex,
     test_detect_scope_file_pdf,
@@ -749,6 +825,8 @@ TESTS = [
     test_verify_references_offline,
     test_verify_references_no_doi_paths,
     test_verify_references_subprocess_unchecked_no_network,
+    test_verify_references_all_unreadable_exits_2,
+    test_verify_references_partial_read_exits_0,
 ]
 
 
