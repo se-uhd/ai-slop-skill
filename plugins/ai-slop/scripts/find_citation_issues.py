@@ -18,7 +18,8 @@ Issues:
 Recognized commands (cluster + grounding checks apply):
   - natbib:   \\cite, \\citep, \\citet, \\citealp, \\citealt, \\citetext.
   - biblatex: \\parencite, \\textcite, \\autocite, \\fullcite, \\smartcite,
-              \\footcite.
+              \\footcite, and their plural multi-cite forms (\\cites,
+              \\parencites, \\textcites, ...; only the first key group is read).
   - Capitalized variants of all of the above (\\Cite, \\Textcite, ...) are
     also matched.
 
@@ -70,68 +71,17 @@ Known limitations:
     A grounding comment placed two or more blank-separated lines after the
     cite is not credited.
 """
-import errno
-import re
 import sys
 from pathlib import Path
 
-CITE_PATTERN = re.compile(
-    r'\\([Cc]ite[a-zA-Z]*|[Pp]arencite|[Tt]extcite|[Aa]utocite'
-    r'|[Ff]ullcite|[Ss]martcite|[Ff]ootcite|nocite)'
-    r'\*?\s*(?:\[[^\]]*\])*\{([^}]*)\}'
-)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cite_scan import has_grounding, iter_cite_calls  # noqa: E402
+from scan_io import report_unreadable  # noqa: E402
 
-# Cite calls that DO require a grounding comment and DO count toward the
-# cluster check. Entries are stored lowercased. The regex captures both
-# lower- and capitalized forms, and the lookup normalizes.
-GROUNDED_COMMANDS = {
-    'cite', 'citep', 'citet', 'citealp', 'citealt', 'citetext',
-    'parencite', 'textcite', 'autocite', 'fullcite', 'smartcite', 'footcite',
-}
-# Style-only helpers, typically paired with a grounded cite nearby. Skip
-# both the cluster and grounding checks for these.
-SKIPPED_COMMANDS = {'citeauthor', 'citeyear', 'citeyearpar', 'citenum'}
-# BibTeX-only marker, not a textual citation.
-IGNORED_COMMANDS = {'nocite'}
+# The cite regex, command-classification sets, and the comment/key/grounding
+# helpers live in cite_scan.py, shared with extract_cites.py.
 
 CLUSTER_THRESHOLD = 3
-
-
-def split_code_and_comment(line):
-    """Return (code, comment) splitting at the first unescaped `%`."""
-    i = 0
-    n = len(line)
-    while i < n:
-        if line[i] == '\\' and i + 1 < n:
-            i += 2
-            continue
-        if line[i] == '%':
-            return line[:i], line[i:]
-        i += 1
-    return line, ''
-
-
-def parse_keys(key_blob):
-    """Split a `{a, b, c}` cite payload into a list of keys, dropping empties."""
-    return [k.strip() for k in key_blob.split(',') if k.strip()]
-
-
-def has_grounding(lines, idx, same_line_comment):
-    """Return True if `% GROUNDING:` appears on the cite's same-line comment
-    portion or on the next non-blank line (which must itself be a comment
-    line)."""
-    if 'GROUNDING:' in same_line_comment:
-        return True
-    j = idx + 1
-    while j < len(lines):
-        stripped = lines[j].strip()
-        if not stripped:
-            j += 1
-            continue
-        if stripped.startswith('%') and 'GROUNDING:' in stripped:
-            return True
-        return False
-    return False
 
 
 def truncate(text, limit=120):
@@ -139,24 +89,6 @@ def truncate(text, limit=120):
     characters, ending with '...' on truncation."""
     text = ' '.join(text.split())
     return text if len(text) <= limit else text[: limit - 3] + '...'
-
-
-def report_unreadable(path, err):
-    """Print a friendly stderr warning for an unreadable path. Truncates the
-    path so a runaway argument cannot flood the terminal, and adds a hint when
-    the argument looks like several paths collapsed into one (the classic
-    unquoted-variable-in-zsh mistake)."""
-    shown = str(path)
-    if len(shown) > 80:
-        shown = shown[:77] + '...'
-    print(f"warning: cannot read {shown!r}: {err.strerror or err}", file=sys.stderr)
-    if getattr(err, 'errno', None) == errno.ENAMETOOLONG or '\n' in str(path):
-        print(
-            "  hint: this argument looks like several paths joined into one. "
-            "Pass each file as a separate argument (in zsh, unquoted variables "
-            "are not split on spaces; use an array or xargs).",
-            file=sys.stderr,
-        )
 
 
 def scan_file(path, stats):
@@ -169,28 +101,16 @@ def scan_file(path, stats):
         return
     stats['files'] += 1
     lines = text.splitlines()
-    for idx, raw_line in enumerate(lines):
-        code, comment = split_code_and_comment(raw_line)
-        for match in CITE_PATTERN.finditer(code):
-            command = match.group(1).lower()
-            if command in IGNORED_COMMANDS:
-                continue
-            if command in SKIPPED_COMMANDS:
-                continue
-            if command not in GROUNDED_COMMANDS:
-                continue  # allowlist miss, not a textual citation we check
-            keys = parse_keys(match.group(2))
-            if not keys:
-                continue
-            stats['considered'] += 1
-            line_no = idx + 1
-            context = truncate(raw_line)
-            if len(keys) >= CLUSTER_THRESHOLD:
-                stats['clusters'] += 1
-                print(f"{path}:{line_no}\tcluster\t{','.join(keys)}\t{context}")
-            if not has_grounding(lines, idx, comment):
-                stats['missing_grounding'] += 1
-                print(f"{path}:{line_no}\tmissing-grounding\t{','.join(keys)}\t{context}")
+    for idx, command, keys, comment, raw_line in iter_cite_calls(lines):
+        stats['considered'] += 1
+        line_no = idx + 1
+        context = truncate(raw_line)
+        if len(keys) >= CLUSTER_THRESHOLD:
+            stats['clusters'] += 1
+            print(f"{path}:{line_no}\tcluster\t{','.join(keys)}\t{context}")
+        if not has_grounding(lines, idx, comment):
+            stats['missing_grounding'] += 1
+            print(f"{path}:{line_no}\tmissing-grounding\t{','.join(keys)}\t{context}")
 
 
 def main(argv):

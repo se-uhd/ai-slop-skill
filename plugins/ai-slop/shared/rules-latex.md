@@ -22,7 +22,7 @@ the skills do not load.
 ## Citations
 
 - **Prefer `\citeauthor{}` over spelled-out author names.** When referring to authors in running text, use `\citeauthor{key}` (and `\citeyear{key}` where a year is needed) rather than typing names directly. This keeps author names synchronized with the BibTeX entry and avoids spelling or ordering errors. Write `\citeauthor{smith2020}` instead of "Smith et al." The same applies to possessives (`\citeauthor{smith2020}'s framework`) and first-mention full forms.
-- **Leave a grounding comment on every new citation.** This is the LaTeX mechanism for the scientific layer's **Ground every claim you attribute to a citation** rule. Add a LaTeX comment (`% GROUNDING: "..."`) after the `\cite{}` with a direct quote supporting the claim. These comments leave an audit trail for co-authors. A review always lists every `\cite{}` still missing a `% GROUNDING:` comment as a grounding to-do, and revise inserts `% GROUNDING: TODO verify <key>` stubs for the author to fill.
+- **Leave a grounding comment on every new citation.** This is the LaTeX mechanism for the scientific layer's **Ground every claim you attribute to a citation** rule. Add a LaTeX comment (`% GROUNDING: "..."`) after the `\cite{}` with a direct quote supporting the claim. These comments leave an audit trail for co-authors. A review always lists every `\cite{}` still missing a `% GROUNDING:` comment as a grounding to-do; revise inserts `% GROUNDING: TODO verify <key>` stubs for the author to fill; and `/ai-slop:ground` fills the comments outright — it fetches each cited source and inserts a retrieved verbatim quote (or a `TODO verify -- <reason>` stub when the source cannot be retrieved, never a quote from memory).
 
 ## Editorial comments
 

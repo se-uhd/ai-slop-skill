@@ -771,6 +771,463 @@ def test_no_dangling_rules_md_references():
     assert not offenders, f"stale 'rules.md' references in: {offenders}"
 
 
+# ---------- shared helper modules (cite_scan.py, bib_parse.py) ----------
+
+def test_cite_scan_iter_cite_calls():
+    import cite_scan
+    lines = [
+        'A~\\cite{x}. % GROUNDING: "x"',
+        'Cluster~\\cite{a, b, c}.',
+        '% \\cite{ghost}',
+        '\\citeauthor{styleonly} text',
+        '\\nocite{ignore}',
+    ]
+    calls = [(cmd, keys) for _, cmd, keys, _, _ in cite_scan.iter_cite_calls(lines)]
+    assert ('cite', ['x']) in calls, f"iter: x missing: {calls!r}"
+    assert ('cite', ['a', 'b', 'c']) in calls, f"iter: cluster missing: {calls!r}"
+    assert all('ghost' not in keys for _, keys in calls), f"iter: commented cite leaked: {calls!r}"
+    assert not any(cmd == 'citeauthor' for cmd, _ in calls), f"iter: style-only leaked: {calls!r}"
+    assert not any('ignore' in keys for _, keys in calls), f"iter: nocite leaked: {calls!r}"
+
+
+def test_cite_scan_recognizes_plural_forms():
+    import cite_scan
+    calls = list(cite_scan.iter_cite_calls([
+        r'See \textcites{aa}{bb} and \parencites{cc}{dd}.',
+        r'Also \cites{ee} and \autocites{ff}{gg}.',
+    ]))
+    cmds = {cmd for _, cmd, _, _, _ in calls}
+    for plural in ('textcites', 'parencites', 'cites', 'autocites'):
+        assert plural in cmds, f"plural form {plural} not recognized: {cmds!r}"
+    keys = [k for _, _, ks, _, _ in calls for k in ks]
+    # Documented limitation: only the first {key} group is read.
+    assert {'aa', 'cc', 'ee', 'ff'} <= set(keys), f"plural first-group keys missing: {keys!r}"
+    assert not ({'bb', 'dd', 'gg'} & set(keys)), f"plural second group should be undercounted: {keys!r}"
+
+
+def test_bib_parse_iter_entries():
+    import bib_parse
+    text = ('@string{ J = "Journal" }\n'
+            '@article{k1, title={T}, author={A}, journal=J, year={2020}, doi={10.1/x}}\n')
+    entries = list(bib_parse.iter_entries(text))
+    assert len(entries) == 1, f"iter_entries: @string not skipped: {entries!r}"
+    key, etype, fields = entries[0]
+    assert key == 'k1' and etype == 'article', f"iter_entries: head: {entries!r}"
+    assert fields['title'] == 'T' and fields['doi'] == '10.1/x', f"iter_entries: fields: {fields!r}"
+
+
+# ---------- extract_cites.py ----------
+
+EXTRACT_TEX = (
+    "\\documentclass{article}\n"
+    "\\bibliography{refs}\n"
+    "\\begin{document}\n"
+    "Code review reduces defects~\\cite{smith2020}.\n"
+    "As shown by \\citet{jones2019}, adoption is slow.\n"
+    "A cluster of tools~\\cite{a, b, c}.\n"
+    "% commented: \\cite{ghost}\n"
+    "Per \\citeauthor{smith2020}, the effect holds.\n"
+    "Already noted~\\cite{done2021}. % GROUNDING: done2021 -- \"x\"\n"
+    "\\end{document}\n"
+)
+EXTRACT_BIB = (
+    "@inproceedings{smith2020,\n"
+    "  title = {A Study of Code Review},\n"
+    "  author = {Smith, Jane},\n"
+    "  booktitle = {ICSE},\n"
+    "  year = {2020},\n"
+    "  doi = {10.1145/1234.5678}\n}\n"
+)
+
+
+def test_extract_cites_basic():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'main.tex', EXTRACT_TEX)
+        write(Path(d) / 'refs.bib', EXTRACT_BIB)
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"extract: rc={rc} err={err!r}"
+        data = json.loads(out)
+        sites = data['sites']
+        # 5 sites: smith cite, jones citet, a/b/c cluster, citeauthor, done2021. ghost excluded.
+        assert len(sites) == 5, f"extract: expected 5 sites, got {len(sites)}: {sites!r}"
+        assert not any('ghost' in s['keys'] for s in sites), f"extract: commented cite leaked: {sites!r}"
+        cluster = [s for s in sites if s['keys'] == ['a', 'b', 'c']]
+        assert cluster and cluster[0]['groundable'], f"extract: cluster missing/not groundable: {sites!r}"
+        author = [s for s in sites if s['command'] == 'citeauthor']
+        assert author and author[0]['groundable'] is False, \
+            f"extract: citeauthor should be non-groundable: {sites!r}"
+        done = [s for s in sites if s['keys'] == ['done2021']]
+        assert done and done[0]['grounded'] is True, f"extract: existing grounding not detected: {sites!r}"
+        # by_key aggregates smith2020 across its cite + citeauthor sites
+        assert len(data['by_key']['smith2020']['sites']) == 2, \
+            f"extract: smith2020 should have 2 sites: {data['by_key']['smith2020']!r}"
+        # metadata pulled from the .bib for used keys
+        assert data['meta']['smith2020']['doi'] == '10.1145/1234.5678', f"extract: meta doi: {data['meta']!r}"
+        assert 'Code Review' in data['meta']['smith2020']['title'], f"extract: meta title: {data['meta']!r}"
+        assert 'extracted 5 cite site(s)' in err, f"extract: summary: {err!r}"
+
+
+def test_extract_cites_follows_input():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        sub = Path(d) / 'sections'
+        sub.mkdir()
+        write(Path(d) / 'main.tex',
+              "\\documentclass{article}\n\\begin{document}\n\\input{sections/intro}\n\\end{document}\n")
+        write(sub / 'intro.tex', "A claim~\\cite{deep2023}.\n")
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"extract input: rc={rc} err={err!r}"
+        data = json.loads(out)
+        assert 'deep2023' in data['by_key'], f"extract input: \\input not followed: {data['by_key']!r}"
+        site = data['sites'][0]
+        assert site['file'].endswith('intro.tex') and site['line'] == 1, \
+            f"extract input: wrong file/line for \\input-ed cite: {site!r}"
+
+
+def test_extract_cites_no_root_exits_2():
+    with tempfile.TemporaryDirectory() as d:
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 2, f"extract no-root: rc={rc} out={out!r}"
+        assert 'no LaTeX root' in err, f"extract no-root: err={err!r}"
+
+
+def test_extract_cites_sentence_split_abbrev_aware():
+    import extract_cites as ec
+    text = 'Smith et al. found gains. The next claim cites other work.'
+    bounds = ec.sentence_boundaries(text)
+    # "et al." must NOT count as a sentence end; the period after "al" is mid-claim.
+    after_al = text.index('al.') + len('al.')
+    assert after_al not in bounds, f"sentence split: abbreviation split at 'al.': bounds={bounds}"
+    # The real boundary is after "gains." (where "The" begins).
+    assert text.index('The') in bounds, f"sentence split: missed real boundary: bounds={bounds}"
+    s = ec.enclosing_sentence(text, text.index('et al'), bounds)
+    assert s == 'Smith et al. found gains.', f"enclosing sentence: {s!r}"
+
+
+def test_extract_cites_claim_excludes_preamble_and_structure():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'main.tex',
+              "\\documentclass{article}\n\\usepackage{natbib}\n\\title{My Paper}\n\\author{Me}\n"
+              "\\begin{document}\n\\maketitle\n\\section{Related Work}\n\\label{sec:related}\n"
+              "Recent advances in deep learning have transformed the field~\\citep{lecun2015}.\n"
+              "\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"claim: rc={rc} err={err!r}"
+        claim = json.loads(out)['sites'][0]['claim']
+        # The first cite of the section must NOT swallow the preamble or heading.
+        assert claim == 'Recent advances in deep learning have transformed the field.', \
+            f"claim leaked preamble/structural markup: {claim!r}"
+
+
+def test_extract_cites_claim_stops_at_paragraph_break():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'main.tex',
+              "\\documentclass{a}\n\\begin{document}\nFirst paragraph ends here.\n\n"
+              "Second paragraph cites work~\\cite{p}.\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"para: rc={rc} err={err!r}"
+        claim = json.loads(out)['sites'][0]['claim']
+        assert claim == 'Second paragraph cites work.', f"claim crossed paragraph break: {claim!r}"
+
+
+def test_extract_cites_multiline_cite():
+    # A \cite whose keys span lines is caught by the joined-text scan (unlike the
+    # line-based find_citation_issues); the line maps to the macro's line.
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'main.tex',
+              "\\documentclass{a}\n\\begin{document}\nText here~\\cite{m1,\n m2}.\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"multiline: rc={rc} err={err!r}"
+        sites = json.loads(out)['sites']
+        assert len(sites) == 1 and sites[0]['keys'] == ['m1', 'm2'], f"multiline: {sites!r}"
+        assert sites[0]['line'] == 3, f"multiline: line should be the macro's line: {sites!r}"
+
+
+def test_extract_cites_addbibresource_and_missing_key_meta():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'main.tex',
+              "\\documentclass{a}\n\\addbibresource{one.bib}\n\\begin{document}\n"
+              "Has meta~\\cite{inbib}. No meta~\\cite{notinbib}.\n\\end{document}\n")
+        write(Path(d) / 'one.bib',
+              "@article{inbib, title={T}, author={A}, journal={J}, year={2020}}\n")
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"addbib: rc={rc} err={err!r}"
+        data = json.loads(out)
+        assert 'inbib' in data['meta'], f"addbib: \\addbibresource not resolved: {data['meta']!r}"
+        assert 'notinbib' not in data['meta'], f"addbib: phantom meta for missing key: {data['meta']!r}"
+        assert 'metadata for 1/2 key(s)' in err, f"addbib: summary: {err!r}"
+
+
+def test_extract_cites_commented_input_skipped():
+    # A commented-out \input must not be followed (ghost.tex does not exist; if it
+    # were followed the file count would differ).
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'main.tex',
+              "\\documentclass{a}\n\\begin{document}\n% \\input{ghost}\nReal claim~\\cite{k}.\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"commented input: rc={rc} err={err!r}"
+        assert 'scanned 1 file(s)' in err, f"commented input: ghost followed: {err!r}"
+        assert 'k' in json.loads(out)['by_key'], "commented input: real cite missing"
+
+
+def test_extract_cites_ambiguous_roots_exits_2():
+    with tempfile.TemporaryDirectory() as d:
+        body = "\\documentclass{a}\n\\begin{document}\nx\n\\end{document}\n"
+        write(Path(d) / 'aa.tex', body)
+        write(Path(d) / 'bb.tex', body)
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 2, f"ambiguous: rc={rc} out={out!r}"
+        assert 'multiple candidate roots' in err, f"ambiguous: err={err!r}"
+
+
+# ---------- insert_grounding.py ----------
+
+INSERT_TEX = (
+    "\\documentclass{article}\n"
+    "\\begin{document}\n"
+    "Claim one~\\cite{alpha}.\n"
+    "Claim two~\\cite{beta}.\n"
+    "\\end{document}\n"
+)
+
+
+def test_insert_grounding_inserts_quote_and_todo_idempotently():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, INSERT_TEX)
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"insert/extract: rc={rc} err={err!r}"
+        extract = Path(d) / 'extract.json'
+        write(extract, out)
+        quotes = Path(d) / 'quotes.json'
+        write(quotes, json.dumps({
+            'alpha': {'quote': 'Alpha reduces defects by half.'},
+            'beta': {'todo': 'paywalled'},
+        }))
+        rc, out, err = run('insert_grounding.py', str(extract), str(quotes))
+        assert rc == 0, f"insert: rc={rc} err={err!r}"
+        body = tex.read_text(encoding='utf-8')
+        assert '% GROUNDING: alpha -- "Alpha reduces defects by half."' in body, \
+            f"insert: quote not inserted: {body!r}"
+        assert '% GROUNDING: beta -- TODO verify -- paywalled' in body, \
+            f"insert: TODO not inserted: {body!r}"
+        # Anti-fabrication: the unretrieved key gets a TODO, never a quote.
+        beta_line = [ln for ln in body.splitlines() if 'GROUNDING: beta' in ln][0]
+        assert '"' not in beta_line, f"insert: beta got a fabricated quote: {beta_line!r}"
+        assert 'inserted 2 grounding comment(s) (1 quote(s), 1 TODO(s))' in err, f"insert: summary: {err!r}"
+        # Re-extract over the now-grounded file and re-insert -> nothing changes.
+        rc, out, err = run('extract_cites.py', d)
+        write(extract, out)
+        rc, out, err = run('insert_grounding.py', str(extract), str(quotes))
+        assert rc == 0, f"insert idem: rc={rc} err={err!r}"
+        assert 'inserted 0 grounding comment(s)' in err, f"insert idem: re-run changed something: {err!r}"
+
+
+def test_insert_grounding_dry_run_does_not_write():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, INSERT_TEX)
+        before = tex.read_text(encoding='utf-8')
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'extract.json'
+        write(extract, out)
+        quotes = Path(d) / 'quotes.json'
+        write(quotes, json.dumps({'alpha': {'quote': 'x'}, 'beta': {'todo': 'source-does-not-support'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(quotes), '--dry-run')
+        assert rc == 0, f"dry: rc={rc} err={err!r}"
+        assert tex.read_text(encoding='utf-8') == before, "dry-run must not modify the file"
+        assert 'would insert 2 grounding comment(s)' in err, f"dry: summary: {err!r}"
+        assert 'GROUNDING: alpha' in out, f"dry: stdout preview missing: {out!r}"
+        # source-does-not-support is surfaced as a likely miscitation.
+        assert 'source-does-not-support' in err, f"dry: reason breakdown missing: {err!r}"
+
+
+def test_insert_grounding_bad_json_exits_2():
+    with tempfile.TemporaryDirectory() as d:
+        extract = Path(d) / 'extract.json'
+        write(extract, '{not valid json')
+        quotes = Path(d) / 'quotes.json'
+        write(quotes, '{}')
+        rc, out, err = run('insert_grounding.py', str(extract), str(quotes))
+        assert rc == 2, f"bad json: rc={rc} err={err!r}"
+        assert 'not valid JSON' in err, f"bad json: err={err!r}"
+
+
+def test_insert_grounding_non_dict_extract_exits_2():
+    # Well-formed JSON of the wrong shape (a list) must exit 2, not crash with 1.
+    with tempfile.TemporaryDirectory() as d:
+        extract = Path(d) / 'e.json'
+        write(extract, '[]')
+        quotes = Path(d) / 'q.json'
+        write(quotes, '{}')
+        rc, out, err = run('insert_grounding.py', str(extract), str(quotes))
+        assert rc == 2, f"non-dict extract: rc={rc} err={err!r}"
+        assert 'not a JSON object' in err, f"non-dict extract: err={err!r}"
+
+
+def test_insert_grounding_blank_quote_becomes_todo():
+    # Anti-fabrication: a whitespace-only (or non-string) quote must not produce
+    # an empty quoted comment; it is routed to a TODO instead.
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, "\\documentclass{article}\n\\begin{document}\nA claim~\\cite{wk}.\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        quotes = Path(d) / 'q.json'
+        write(quotes, json.dumps({'wk': {'quote': '   \t  '}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(quotes))
+        assert rc == 0, f"blank quote: rc={rc} err={err!r}"
+        body = tex.read_text(encoding='utf-8')
+        assert '% GROUNDING: wk -- TODO verify' in body, f"blank quote: not routed to TODO: {body!r}"
+        assert 'wk -- ""' not in body, f"blank quote: emitted an empty quoted comment: {body!r}"
+        assert '0 quote(s), 1 TODO(s)' in err, f"blank quote: miscounted as a quote: {err!r}"
+
+
+def test_insert_grounding_key_match_ignores_quote_body():
+    # grounds_key must look only at the comment header, not the quote body: a key
+    # named inside another key's quote must still be groundable on a later run.
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, "\\documentclass{article}\n\\begin{document}\n"
+                   "Both works agree~\\citep{bar2021, foo2020}.\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        # Ground only bar2021, with a quote that names foo2020.
+        write(Path(d) / 'q1.json', json.dumps({'bar2021': {'quote': 'Following foo2020 we extend it.'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q1.json'))
+        assert rc == 0, f"key-body/1: rc={rc} err={err!r}"
+        # Re-extract, then ground foo2020: it must NOT be treated as already grounded.
+        rc, out, err = run('extract_cites.py', d)
+        write(extract, out)
+        write(Path(d) / 'q2.json', json.dumps({'foo2020': {'quote': 'foo2020 reports a gain.'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q2.json'))
+        assert rc == 0, f"key-body/2: rc={rc} err={err!r}"
+        body = tex.read_text(encoding='utf-8')
+        assert '% GROUNDING: foo2020 -- "foo2020 reports a gain."' in body, \
+            f"key-body: foo2020 wrongly skipped (matched inside bar2021's quote): {body!r}"
+
+
+def test_insert_grounding_preserves_crlf():
+    # A CRLF source must stay CRLF after insertion (minimal diff, no LF rewrite).
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        crlf = ("\\documentclass{article}\r\n\\begin{document}\r\n"
+                "A claim~\\cite{wk}.\r\n\\end{document}\r\n")
+        Path(tex).write_bytes(crlf.encode('utf-8'))
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        quotes = Path(d) / 'q.json'
+        write(quotes, json.dumps({'wk': {'quote': 'Supporting evidence.'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(quotes))
+        assert rc == 0, f"crlf: rc={rc} err={err!r}"
+        raw = Path(tex).read_bytes()
+        assert b'% GROUNDING: wk -- "Supporting evidence."\r\n' in raw, \
+            f"crlf: inserted comment not CRLF-terminated: {raw!r}"
+        # Every newline is part of a CRLF; no bare LF was introduced.
+        assert raw.replace(b'\r\n', b'').count(b'\n') == 0, f"crlf: stray LF introduced: {raw!r}"
+
+
+def test_insert_grounding_cluster_one_comment_per_key_preserves_indent():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, "\\documentclass{a}\n\\begin{document}\n    Indented~\\cite{a, b, c}.\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        write(Path(d) / 'q.json',
+              json.dumps({'a': {'quote': 'qa'}, 'b': {'todo': 'paywalled'}, 'c': {'quote': 'qc'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0, f"cluster: rc={rc} err={err!r}"
+        comments = [ln for ln in tex.read_text(encoding='utf-8').splitlines() if 'GROUNDING:' in ln]
+        assert len(comments) == 3, f"cluster: expected one comment per key: {comments!r}"
+        assert all(ln.startswith('    %') for ln in comments), \
+            f"cluster: indentation not preserved: {comments!r}"
+        for frag in ('a -- "qa"', 'b -- TODO verify -- paywalled', 'c -- "qc"'):
+            assert any(frag in ln for ln in comments), f"cluster: missing {frag}: {comments!r}"
+
+
+def test_insert_grounding_resumable_over_absent_keys():
+    # A key absent from quotes is left untouched (counted as 'no result'), so a
+    # later run fills it — the documented resumability over still-ungrounded sites.
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, "\\documentclass{a}\n\\begin{document}\nClaim~\\cite{r1}.\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        write(Path(d) / 'empty.json', '{}')
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'empty.json'))
+        assert rc == 0 and 'inserted 0' in err and '1 key(s) with no result' in err, f"resume/1: {err!r}"
+        assert 'GROUNDING' not in tex.read_text(encoding='utf-8'), "resume/1: file should be untouched"
+        rc, out, err = run('extract_cites.py', d)
+        write(extract, out)
+        write(Path(d) / 'q.json', json.dumps({'r1': {'quote': 'later'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0 and 'inserted 1' in err, f"resume/2: {err!r}"
+        assert '% GROUNDING: r1 -- "later"' in tex.read_text(encoding='utf-8'), "resume/2: not filled"
+
+
+def test_insert_grounding_preserves_missing_final_newline():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        Path(tex).write_bytes(b"\\documentclass{a}\n\\begin{document}\nClaim~\\cite{k}.\n\\end{document}")
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        write(Path(d) / 'q.json', json.dumps({'k': {'quote': 'q'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0, f"eofnl: rc={rc} err={err!r}"
+        assert not Path(tex).read_bytes().endswith(b'\n'), "eofnl: a trailing newline was added"
+
+
+def test_insert_grounding_same_line_comment_idempotent():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, "\\documentclass{a}\n\\begin{document}\n"
+                   "Claim~\\cite{k}. % GROUNDING: k -- \"x\"\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        write(Path(d) / 'q.json', json.dumps({'k': {'quote': 'new'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0 and 'inserted 0' in err and '1 already grounded' in err, f"same-line: {err!r}"
+        assert tex.read_text(encoding='utf-8').count('GROUNDING:') == 1, "same-line: grounding duplicated"
+
+
+def test_insert_grounding_non_string_quote_becomes_todo():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, "\\documentclass{a}\n\\begin{document}\nClaim~\\cite{k}.\n\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        write(Path(d) / 'q.json', json.dumps({'k': {'quote': ['x', 'y']}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0, f"non-str: rc={rc} err={err!r}"
+        body = tex.read_text(encoding='utf-8')
+        assert '% GROUNDING: k -- TODO verify' in body, f"non-str: not routed to TODO: {body!r}"
+        assert "['x', 'y']" not in body, f"non-str: a repr leaked as a quote: {body!r}"
+
+
 # ---------- runner ----------
 
 TESTS = [
@@ -827,6 +1284,31 @@ TESTS = [
     test_verify_references_subprocess_unchecked_no_network,
     test_verify_references_all_unreadable_exits_2,
     test_verify_references_partial_read_exits_0,
+    test_cite_scan_iter_cite_calls,
+    test_cite_scan_recognizes_plural_forms,
+    test_bib_parse_iter_entries,
+    test_extract_cites_basic,
+    test_extract_cites_follows_input,
+    test_extract_cites_no_root_exits_2,
+    test_extract_cites_sentence_split_abbrev_aware,
+    test_extract_cites_claim_excludes_preamble_and_structure,
+    test_extract_cites_claim_stops_at_paragraph_break,
+    test_extract_cites_multiline_cite,
+    test_extract_cites_addbibresource_and_missing_key_meta,
+    test_extract_cites_commented_input_skipped,
+    test_extract_cites_ambiguous_roots_exits_2,
+    test_insert_grounding_inserts_quote_and_todo_idempotently,
+    test_insert_grounding_dry_run_does_not_write,
+    test_insert_grounding_bad_json_exits_2,
+    test_insert_grounding_non_dict_extract_exits_2,
+    test_insert_grounding_blank_quote_becomes_todo,
+    test_insert_grounding_key_match_ignores_quote_body,
+    test_insert_grounding_preserves_crlf,
+    test_insert_grounding_cluster_one_comment_per_key_preserves_indent,
+    test_insert_grounding_resumable_over_absent_keys,
+    test_insert_grounding_preserves_missing_final_newline,
+    test_insert_grounding_same_line_comment_idempotent,
+    test_insert_grounding_non_string_quote_becomes_todo,
 ]
 
 
