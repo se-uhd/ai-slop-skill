@@ -34,10 +34,12 @@ Notes:
     flagged. Sanity-check flagged entries.
   - Assumes BibTeX keys contain no tabs (true in practice).
 """
-import errno
-import re
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bib_parse import find_entry_blocks, parse_entry, SKIP_TYPES  # noqa: E402
+from scan_io import report_unreadable  # noqa: E402
 
 # Required-fields table from Patashnik's btxdoc (the canonical BibTeX manual):
 # https://mirrors.ctan.org/biblio/bibtex/base/btxdoc.tex
@@ -60,89 +62,9 @@ REQUIRED = {
     'unpublished':   ['author', 'title', 'note'],
 }
 
-SKIP_TYPES = {'string', 'preamble', 'comment'}
-
-ENTRY_HEAD = re.compile(r'@(\w+)\s*\{', re.IGNORECASE)
-FIELD_NAME = re.compile(r'(\w+)\s*=', re.IGNORECASE)
-
-
-def find_entry_blocks(text):
-    """Yield (etype, body) for each @TYPE{...} entry, using brace counting
-    so entries with closing `}` on the same line as the last field, or
-    nested braces inside field values, are bounded correctly."""
-    pos = 0
-    while pos < len(text):
-        m = ENTRY_HEAD.search(text, pos)
-        if not m:
-            return
-        etype = m.group(1).lower()
-        body_start = m.end()
-        depth = 1
-        i = body_start
-        while i < len(text) and depth > 0:
-            c = text[i]
-            if c == '{':
-                depth += 1
-            elif c == '}':
-                depth -= 1
-            i += 1
-        if depth != 0:
-            raise ValueError(f"unbalanced braces in @{etype} starting at offset {m.start()}")
-        yield etype, text[body_start:i - 1]
-        pos = i
-
-
-def parse_entry(body):
-    """Return (key, set_of_lowercase_field_names) for one entry body.
-
-    The first top-level comma terminates the key. Field names are detected
-    as 'name =' tokens at brace depth 0 outside quoted strings.
-    """
-    depth = 0
-    key_end = None
-    for i, c in enumerate(body):
-        if c == '{':
-            depth += 1
-        elif c == '}':
-            depth -= 1
-        elif c == ',' and depth == 0:
-            key_end = i
-            break
-    if key_end is None:
-        return body.strip(), set()
-    key = body[:key_end].strip()
-    rest = body[key_end + 1:]
-
-    fields = set()
-    depth = 0
-    i = 0
-    n = len(rest)
-    while i < n:
-        c = rest[i]
-        if c == '{':
-            depth += 1
-            i += 1
-        elif c == '}':
-            depth -= 1
-            i += 1
-        elif c == '"' and depth == 0:
-            i += 1
-            while i < n and rest[i] != '"':
-                if rest[i] == '\\' and i + 1 < n:
-                    i += 2
-                else:
-                    i += 1
-            i += 1
-        elif depth == 0 and (c.isalpha() or c == '_'):
-            m = FIELD_NAME.match(rest, i)
-            if m:
-                fields.add(m.group(1).lower())
-                i = m.end()
-            else:
-                i += 1
-        else:
-            i += 1
-    return key, fields
+# Entry splitting (find_entry_blocks), the field-name parser (parse_entry), and
+# SKIP_TYPES live in bib_parse.py, shared with verify_references.py and
+# extract_cites.py.
 
 
 def missing_fields(etype, fields):
@@ -158,24 +80,6 @@ def missing_fields(etype, fields):
         if 'chapter' not in fields and 'pages' not in fields:
             missing.add('chapter')
     return sorted(missing)
-
-
-def report_unreadable(path, err):
-    """Print a friendly stderr warning for an unreadable path. Truncates the
-    path so a runaway argument cannot flood the terminal, and adds a hint when
-    the argument looks like several paths collapsed into one (the classic
-    unquoted-variable-in-zsh mistake)."""
-    shown = str(path)
-    if len(shown) > 80:
-        shown = shown[:77] + '...'
-    print(f"warning: cannot read {shown!r}: {err.strerror or err}", file=sys.stderr)
-    if getattr(err, 'errno', None) == errno.ENAMETOOLONG or '\n' in str(path):
-        print(
-            "  hint: this argument looks like several paths joined into one. "
-            "Pass each file as a separate argument (in zsh, unquoted variables "
-            "are not split on spaces; use an array or xargs).",
-            file=sys.stderr,
-        )
 
 
 def check_file(path, stats):

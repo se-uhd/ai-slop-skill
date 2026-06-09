@@ -35,18 +35,19 @@ No other runtime dependencies. The reference check (`verify_references.py`) is t
 /plugin install ai-slop
 ```
 
-Four slash commands become available:
+Five slash commands become available:
 
 ```text
 /ai-slop:review
 /ai-slop:review-diff
 /ai-slop:revise
+/ai-slop:ground
 /ai-slop:init
 ```
 
 `review`, `review-diff`, and `init` detect LaTeX source automatically and load all three rule layers for it; any other input loads the general layer. Add `--scientific` to also apply the research article rules to a non-LaTeX manuscript (a Markdown or PDF paper).
 
-Run them from your project directory. `/ai-slop:review` finds the document to review in the current directory (a LaTeX root, a PDF, or a text file), walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the source; the same report schema is used for both review modes. `/ai-slop:init` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and wires it into the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so collaborators and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "set up writing rules in this repo").
+Run them from your project directory. `/ai-slop:review` finds the document to review in the current directory (a LaTeX root, a PDF, or a text file), walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the source; the same report schema is used for both review modes. `/ai-slop:ground` closes the loop the review opens for LaTeX papers: review *finds* the `\cite{}` calls missing a `% GROUNDING:` comment, ground *fills* them by fetching each cited source and inserting a retrieved verbatim quote (or a `TODO verify -- <reason>` stub when the source cannot be retrieved). `/ai-slop:init` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and wires it into the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so collaborators and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "ground the citations", "set up writing rules in this repo").
 
 To pick up a new release, refresh the marketplace catalog and reload plugins:
 
@@ -61,7 +62,7 @@ To skip the manual refresh, enable auto-update for the marketplace: run `/plugin
 
 ## Use in other Agent Skills clients
 
-The skills are laid out per the [Agent Skills specification](https://agentskills.io/specification): each `SKILL.md` is self-contained and ships under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/revise/`, and `plugins/ai-slop/skills/init/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To consume the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
+The skills are laid out per the [Agent Skills specification](https://agentskills.io/specification): each `SKILL.md` is self-contained and ships under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/revise/`, `plugins/ai-slop/skills/ground/`, and `plugins/ai-slop/skills/init/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To consume the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
 
 ## Use as a system prompt
 
@@ -103,6 +104,16 @@ Given a previously generated report and the document's source, the revise skill:
 
 Revise mode does not regenerate the report and does not commit. The user runs `git diff` to inspect and `git commit` to keep the changes.
 
+### `/ai-slop:ground`
+
+Ground mode closes the loop the review opens, for LaTeX papers. Review *finds* the `\cite{}` calls missing a `% GROUNDING:` comment; ground *fills* them. Given a LaTeX root, the ground skill:
+
+1. **Extracts the citations** with `scripts/extract_cites.py`, which resolves the root, follows `\input` / `\include`, and emits, per cited key, the claims the surrounding sentences attribute to it and the BibTeX metadata (title, author, year, DOI, URL) needed to find the source.
+2. **Fetches each source** with one agent per cited key, chunked into small slices to stay under rate limits. Each agent retrieves the source (online, or a user-supplied local file for a paywalled article or book) and copies a short verbatim quote that supports the claim.
+3. **Writes the comments back** with `scripts/insert_grounding.py`, inserting `% GROUNDING: <key> -- "<quote>"` after each ungrounded cite (idempotently, matching indentation).
+
+The anti-fabrication rule is mandatory: a quote is written only when the source was actually retrieved. Otherwise the comment is `% GROUNDING: <key> -- TODO verify -- <reason>` (`paywalled`, `abstract-only`, `book`, `not-found`, or `source-does-not-support`), never a quote from memory. A `source-does-not-support` result is surfaced as a finding, not a gap: it flags a likely miscitation. Ground mode is LaTeX-only and does not commit; the user inspects the edits with `git diff`.
+
 ### `/ai-slop:init`
 
 The init skill is a one-shot setup command for new (or existing) project repositories. It builds a project-local `WRITING.md` by concatenating the bundled writing rules (the layers selected automatically — all three for a LaTeX project, the general layer otherwise, or general + scientific with `--scientific`) with the AI-trope catalog (fetched live from the upstream Gist, with the tropes.fyi viewer and the bundled `shared/tropes-snapshot.md` as fallbacks), then either creates a `CLAUDE.md` that references the file or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions and the trope catalog through the standard mechanism, even when this plugin is not installed and even offline.
@@ -111,7 +122,7 @@ The init skill is a one-shot setup command for new (or existing) project reposit
 
 ## Repository layout
 
-The plugin lives under `plugins/ai-slop/`: `commands/` holds the four slash commands, `skills/` the four `SKILL.md` workflows (review, review-diff, revise, init), `shared/` the three rule layers plus the rationale doc and the bundled trope snapshot, and `scripts/` the stdlib Python helpers — scope and LaTeX root detection, the trope fetch chain, citation, BibTeX, and reference checks, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
+The plugin lives under `plugins/ai-slop/`: `commands/` holds the five slash commands, `skills/` the five `SKILL.md` workflows (review, review-diff, revise, ground, init), `shared/` the three rule layers plus the rationale doc and the bundled trope snapshot, and `scripts/` the stdlib Python helpers — scope and LaTeX root detection, the trope fetch chain, citation, BibTeX, and reference checks, citation extraction and grounding-comment insertion, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
 
 ## Maintainer notes
 

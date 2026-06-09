@@ -33,7 +33,7 @@ Legitimate words that AI overuses. Each use should be intentional. If a simpler 
 | underscore | emphasize, highlight, stress | n/a |
 | harness | use, apply, employ | n/a |
 | encompass | include, cover, span | n/a |
-| navigate | handle, manage, deal with | n/a |
+| navigate | handle, manage, deal with | Only for literal movement through a UI, website, menu, or file tree (e.g., "navigate the codebook"); never as a metaphor for handling difficulty ("navigate the challenges") |
 | landscape | field, area, environment, situation | n/a |
 | nuanced | detailed, subtle, qualified | n/a |
 | multifaceted | complex, varied, many-sided | n/a |
@@ -44,6 +44,12 @@ Legitimate words that AI overuses. Each use should be intentional. If a simpler 
 **Standard vocabulary (novel, robust, comprehensive, insights, mitigate, enhance, innovative, paradigm, framework, stakeholder, fundamentally, inherently)** is not restricted. Do not overuse it; if a simpler word works equally well, prefer it.
 
 **Transition words (moreover, furthermore, notably, conversely, crucially, etc.)** are also standard and not restricted. Do not overuse them. If more than two appear in a single paragraph, check whether any can be dropped without losing logical flow.
+
+## Phrases to Avoid
+
+Stock formulations that read as AI filler or stilted register. Replace each with the plain alternative. The trope catalog (fetched separately) covers the broader banned-phrase list; this section holds project-specific additions.
+
+- **"worked example(s)"** → "example(s)". The qualifier "worked" rarely adds information and reads as padded pedagogical register. Keep it only in the narrow technical sense of a fully solved problem walked through step by step (a textbook "worked solution"), where the contrast with an unsolved exercise is the point.
 
 ## Terminology Consistency
 
