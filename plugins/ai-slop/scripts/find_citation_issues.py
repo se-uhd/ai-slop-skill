@@ -12,8 +12,11 @@ Issues:
                        flags the existence of the cluster. Judging whether
                        the surrounding prose explains each work is left to
                        the caller.
-  - missing-grounding: a \\cite-style call with no `% GROUNDING:` comment on
-                       the same line or on the next non-blank line.
+  - missing-grounding: a \\cite-style call with no grounding comment on the same
+                       line or on the next non-blank line. A grounding comment
+                       leads with the GROUNDING marker in any key-placement form
+                       (`% GROUNDING: "..."`, `% GROUNDING: <key> -- "..."`, or
+                       `% GROUNDING <key>: "..."`); see cite_scan.py.
 
 Recognized commands (cluster + grounding checks apply):
   - natbib:   \\cite, \\citep, \\citet, \\citealp, \\citealt, \\citetext.
@@ -69,7 +72,8 @@ Known limitations:
     undercounts keys.
   - "Nearby grounding" is defined as same line or the next non-blank line.
     A grounding comment placed two or more blank-separated lines after the
-    cite is not credited.
+    cite is not credited. The marker is matched in any key-placement form
+    (`% GROUNDING:`, `% GROUNDING: <key>`, or `% GROUNDING <key>:`).
 """
 import sys
 from pathlib import Path

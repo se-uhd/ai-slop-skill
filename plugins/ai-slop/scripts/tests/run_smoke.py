@@ -307,6 +307,33 @@ def test_find_citation_issues_no_findings():
             f"clean cite: stderr summary missing or wrong: {err!r}"
 
 
+def test_find_citation_issues_per_key_grounding_not_flagged():
+    """The per-key `% GROUNDING <key>: "..."` convention (key before the colon,
+    incl. DBLP keys with internal colons) must count as grounded, on the same
+    line and the next line — not reported as missing-grounding."""
+    fixture = (
+        'Same-line per-key~\\cite{alpha}. % GROUNDING alpha: "alpha says yes"\n'
+        '\n'
+        'Next-line per-key~\\cite{beta}.\n'
+        '% GROUNDING beta: "beta says foo"\n'
+        '\n'
+        'DBLP-style key~\\cite{DBLP:conf/icse/BanoGH25}.\n'
+        '% GROUNDING DBLP:conf/icse/BanoGH25: "internal colons in the key"\n'
+        '\n'
+        'Multi-key sentence~\\cite{one, two}.\n'
+        '% GROUNDING one: "one says a"\n'
+        '% GROUNDING two: "two says b"\n'
+    )
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'paper.tex'
+        write(tex, fixture)
+        rc, out, err = run('find_citation_issues.py', str(tex))
+        assert rc == 0, f"per-key grounding: rc={rc} err={err!r}"
+        missing = [l for l in out.strip().split('\n') if '\tmissing-grounding\t' in l]
+        assert missing == [], f"per-key grounding falsely flagged missing: {missing!r}"
+        assert '0 missing-grounding' in err, f"per-key grounding: stderr summary: {err!r}"
+
+
 def test_find_citation_issues_optional_args():
     """\\cite[opt]{key} and \\citep[see, e.g.,][p.~3]{a, b, c} parse correctly."""
     with tempfile.TemporaryDirectory() as d:
@@ -805,6 +832,45 @@ def test_cite_scan_recognizes_plural_forms():
     assert not ({'bb', 'dd', 'gg'} & set(keys)), f"plural second group should be undercounted: {keys!r}"
 
 
+def test_cite_scan_recognizes_grounding_comment_forms():
+    import cite_scan
+    grounded = [
+        '% GROUNDING: "marker then quote"',
+        '% GROUNDING: smith2020 -- "the form insert_grounding writes"',
+        '% GROUNDING smith2020: "key before the colon"',
+        '% GROUNDING DBLP:conf/icse/BanoGH25: "key with internal colons"',
+        '%% GROUNDING foo: "double-percent still counts"',
+    ]
+    for c in grounded:
+        assert cite_scan.is_grounding_comment(c), f"should be grounding: {c!r}"
+    not_grounded = [
+        '',
+        '% a prose comment that merely mentions grounding the claim',
+        '% TODO: add a grounding quote here',
+        '% GROUNDINGS are plural and not the marker',
+    ]
+    for c in not_grounded:
+        assert not cite_scan.is_grounding_comment(c), f"should NOT be grounding: {c!r}"
+    # has_grounding credits the per-key form on the same line and the next line.
+    assert cite_scan.has_grounding(
+        ['A~\\cite{k}. % GROUNDING k: "x"'], 0, '% GROUNDING k: "x"'), "per-key same-line not credited"
+    assert cite_scan.has_grounding(
+        ['A~\\cite{k}.', '% GROUNDING k: "x"'], 0, ''), "per-key next-line not credited"
+
+
+def test_insert_grounding_grounds_key_recognizes_per_key_form():
+    import insert_grounding as ig
+    # Form this script writes (key after the colon).
+    assert ig.grounds_key('% GROUNDING: alpha -- "q"', 'alpha')
+    # Per-key form (key before the colon), incl. a DBLP key with internal colons.
+    assert ig.grounds_key('% GROUNDING alpha: "q"', 'alpha')
+    assert ig.grounds_key('% GROUNDING DBLP:conf/icse/BanoGH25: "q"', 'DBLP:conf/icse/BanoGH25')
+    # A key named only inside the quote body does not count as grounding it.
+    assert not ig.grounds_key('% GROUNDING alpha: "beta also matters"', 'beta')
+    # A non-grounding comment never grounds anything.
+    assert not ig.grounds_key('% just a note about alpha', 'alpha')
+
+
 def test_bib_parse_iter_entries():
     import bib_parse
     text = ('@string{ J = "Journal" }\n'
@@ -1246,6 +1312,7 @@ TESTS = [
     test_check_bib_fields_partial_read_exits_0,
     test_find_citation_issues_basic,
     test_find_citation_issues_no_findings,
+    test_find_citation_issues_per_key_grounding_not_flagged,
     test_find_citation_issues_optional_args,
     test_find_citation_issues_truncate_respects_120_chars,
     test_find_citation_issues_all_unreadable_exits_2,
@@ -1286,6 +1353,8 @@ TESTS = [
     test_verify_references_partial_read_exits_0,
     test_cite_scan_iter_cite_calls,
     test_cite_scan_recognizes_plural_forms,
+    test_cite_scan_recognizes_grounding_comment_forms,
+    test_insert_grounding_grounds_key_recognizes_per_key_form,
     test_bib_parse_iter_entries,
     test_extract_cites_basic,
     test_extract_cites_follows_input,
