@@ -122,6 +122,14 @@ cannot tell a well-placed dash from a lazy one.
   only where they do genuine consolidating work.
 - **Rule-of-three defaults.** AI text groups items in threes by habit; the rule
   forces the count to match the actual number of items.
+- **No list-cramming in a single sentence.** AI text maximizes information per
+  sentence, flattening what should be several sentences into one colon- or
+  dash-led chain of semicolon-joined clauses. The pile-up reads as machine prose
+  and hurts the reader; splitting restores burstiness and lets each claim carry
+  its own citation cleanly. It also resolves the capitalization-after-a-colon
+  edge case, where a colon introducing a series of independent clauses falls
+  between the capitalize-a-sentence and lowercase-a-list halves of that rule:
+  once the clauses are separate sentences, the question does not arise.
 - **One-sentence paragraphs.** AI text breaks prose into one-sentence paragraphs
   for manufactured emphasis. They are kept only where a single sentence does
   structural work (opening a section, introducing a list or figure, marking a
