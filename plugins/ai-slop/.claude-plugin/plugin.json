@@ -1,6 +1,6 @@
 {
   "name": "ai-slop",
-  "version": "2026-06_rev2",
+  "version": "2026-06_rev3",
   "description": "Catches AI slop in any prose and adds a scientific layer for empirical software engineering papers (voice and tense, statistical reporting per APA/IEEE/ACM, citations) and a LaTeX layer (BibTeX verification, reference checks against CrossRef/DBLP, citation macros, grounding comments) when you target a manuscript or .tex paper. Combines these with the community-maintained AI-trope catalog at tropes.fyi.",
   "homepage": "https://github.com/se-uhd/ai-slop-skill",
   "repository": "https://github.com/se-uhd/ai-slop-skill",

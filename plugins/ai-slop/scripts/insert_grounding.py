@@ -53,7 +53,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cite_scan import CITE_PATTERN, parse_keys, split_code_and_comment  # noqa: E402
+from cite_scan import (  # noqa: E402
+    CITE_PATTERN, is_grounding_comment, parse_keys, split_code_and_comment,
+)
 
 # Characters that may appear inside a BibTeX key; used to bound the key when
 # testing whether a comment already grounds it (so "smith2020" does not match
@@ -88,13 +90,17 @@ def comment_for(key, result):
 
 
 def grounds_key(text, key):
-    """True if `text` is a GROUNDING comment whose key field names `key`. Only
-    the header (before the first ` -- ` that precedes the quote or TODO) is
-    examined, so a key that appears inside a quote body does not count as already
-    grounding that key — preserving resumability over still-ungrounded keys."""
-    if 'GROUNDING:' not in text:
+    """True if `text` is a GROUNDING comment whose key field names `key`.
+    Recognizes both `% GROUNDING: <key> -- "<quote>"` (the form this script
+    writes) and `% GROUNDING <key>: "<quote>"` (the per-key form authors use when
+    one sentence cites several keys, each grounded on its own line). Only the
+    header (before the quote, the ` -- ` TODO separator, and a trailing
+    key/quote-delimiter colon) is examined, so a key appearing inside a quote
+    body does not count as already grounding that key — preserving resumability
+    over still-ungrounded keys."""
+    if not is_grounding_comment(text):
         return False
-    header = text.split(' -- ', 1)[0]
+    header = text.split(' -- ', 1)[0].split('"', 1)[0].rstrip().rstrip(':')
     return re.search(rf'(?<![{KEYCHARS}]){re.escape(key)}(?![{KEYCHARS}])', header) is not None
 
 
