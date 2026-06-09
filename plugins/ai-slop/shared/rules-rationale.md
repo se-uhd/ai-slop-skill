@@ -56,6 +56,8 @@ statistical meaning. Used as a generic intensifier it creates ambiguity about
 whether a statistical test was actually run, so it is reserved for reporting
 statistical results.
 
+"Navigate" is restricted only in its metaphorical sense (navigating complexity, challenges, or a landscape), the pattern that reads as AI prose. Its literal sense, moving through a UI, website, menu, or file tree, is precise and not flagged. "Worked example" sits in the phrases-to-avoid list because the "worked" qualifier is usually empty padding that "example" already carries, with the lone exception of a fully solved problem presented step by step.
+
 ## Terminology consistency
 
 What reads as elegant variation in literary writing creates ambiguity in

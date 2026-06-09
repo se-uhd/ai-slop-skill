@@ -38,7 +38,6 @@ Future (not yet wired): an optional local DBLP dump ($AI_SLOP_DBLP) for offline
 and faster bulk checks; richer venue-abbreviation matching.
 """
 import argparse
-import errno
 import json
 import re
 import sys
@@ -47,92 +46,27 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-# Reuse the brace-counting entry splitter from the sibling field checker.
+# Shared BibTeX parsing + the unreadable-path warning live in sibling modules.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from check_bib_fields import find_entry_blocks  # noqa: E402
+from bib_parse import iter_entries  # noqa: E402
+from scan_io import report_unreadable  # noqa: E402
 
 USER_AGENT = "ai-slop-verify-references/1.0 (+https://github.com/se-uhd/ai-slop-skill)"
 TIMEOUT = 10
 MAX_LOOKUPS = 200  # bound network calls per run; excess entries report `unchecked`
-SKIP_TYPES = {'string', 'preamble', 'comment'}
 
 
 class NetworkError(Exception):
     """A lookup could not complete because the network was unreachable."""
 
 
-# ---------- BibTeX value parsing ----------
-
-_FIELD_RE = re.compile(r'(\w+)\s*=\s*', re.IGNORECASE)
-
-
-def _clean(raw):
-    raw = raw.strip().rstrip(',').strip()
-    if len(raw) >= 2 and ((raw[0] == '{' and raw[-1] == '}') or (raw[0] == '"' and raw[-1] == '"')):
-        raw = raw[1:-1]
-    return re.sub(r'\s+', ' ', raw.replace('{', '').replace('}', '')).strip()
-
-
-def parse_entry_values(body):
-    """Return (key, {field: value}) for one entry body. The first top-level
-    comma ends the key; field values may be brace-, quote-, or bare-delimited."""
-    depth = 0
-    key_end = None
-    for i, c in enumerate(body):
-        if c == '{':
-            depth += 1
-        elif c == '}':
-            depth -= 1
-        elif c == ',' and depth == 0:
-            key_end = i
-            break
-    if key_end is None:
-        return body.strip(), {}
-    key = body[:key_end].strip()
-    rest = body[key_end + 1:]
-    fields = {}
-    i, n = 0, len(rest)
-    while i < n:
-        m = _FIELD_RE.match(rest, i)
-        if not m:
-            i += 1
-            continue
-        name = m.group(1).lower()
-        j = m.end()
-        if j < n and rest[j] == '{':
-            depth, k = 0, j
-            while k < n:
-                if rest[k] == '{':
-                    depth += 1
-                elif rest[k] == '}':
-                    depth -= 1
-                    if depth == 0:
-                        k += 1
-                        break
-                k += 1
-            value = rest[j:k]
-        elif j < n and rest[j] == '"':
-            k = j + 1
-            while k < n and rest[k] != '"':
-                k += 1
-            k += 1
-            value = rest[j:k]
-        else:
-            k = j
-            while k < n and rest[k] != ',':
-                k += 1
-            value = rest[j:k]
-        fields[name] = _clean(value)
-        i = k
-    return key, fields
+# ---------- BibTeX entry projection ----------
 
 
 def bib_entries(text):
-    """Yield a normalized dict per entry: key, type, doi, title, year, venue."""
-    for etype, body in find_entry_blocks(text):
-        if etype in SKIP_TYPES:
-            continue
-        key, f = parse_entry_values(body)
+    """Yield a normalized dict per entry: key, type, doi, title, year, venue.
+    The brace-counting splitter and field-value parser live in bib_parse.py."""
+    for key, etype, f in iter_entries(text):
         yield {
             'key': key,
             'type': etype,
@@ -289,24 +223,6 @@ def _cache_key(entry):
     if doi:
         return ('doi', doi)
     return ('title', ' '.join(_tokens(entry.get('title', ''))))
-
-
-def report_unreadable(path, err):
-    """Print a friendly stderr warning for an unreadable path. Truncates the
-    path so a runaway argument cannot flood the terminal, and adds a hint when
-    the argument looks like several paths collapsed into one (the classic
-    unquoted-variable-in-zsh mistake)."""
-    shown = str(path)
-    if len(shown) > 80:
-        shown = shown[:77] + '...'
-    print(f"warning: cannot read {shown!r}: {err.strerror or err}", file=sys.stderr)
-    if getattr(err, 'errno', None) == errno.ENAMETOOLONG or '\n' in str(path):
-        print(
-            "  hint: this argument looks like several paths joined into one. "
-            "Pass each file as a separate argument (in zsh, unquoted variables "
-            "are not split on spaces; use an array or xargs).",
-            file=sys.stderr,
-        )
 
 
 def main(argv):
