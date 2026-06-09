@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
 r"""cite_scan.py — shared LaTeX citation-scanning primitives.
 
-find_citation_issues.py (flags clusters and missing `% GROUNDING:` comments) and
+find_citation_issues.py (flags clusters and missing grounding comments) and
 extract_cites.py (gathers per-source claims for grounding) scan the same
 \cite-family macros. The regex, the command-classification sets, and the
 comment/key/grounding helpers live here so the two tools agree on what counts as
 a citation and neither re-implements the parsing.
+
+Grounding-comment forms recognized by has_grounding / is_grounding_comment:
+  - `% GROUNDING: "<quote>"`            marker then quote
+  - `% GROUNDING: <key> -- "<quote>"`   the form insert_grounding.py writes
+  - `% GROUNDING <key>: "<quote>"`      the key named before the colon, common
+                                        when one sentence cites several keys and
+                                        each is grounded on its own comment line
+A grounding comment is any `%` comment whose first word is the GROUNDING marker;
+the key placement and the colon position do not matter.
 
 Recognized commands:
   - natbib:   \cite, \citep, \citet, \citealp, \citealt, \citetext.
@@ -54,6 +63,22 @@ IGNORED_COMMANDS = {'nocite'}
 CITATION_COMMANDS = GROUNDED_COMMANDS | SKIPPED_COMMANDS
 
 
+# A grounding comment leads with the GROUNDING marker. The key (if named) may
+# sit either after the colon (`% GROUNDING: <key> -- ...`) or before it
+# (`% GROUNDING <key>: ...`); detection only needs the leading marker word, so
+# neither the colon position nor the presence of a key matters here. Anchored at
+# the start of the comment (after the `%`), so a stray lowercase "grounding"
+# mention inside a prose comment is not mistaken for the marker.
+GROUNDING_MARKER = re.compile(r'%+\s*GROUNDING\b')
+
+
+def is_grounding_comment(comment):
+    """True if `comment` (a string beginning with `%`) leads with the GROUNDING
+    marker, in any of the recognized key-placement forms (see module docstring).
+    An empty string or a non-grounding comment returns False."""
+    return GROUNDING_MARKER.match(comment.lstrip()) is not None
+
+
 def split_code_and_comment(line):
     """Return (code, comment) splitting at the first unescaped `%`."""
     i = 0
@@ -74,10 +99,10 @@ def parse_keys(key_blob):
 
 
 def has_grounding(lines, idx, same_line_comment):
-    """Return True if `% GROUNDING:` appears on the cite's same-line comment
-    portion or on the next non-blank line (which must itself be a comment
-    line)."""
-    if 'GROUNDING:' in same_line_comment:
+    """Return True if a grounding comment (any form recognized by
+    is_grounding_comment) appears on the cite's same-line comment portion or on
+    the next non-blank line (which must itself be a comment line)."""
+    if is_grounding_comment(same_line_comment):
         return True
     j = idx + 1
     while j < len(lines):
@@ -85,7 +110,7 @@ def has_grounding(lines, idx, same_line_comment):
         if not stripped:
             j += 1
             continue
-        if stripped.startswith('%') and 'GROUNDING:' in stripped:
+        if stripped.startswith('%') and is_grounding_comment(stripped):
             return True
         return False
     return False

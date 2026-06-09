@@ -8,7 +8,7 @@ directory is resolved to its LaTeX root the same way find_latex_root.py does.
 The root and every file it pulls in with `\input` / `\include` are scanned.
 
 This opens the loop that find_citation_issues.py reports: that script lists the
-`\cite` calls missing a `% GROUNDING:` comment; this script collects what each
+`\cite` calls missing a grounding comment; this script collects what each
 of them needs grounded (the enclosing claim) and the source identity needed to
 find a supporting quote (title / author / year / DOI / URL / eprint). A
 grounding workflow then fetches each source once and returns a verbatim quote
@@ -33,7 +33,8 @@ Output: one JSON object on stdout —
 (\cite, \citep, \citet, \parencite, ...); style-only helpers (\citeauthor,
 \citeyear) are recorded with groundable=False so their claims enrich `by_key`
 without becoming insertion targets. `grounded` is True when the site already has
-a `% GROUNDING:` comment. A one-line summary is printed to stderr.
+a grounding comment (any form recognized by cite_scan.is_grounding_comment). A
+one-line summary is printed to stderr.
 
 Exit codes:
   0  at least one source file was scanned.

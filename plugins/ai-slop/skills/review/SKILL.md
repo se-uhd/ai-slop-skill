@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes — and, for research papers, statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev2"
+  version: "2026-06_rev3"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -34,7 +34,7 @@ The skill auto-detects the paper in the current working directory. No path argum
 - LaTeX source (`.tex`): read the root and follow `\input{}` / `\include{}` for files inside the project tree. A flattened `.tex` works the same way.
 - PDF (`.pdf`): extract text using whatever tool is available in the environment (`pdftotext`, `mutool draw -F txt`, or a Python library). If no extractor is available, tell the user which one to install rather than failing silently.
 
-When both LaTeX source and PDF are available for the same paper, prefer the LaTeX source. It exposes LaTeX-specific artifacts (e.g., commented-out disclosures, `\todo{}` notes, missing `% GROUNDING:` comments, spelled-out author names that should use `\citeauthor{}`) that get lost in the PDF.
+When both LaTeX source and PDF are available for the same paper, prefer the LaTeX source. It exposes LaTeX-specific artifacts (e.g., commented-out disclosures, `\todo{}` notes, missing grounding comments, spelled-out author names that should use `\citeauthor{}`) that get lost in the PDF.
 
 **Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning. A path to a plain-text file (`.md`, `.txt`, or similar) is also accepted and reviewed with the general layer (add `--scientific` to include the research-article rules; see step 2), so the skill works on prose that is not a LaTeX or PDF paper.
 
@@ -78,13 +78,13 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    These counts are secondary signals, not the findings. A page can sit within every target above and still contain an individual mark that is the wrong choice. When a specific em-dash, colon, or semicolon should be a different mark, record it as a per-section finding under step 4 (with the corrected punctuation as the suggested revision), regardless of the per-page count. The most common case is a semicolon joining two independent clauses that a period would separate, especially when the second clause opens with we, it, this, they, or these. An em-dash standing in for a period, and a colon used as a generic mid-sentence pause, are promoted the same way.
 
 6. **Citations and BibTeX (LaTeX only).** Scan for:
-   - Citation clusters with three or more keys, and `\cite{}` calls without a nearby `% GROUNDING: "..."` comment. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_citation_issues.py <root.tex> [<input1.tex> ...]` over the LaTeX root and any `\input`-ed files. Each stdout line is `<file>:<line>\t<issue>\t<keys>\t<context>` where `<issue>` is `cluster` or `missing-grounding`. The script prints a stderr summary (e.g. `considered 41 cite call(s) across 1 file(s); 1 cluster(s), 41 missing-grounding`). Use it to confirm the run completed. Known limitations of the scan:
+   - Citation clusters with three or more keys, and `\cite{}` calls without a nearby grounding comment. A grounding comment leads with the `% GROUNDING` marker; both `% GROUNDING: "..."` (and `% GROUNDING: <key> -- "..."`) and the per-key `% GROUNDING <key>: "..."` form are recognized, so a paper that names the key before the colon is not falsely reported as ungrounded. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_citation_issues.py <root.tex> [<input1.tex> ...]` over the LaTeX root and any `\input`-ed files. Each stdout line is `<file>:<line>\t<issue>\t<keys>\t<context>` where `<issue>` is `cluster` or `missing-grounding`. The script prints a stderr summary (e.g. `considered 41 cite call(s) across 1 file(s); 1 cluster(s), 41 missing-grounding`). Use it to confirm the run completed. Known limitations of the scan:
      - The script does not follow `\input` / `\include`. Pass the file list explicitly.
      - Multi-line `\cite{}` calls (where `}` is on a different line from `\cite{`) are skipped.
      - Biblatex multi-cite forms (`\textcites`, `\autocites`, `\fullcites`) read only the first key group.
      - "Nearby grounding" means same line or the next non-blank line. A comment placed two or more blank-separated lines after the cite is not credited.
    - For each cluster, only flag it as a finding if the surrounding prose does not explain what each cited work contributes. A cluster followed by sentences that distinguish each work is fine.
-   - For missing-grounding, always surface the result as a **Grounding to-do** list in the report: every `\cite{}` lacking a `% GROUNDING:` comment, by `file:line` and key. This list is always emitted, not a project-internal decision. To fill these comments — fetch each cited source and insert a retrieved supporting quote — point the user to `/ai-slop:ground`.
+   - For missing-grounding, always surface the result as a **Grounding to-do** list in the report: every `\cite{}` lacking a grounding comment, by `file:line` and key. This list is always emitted, not a project-internal decision. (A paper may use the per-key `% GROUNDING <key>: "..."` convention; the script credits it, so do not re-report those cites as ungrounded.) To fill genuinely missing comments — fetch each cited source and insert a retrieved supporting quote — point the user to `/ai-slop:ground`.
    - Spelled-out author names that should use `\citeauthor{}`. The script does not check this. Scan manually.
    - `.bib` entries with missing required fields. To find the bib files, grep the LaTeX root (and any `\input`-ed files) for `\bibliography{...}` and `\addbibresource{...}` directives and resolve each path. If at least one is found, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfile1> <bibfile2> ...` and report each printed entry as a finding. The script uses standard BibTeX required-field semantics (Patashnik's `btxdoc`) and does not honor `crossref` inheritance, so sanity-check flagged entries before reporting them, and skip the check entirely if no bib files are referenced. The script always prints a one-line summary to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field issue(s)`). Use it to confirm the run completed.
    - Hallucinated or mismatched references. After the field check, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/verify_references.py <bibfile1> [<bibfile2> ...] [--mailto you@example.org]` over the same `.bib` files. It looks each entry up in CrossRef (by DOI, then title) and DBLP (by title) and prints one tab-separated line per entry that is not cleanly verified: `<key>\t<verdict>\t<detail>`, where `<verdict>` is `doi-not-found`, `title-mismatch`, `year-mismatch`, `venue-mismatch`, `not-found`, `unchecked-offline`, or `unchecked`. Report these under **Reference verification**. This check is advisory and online-first: with no network every entry returns `unchecked-offline` and the run still exits 0. Never assert a reference is fabricated from eyeballing — treat `doi-not-found` and `not-found` as likely-fabricated only after a sanity check, and for entries the databases cannot confirm, do a web search to validate before flagging. DBLP's curated BibTeX is the canonical record for CS/SE venues; prefer the publisher/DOI metadata only when DBLP holds just a preprint of a now-published paper. For an exhaustive non-LLM audit of someone else's submission, point the user to the `hallucite` skill.
@@ -105,7 +105,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-06_rev2 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-06_rev3 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -171,7 +171,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 - Spelled-out author names that should use `\citeauthor{}`: <list>
 
 ### Grounding to-do
-- `\cite{}` calls with no `% GROUNDING:` comment (always listed): <file:line — keys>
+- `\cite{}` calls with no grounding comment (always listed; `% GROUNDING <key>:` counts as grounded): <file:line — keys>
 
 ### BibTeX (if applicable)
 - Entries with missing or unverifiable required fields: <list>
