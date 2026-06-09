@@ -62,6 +62,8 @@ A shift from past to present within a paragraph is acceptable when moving from w
 
 Other present-tense verbs that describe the paper itself: *we define, we propose, we present, we introduce, we show, we argue, we contribute*. Other past-tense verbs that describe the study: *we surveyed, we measured, we coded, we interviewed, we observed*.
 
+The same distinction governs cited prior work: an action a study performed (it *surveyed*, *found*, *measured*) takes past or present perfect, while a claim its paper makes (it *argues*, *proposes*, *defines*) can stay present. Do not mix the two within one attribution clause: "they *surveyed* … and *found* …", not "they *survey* … and *found* …".
+
 Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / Conclusions headings) follow the same tense logic per subsection.
 
 ## Structure
@@ -135,7 +137,7 @@ Apply these in addition to the general-layer self-check:
 3. **Grounding.** Verify each claim attributed to a citation is supported by the cited work, not just plausibly associated with it. Read the whole paper where its full text is available, not just the abstract.
 4. **Related work tone.** Scan for complimentary language ("seminal," "pioneering," "impressive") that describes prior work without analyzing it. Rewrite to be analytical.
 5. **Threats specificity (if applicable).** Verify each threat names a specific risk to this study and describes a concrete mitigation. Remove generic threats.
-6. **Verb tense consistency.** Check that each section uses the tense prescribed by the verb-tense table. Fix unmotivated tense shifts within a paragraph.
+6. **Verb tense consistency.** Check the tense of every clause whose subject is a citation or author name: an empirical action a cited study performed takes past or present perfect, not present. Do not clear a section from its dominant tense alone — a present-tense prior-work clause can sit inside an otherwise-correct section. Fix unmotivated tense shifts within a paragraph.
 7. **Statistical formatting.** Verify exact *p*-values (not *p* < 0.05 unless *p* < 0.001), check that effect sizes accompany *p*-values, confirm leading zeros before all decimal values, and verify that statistical symbols are italicized where required.
 8. **Figure and table captions.** Rewrite vague captions ("Overview of our approach," "Experimental results") to state what the figure or table actually shows.
 9. **Cross-section redundancy.** Scan for method details, findings, or formal introductions of supplementary resources stated in full in more than one section. Replace duplicated content with a cross-reference to the section where it is first stated.

@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes — and, for research papers, statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev3"
+  version: "2026-06_rev4"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -71,7 +71,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - Combined pause-punctuation signal (combined em-dash + colon + semicolon count per page-equivalent; a page near all three caps at once is over-punctuated).
    - Restricted-word density per paragraph (flag paragraphs with more than 2 to 3 occurrences).
    - Sentence-length variance (flag stretches of three or more consecutive sentences within 5 words of each other in length).
-   - Verb-tense compliance by section (compare against the table in the scientific layer; only when that layer is in scope).
+   - Verb-tense compliance, checked per clause, not per section (only when the scientific layer is in scope). Do not certify a section from its dominant tense — a present-tense prior-work clause can hide inside an otherwise-correct section. Inspect every sentence whose subject is a citation or author name (`\citeauthor{...}`, "X et al.", "the authors"): an empirical action the cited study performed takes past or present perfect (compare against the table in the scientific layer).
    - American-vs-British spelling (flag British variants).
    - "Significant" audit (flag non-statistical uses).
 
@@ -105,7 +105,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-06_rev3 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-06_rev4 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -158,7 +158,8 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 - Paragraphs over threshold: <list with paragraph pointers>
 
 ### Verb-tense compliance
-- Sections with non-conforming default tense: <list>
+- Prior-work attributions in present tense where past or present perfect is required: <list with pointers>
+- Unmotivated tense shifts within a paragraph or clause: <list>
 
 ### Spelling (American vs. British)
 - British variants found: <list>
