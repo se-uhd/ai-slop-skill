@@ -51,11 +51,15 @@ def check(yaml_path):
         sys.stderr.write(f"check_baseline.py: cannot read {yaml_path}: {e}\n")
         return 2
     try:
-        doc = yaml.safe_load(body) or {}
+        doc = yaml.safe_load(body)
     except yaml.YAMLError as e:
         sys.stderr.write(f"check_baseline.py: invalid yaml: {e}\n")
         return 2
+    if doc is None:
+        doc = {}
     if not isinstance(doc, dict):
+        # No `or {}` shortcuts here or below: they would coerce falsy
+        # non-mappings ([], "", false) past the shape check.
         sys.stderr.write(
             f"check_baseline.py: top level of {yaml_path} must be a "
             f"mapping, not {type(doc).__name__}\n"
@@ -64,7 +68,9 @@ def check(yaml_path):
 
     sections = {}
     for key in ("extensions", "plugins"):
-        section = doc.get(key) or {}
+        section = doc.get(key)
+        if section is None:
+            section = {}
         if not isinstance(section, dict):
             sys.stderr.write(
                 f"check_baseline.py: `{key}` must be a mapping, not "
