@@ -64,9 +64,9 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - A concrete suggested replacement that follows the rules.
 
 5. **Cross-cutting metrics.** Compute and record the metrics whose layer is in scope (skip the scientific ones — verb-tense compliance, the "significant" audit — when only the general layer is loaded):
-   - Em-dash density (target: ≤ 2 per page-equivalent of ~350 words).
+   - Em-dash density (target: ≤ 2 to 3 per page-equivalent of ~350 words, matching the general layer's em-dash ceiling).
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
-   - Capitalization after a colon in running prose (flag colons whose post-colon clause is a complete sentence beginning lowercase, and flag colons whose post-colon text is a fragment or list beginning uppercase).
+   - Capitalization after a colon in running prose (flag colons whose post-colon clause is a complete sentence beginning lowercase — except the first item of an enumerated series of independent clauses, which the capitalization rule treats as a list and keeps lowercase — and flag colons whose post-colon text is a fragment or list beginning uppercase).
    - Semicolon density in running prose (target: ≤ 1 to 2 per page-equivalent).
    - Combined pause-punctuation signal (combined em-dash + colon + semicolon count per page-equivalent; a page near all three caps at once is over-punctuated).
    - Restricted-word density per paragraph (flag paragraphs with more than 2 to 3 occurrences).
@@ -82,7 +82,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
      - The script does not follow `\input` / `\include`. Pass the file list explicitly.
      - Multi-line `\cite{}` calls (where `}` is on a different line from `\cite{`) are skipped.
      - Biblatex multi-cite forms (`\textcites`, `\autocites`, `\fullcites`) read only the first key group.
-     - "Nearby grounding" means same line or the next non-blank line. A comment placed two or more blank-separated lines after the cite is not credited.
+     - "Nearby grounding" means the cite's attached comment block: the same line plus the contiguous run of blank and `%`-comment lines directly below it. A comment placed after intervening code or prose is not credited. A quote-less `TODO verify` stub counts as attached (marked, not missing); `/ai-slop:ground` fills such stubs.
    - For each cluster, only flag it as a finding if the surrounding prose does not explain what each cited work contributes. A cluster followed by sentences that distinguish each work is fine.
    - For missing-grounding, always surface the result as a **Grounding to-do** list in the report: every `\cite{}` lacking a grounding comment, by `file:line` and key. This list is always emitted, not a project-internal decision. (A paper may use the per-key `% GROUNDING <key>: "..."` convention; the script credits it, so do not re-report those cites as ungrounded.) To fill genuinely missing comments — fetch each cited source and insert a retrieved supporting quote — point the user to `/ai-slop:ground`.
    - Spelled-out author names that should use `\citeauthor{}`. The script does not check this. Scan manually.
@@ -135,7 +135,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 ## Cross-cutting metrics
 
 ### Em-dash density
-- Per-page-equivalent count: <N> (target: ≤ 2)
+- Per-page-equivalent count: <N> (target: ≤ 2 to 3)
 - Locations: <list>
 
 ### Colon density (running prose)
@@ -143,7 +143,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 - Locations: <list>
 
 ### Capitalization after a colon
-- Colons followed by a complete sentence with a lowercase first word: <list>
+- Colons followed by a complete sentence with a lowercase first word (the first item of an enumerated series is exempt): <list>
 - Colons followed by a fragment or list with an uppercase first word: <list>
 
 ### Semicolon density (running prose)
@@ -192,7 +192,7 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers (general prose; research-article conventions; LaTeX mechanics). Load the subset the scope calls for (step 2).
 - `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the upstream Gist and tropes.fyi viewer are both unreachable.
-- `../../scripts/find_latex_root.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py` implement the deterministic checks above; their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch chain, citation issues, BibTeX field and reference verification, report linting); their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 

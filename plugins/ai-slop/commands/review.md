@@ -1,5 +1,5 @@
 ---
-description: Review any prose for AI slop and rule violations. The general rules apply by default; the scientific and LaTeX layers are auto-applied for a manuscript or `.tex` paper, adding citations, statistics, BibTeX, a reference check, and a grounding to-do. Generates a structured Markdown report with concrete suggested revisions.
+description: Review any prose for AI slop and rule violations. The general rules apply by default; `.tex` source auto-loads the scientific and LaTeX layers — citations, statistics, BibTeX, a reference check, and a grounding to-do — and `--scientific` adds the scientific layer to a non-LaTeX manuscript. Generates a structured Markdown report with concrete suggested revisions.
 ---
 
 Use the `ai-slop:review` skill.
