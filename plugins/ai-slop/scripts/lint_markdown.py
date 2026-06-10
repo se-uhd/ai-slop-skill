@@ -42,8 +42,10 @@ on the raw bytes before pymarkdown is invoked:
                         so fences inside it are tracked.
 
 Note: pymarkdown 0.9.37 crashes (internal assertion) on files that open
-with `---` but lack a final newline; the wrapper exits 2 on such files
-and still prints the pre-pass and schema findings it detected.
+with `---` but lack a final newline, and — when allow_blank_lines is
+enabled — on any unclosed frontmatter block; the wrapper exits 2 on
+such files and still prints the pre-pass and schema findings it
+detected.
 
 Schema checks
 -------------
@@ -129,7 +131,10 @@ def frontmatter_settings(config_path):
     suppresses the frontmatter pre-pass, never adds findings.
     """
     try:
-        doc = yaml.safe_load(config_path.read_text(encoding='utf-8'))
+        # Binary read: PyYAML auto-detects UTF-8/16/32 via BOM, matching
+        # how pymarkdown's own loader reads the same file; undecodable
+        # bytes surface as a YAMLError, not a UnicodeDecodeError.
+        doc = yaml.safe_load(config_path.read_bytes())
     except (OSError, yaml.YAMLError):
         return False, False
     if not isinstance(doc, dict):
@@ -208,12 +213,17 @@ def pre_findings(raw_text, fm_enabled=False, fm_allow_blanks=False):
                 # Valid frontmatter; keep the fence scan out of the YAML.
                 fence_scan_start = closed_at + 1
         elif content_seen:
-            findings.append((
-                1, 'unclosed-frontmatter',
-                'leading `---` has no matching close before '
-                + ('EOF' if fm_allow_blanks else 'a blank line')
-                + '; pymarkdown silently treats the block as body text',
-            ))
+            if fm_allow_blanks:
+                # With allow_blank_lines pymarkdown never reaches its
+                # abandonment path: an unclosed block hits an internal
+                # assertion at EOF instead (0.9.37).
+                detail = ('leading `---` has no matching close before '
+                          'EOF; pymarkdown errors out on such files')
+            else:
+                detail = ('leading `---` has no matching close before a '
+                          'blank line; pymarkdown silently treats the '
+                          'block as body text')
+            findings.append((1, 'unclosed-frontmatter', detail))
 
     fence_char = None
     fence_width = 0
