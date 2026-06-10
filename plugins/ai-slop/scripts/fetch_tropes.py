@@ -2,8 +2,11 @@
 """fetch_tropes.py <bundled-fallback>
 
 Fetch the AI-trope catalog with a three-step fallback chain and emit it on
-stdout. Always exits 0; always emits a non-empty body (the bundled fallback
-guarantees content even when offline).
+stdout. On success (exit 0) the body is non-empty — a 200 response with an
+empty body is rejected, and the bundled fallback guarantees content even when
+offline. Exits 2 without emitting a body on a usage error or when the bundled
+fallback itself is missing, unreadable, or empty (an intact install never hits
+this; it means the bundle is broken).
 
 Sources, in order:
   1. Upstream Gist (raw markdown):
@@ -51,7 +54,15 @@ def main(argv):
             print(f"source: {name}", file=sys.stderr)
             sys.stdout.write(body)
             return 0
-    body = fallback.read_text(encoding='utf-8', errors='replace')
+    try:
+        body = fallback.read_text(encoding='utf-8', errors='replace')
+    except OSError as e:
+        print(f"error: cannot read bundled fallback {fallback}: {e.strerror or e}",
+              file=sys.stderr)
+        return 2
+    if not body.strip():
+        print(f"error: bundled fallback {fallback} is empty", file=sys.stderr)
+        return 2
     print("source: bundled", file=sys.stderr)
     sys.stdout.write(body)
     return 0
