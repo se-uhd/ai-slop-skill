@@ -97,7 +97,7 @@ Given a previously generated report and the document's source, the revise skill:
 1. **Parses the report**, extracting the per-section findings.
 2. **Locates each `Quote` in the document** using the report's `Location` hint to disambiguate.
 3. **Applies the `Suggested revision`** with one Edit call per finding (so each change is one diff hunk).
-4. **Inserts `% GROUNDING: TODO verify <key>` stubs** after the ungrounded `\cite{}` calls listed in the report's grounding to-do, for the author to fill.
+4. **Inserts `% GROUNDING: TODO verify <key>` stubs** after the ungrounded `\cite{}` calls listed in the report's grounding to-do, for the author to fill — or for `/ai-slop:ground` to replace with retrieved quotes.
 5. **Skips findings** whose `Quote` cannot be located uniquely or whose suggestion would break the markup (e.g., LaTeX), with reasons logged in the summary.
 6. **Skips items in "Items requiring author judgment"** (they need manual decisions).
 7. **Prints a summary** of applied, skipped, and author-judgment-required findings.
@@ -110,7 +110,7 @@ Ground mode closes the loop the review opens, for LaTeX papers. Review *finds* t
 
 1. **Extracts the citations** with `scripts/extract_cites.py`, which resolves the root, follows `\input` / `\include`, and emits, per cited key, the claims the surrounding sentences attribute to it and the BibTeX metadata (title, author, year, DOI, URL) needed to find the source.
 2. **Fetches each source** with one agent per cited key, chunked into small slices to stay under rate limits. Each agent retrieves the source (online, or a user-supplied local file for a paywalled article or book) and copies a short verbatim quote that supports the claim.
-3. **Writes the comments back** with `scripts/insert_grounding.py`, inserting `% GROUNDING: <key> -- "<quote>"` after each ungrounded cite (idempotently, matching indentation).
+3. **Writes the comments back** with `scripts/insert_grounding.py`, inserting `% GROUNDING: <key> -- "<quote>"` after each ungrounded cite and replacing any `TODO verify` stub left by revise mode or an earlier run (idempotently, matching indentation).
 
 The anti-fabrication rule is mandatory: a quote is written only when the source was actually retrieved. Otherwise the comment is `% GROUNDING: <key> -- TODO verify -- <reason>` (`paywalled`, `abstract-only`, `book`, `not-found`, or `source-does-not-support`), never a quote from memory. A `source-does-not-support` result is surfaced as a finding, not a gap: it flags a likely miscitation. Ground mode is LaTeX-only and does not commit; the user inspects the edits with `git diff`.
 

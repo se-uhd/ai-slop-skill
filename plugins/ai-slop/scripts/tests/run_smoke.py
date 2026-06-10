@@ -1294,6 +1294,96 @@ def test_insert_grounding_non_string_quote_becomes_todo():
         assert "['x', 'y']" not in body, f"non-str: a repr leaked as a quote: {body!r}"
 
 
+def test_insert_grounding_replaces_todo_stubs():
+    # A quote-less TODO stub — the revise-mode form (`% GROUNDING: TODO verify
+    # <key>`) or the reasoned form an earlier run wrote — must not block the
+    # fill: extract_cites reports the site ungrounded, and insert_grounding
+    # replaces the stub line in place with the retrieved quote. Re-running
+    # with the same quotes is then a no-op.
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, "\\documentclass{a}\n\\begin{document}\n"
+                   "Claim one~\\cite{rk}.\n"
+                   "% GROUNDING: TODO verify rk\n"
+                   "Claim two~\\cite{pk}.\n"
+                   "% GROUNDING: pk -- TODO verify -- paywalled\n"
+                   "\\end{document}\n")
+        rc, out, err = run('extract_cites.py', d)
+        assert rc == 0, f"stub/extract: rc={rc} err={err!r}"
+        sites = json.loads(out)['sites']
+        assert all(s['grounded'] is False for s in sites), \
+            f"stub/extract: TODO stubs must count as ungrounded: {sites!r}"
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        write(Path(d) / 'q.json', json.dumps({
+            'rk': {'quote': 'rk evidence.'},
+            'pk': {'quote': 'pk evidence from the local PDF.'},
+        }))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0, f"stub/insert: rc={rc} err={err!r}"
+        assert '2 TODO stub(s) replaced' in err, f"stub/insert: summary: {err!r}"
+        body = tex.read_text(encoding='utf-8')
+        assert '% GROUNDING: rk -- "rk evidence."' in body, f"stub/insert: rk: {body!r}"
+        assert '% GROUNDING: pk -- "pk evidence from the local PDF."' in body, \
+            f"stub/insert: pk: {body!r}"
+        assert 'TODO verify' not in body, f"stub/insert: a stub survived: {body!r}"
+        assert body.count('GROUNDING') == 2, f"stub/insert: comment duplicated: {body!r}"
+        # Idempotent: re-extract over the now-grounded file, re-insert -> no-op.
+        rc, out, err = run('extract_cites.py', d)
+        write(extract, out)
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0 and 'inserted 0 grounding comment(s)' in err, f"stub/idem: {err!r}"
+
+
+def test_grounding_comment_block_read_write_agree():
+    # The read side (find_citation_issues / extract_cites) and the write side
+    # (insert_grounding) share one definition of the cite's attached comment
+    # block: an unrelated % comment between the cite and its grounding comment
+    # does not hide the grounding, a TODO stub marks the cite as not-missing
+    # but still fillable, and a comment beyond intervening code is not credited.
+    import json
+    fixture = (
+        'Stubbed~\\cite{sk}.\n'
+        '% GROUNDING: TODO verify sk\n'
+        '\n'
+        'Interleaved~\\cite{ik}.\n'
+        '% see also the appendix\n'
+        '% GROUNDING: ik -- "ik says yes"\n'
+        '\n'
+        'Truly missing~\\cite{mk}.\n'
+        'Another sentence of prose.\n'
+        '% GROUNDING: mk -- "beyond code, not attached"\n'
+    )
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'paper.tex'
+        write(tex, fixture)
+        rc, out, err = run('find_citation_issues.py', str(tex))
+        assert rc == 0, f"block/issues: rc={rc} err={err!r}"
+        missing = [l for l in out.strip().split('\n') if l and '\tmissing-grounding\t' in l]
+        assert len(missing) == 1 and '\tmk\t' in missing[0], \
+            f"block/issues: expected exactly mk missing: {missing!r}"
+        rc, out, err = run('extract_cites.py', str(tex))
+        assert rc == 0, f"block/extract: rc={rc} err={err!r}"
+        grounded = {s['keys'][0]: s['grounded'] for s in json.loads(out)['sites']}
+        assert grounded == {'sk': False, 'ik': True, 'mk': False}, f"block/extract: {grounded!r}"
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        write(Path(d) / 'q.json', json.dumps({
+            'sk': {'quote': 'sk quote'},
+            'ik': {'quote': 'new ik quote'},
+            'mk': {'quote': 'mk quote'},
+        }))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0, f"block/insert: rc={rc} err={err!r}"
+        assert '1 already grounded' in err, f"block/insert: ik should be left alone: {err!r}"
+        assert '1 TODO stub(s) replaced' in err, f"block/insert: sk stub not replaced: {err!r}"
+        body = tex.read_text(encoding='utf-8')
+        assert '% GROUNDING: sk -- "sk quote"' in body, f"block/insert: sk: {body!r}"
+        assert 'new ik quote' not in body, f"block/insert: ik wrongly rewritten: {body!r}"
+        assert '% GROUNDING: mk -- "mk quote"' in body, f"block/insert: mk: {body!r}"
+
+
 # ---------- runner ----------
 
 TESTS = [
@@ -1378,6 +1468,8 @@ TESTS = [
     test_insert_grounding_preserves_missing_final_newline,
     test_insert_grounding_same_line_comment_idempotent,
     test_insert_grounding_non_string_quote_becomes_todo,
+    test_insert_grounding_replaces_todo_stubs,
+    test_grounding_comment_block_read_write_agree,
 ]
 
 

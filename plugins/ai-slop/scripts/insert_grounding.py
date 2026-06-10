@@ -31,8 +31,15 @@ subset and later runs can fill the rest (resumable over the still-TODO keys).
 Behavior:
   - Only `groundable` sites (the cite macros find_citation_issues.py flags) are
     annotated; style-only \citeauthor / \citeyear sites are skipped.
-  - Idempotent: a (line, key) that already has a `% GROUNDING:` comment naming
-    that key is left alone, so re-running is safe.
+  - Idempotent: a (line, key) that already has a quote-backed `% GROUNDING:`
+    comment naming that key is left alone, so re-running is safe.
+  - A quote-less `TODO verify` stub naming the key — planted by revise mode
+    (`% GROUNDING: TODO verify <key>`) or by an earlier run of this script —
+    does NOT count as grounded: it is replaced in place with the new comment,
+    so a later grounding run can fill what a stub only marks. Replacing a stub
+    with identical content is a no-op. A stub on the cite's own line is never
+    edited (mid-line edits risk the code); the new comment is inserted below
+    and the inline stub is left for the author to drop.
   - Each comment matches the cite line's indentation and is inserted on its own
     line directly after it (a `%` comment's trailing newline is consumed by
     LaTeX, so the surrounding markup still renders unchanged).
@@ -54,7 +61,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cite_scan import (  # noqa: E402
-    CITE_PATTERN, is_grounding_comment, parse_keys, split_code_and_comment,
+    CITE_PATTERN, is_grounding_comment, is_quote_grounding, iter_comment_block,
+    parse_keys, split_code_and_comment,
 )
 
 # Characters that may appear inside a BibTeX key; used to bound the key when
@@ -105,24 +113,28 @@ def grounds_key(text, key):
 
 
 def already_grounded(lines, idx, key):
-    """True if the cite on line `idx` already has a GROUNDING comment for `key`,
-    either inline or in the comment block on the following lines."""
+    """True if the cite on line `idx` already has a quote-backed GROUNDING
+    comment for `key`, either inline or in the attached comment block. A
+    quote-less `TODO verify` stub for the key does NOT count: stubs are
+    placeholders this script upgrades in place (see find_todo_stub), so
+    treating them as grounded would permanently block the fill."""
     _, same_comment = split_code_and_comment(lines[idx])
-    if grounds_key(same_comment, key):
-        return True
-    j = idx + 1
-    while j < len(lines):
-        stripped = lines[j].strip()
-        if not stripped:
-            j += 1
+    return any(grounds_key(text, key) and is_quote_grounding(text)
+               for _, text in iter_comment_block(lines, idx, same_comment))
+
+
+def find_todo_stub(lines, idx, key):
+    """Return the index of the first quote-less GROUNDING comment line for
+    `key` attached to the cite on line `idx`, or None. The cite's own line is
+    excluded — an inline stub is never edited; the replacement logic only
+    rewrites whole comment lines."""
+    _, same_comment = split_code_and_comment(lines[idx])
+    for j, text in iter_comment_block(lines, idx, same_comment):
+        if j == idx:
             continue
-        if stripped.startswith('%'):
-            if grounds_key(stripped, key):
-                return True
-            j += 1
-            continue
-        break
-    return False
+        if grounds_key(text, key) and not is_quote_grounding(text):
+            return j
+    return None
 
 
 def line_has_key(line, key):
@@ -139,9 +151,12 @@ def leading_ws(line):
 
 
 def plan_file(lines, sites, quotes, stats):
-    """Return {line_index: [comment lines]} of insertions for one file, updating
-    `stats` in place. Each site is a dict with line/keys/groundable."""
+    """Return (inserts, replacements) for one file — {line_index: [comment
+    lines]} of new comments to insert after a cite line, and {line_index: new
+    line} of TODO-stub lines to rewrite in place — updating `stats` in place.
+    Each site is a dict with line/keys/groundable."""
     inserts = {}
+    replacements = {}
     for site in sites:
         if not site.get('groundable'):
             continue
@@ -172,19 +187,30 @@ def plan_file(lines, sites, quotes, stats):
                 stats['skipped_existing'] += 1
                 continue
             body, kind = comment_for(key, result)
-            inserts.setdefault(idx, []).append(indent + body)
+            stub_idx = find_todo_stub(lines, idx, key)
+            if stub_idx is not None:
+                new_line = leading_ws(lines[stub_idx]) + body
+                if lines[stub_idx] == new_line:
+                    stats['skipped_existing'] += 1  # stub already says exactly this
+                    continue
+                replacements[stub_idx] = new_line
+                stats['replaced'] += 1
+            else:
+                inserts.setdefault(idx, []).append(indent + body)
             stats['inserted'] += 1
             if kind == 'quote':
                 stats['quotes'] += 1
             else:
                 stats['todos'] += 1
                 stats['reasons'][kind] = stats['reasons'].get(kind, 0) + 1
-    return inserts
+    return inserts, replacements
 
 
-def apply_inserts(lines, inserts):
-    """Apply {line_index: [comment lines]} to `lines`, bottom-up so earlier
-    insertions do not shift later indices."""
+def apply_changes(lines, inserts, replacements):
+    """Apply replacements (index-stable) first, then insertions bottom-up so
+    earlier insertions do not shift later indices."""
+    for j, new_line in replacements.items():
+        lines[j] = new_line
     for idx in sorted(inserts, reverse=True):
         for comment in reversed(inserts[idx]):
             lines.insert(idx + 1, comment)
@@ -215,8 +241,9 @@ def main(argv):
             continue
         by_file.setdefault(fpath, []).append(site)
 
-    stats = {'inserted': 0, 'quotes': 0, 'todos': 0, 'skipped_existing': 0,
-             'skipped_moved': 0, 'no_quote': 0, 'files_changed': 0, 'reasons': {}}
+    stats = {'inserted': 0, 'quotes': 0, 'todos': 0, 'replaced': 0,
+             'skipped_existing': 0, 'skipped_moved': 0, 'no_quote': 0,
+             'files_changed': 0, 'reasons': {}}
 
     for fpath, fsites in by_file.items():
         try:
@@ -233,15 +260,17 @@ def main(argv):
         lines = text.split(newline)
         if had_final_newline and lines and lines[-1] == '':
             lines.pop()  # trailing terminator yields an empty final element
-        inserts = plan_file(lines, fsites, quotes, stats)
-        if not inserts:
+        inserts, replacements = plan_file(lines, fsites, quotes, stats)
+        if not inserts and not replacements:
             continue
         if args.dry_run:
             for idx in sorted(inserts):
                 for comment in inserts[idx]:
                     print(f"{fpath}:{idx + 1}\t+{comment.strip()}")
+            for j in sorted(replacements):
+                print(f"{fpath}:{j + 1}\t~{replacements[j].strip()}")
             continue
-        apply_inserts(lines, inserts)
+        apply_changes(lines, inserts, replacements)
         out = newline.join(lines) + (newline if had_final_newline else '')
         with open(fpath, 'w', encoding='utf-8', newline='') as fh:
             fh.write(out)
@@ -255,6 +284,8 @@ def main(argv):
         f"{stats['skipped_moved']} skipped (moved/missing), "
         f"{stats['no_quote']} key(s) with no result"
     )
+    if stats['replaced']:
+        summary += f"; {stats['replaced']} TODO stub(s) replaced"
     if not args.dry_run:
         summary += f"; {stats['files_changed']} file(s) changed"
     print(summary, file=sys.stderr)

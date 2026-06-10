@@ -12,11 +12,15 @@ Issues:
                        flags the existence of the cluster. Judging whether
                        the surrounding prose explains each work is left to
                        the caller.
-  - missing-grounding: a \\cite-style call with no grounding comment on the same
-                       line or on the next non-blank line. A grounding comment
+  - missing-grounding: a \\cite-style call with no grounding comment attached —
+                       on the same line or in the contiguous run of blank and
+                       `%`-comment lines directly below it. A grounding comment
                        leads with the GROUNDING marker in any key-placement form
                        (`% GROUNDING: "..."`, `% GROUNDING: <key> -- "..."`, or
-                       `% GROUNDING <key>: "..."`); see cite_scan.py.
+                       `% GROUNDING <key>: "..."`); see cite_scan.py. A quote-less
+                       `TODO verify` stub also counts as attached (the cite is
+                       marked, not missing) — filling stubs is insert_grounding's
+                       job, not a finding here.
 
 Recognized commands (cluster + grounding checks apply):
   - natbib:   \\cite, \\citep, \\citet, \\citealp, \\citealt, \\citetext.
@@ -70,10 +74,13 @@ Known limitations:
   - Multi-cite biblatex forms \\textcites / \\autocites / \\fullcites use
     multiple {key} groups. This script reads only the first group and
     undercounts keys.
-  - "Nearby grounding" is defined as same line or the next non-blank line.
-    A grounding comment placed two or more blank-separated lines after the
-    cite is not credited. The marker is matched in any key-placement form
-    (`% GROUNDING:`, `% GROUNDING: <key>`, or `% GROUNDING <key>:`).
+  - "Nearby grounding" is the cite's attached comment block: the same line
+    plus the contiguous run of blank and `%`-comment lines below it. The
+    first code line ends the block, so a grounding comment placed after
+    intervening code or prose is not credited. Blank lines and unrelated
+    `%` comments inside the block are skipped over. The marker is matched
+    in any key-placement form (`% GROUNDING:`, `% GROUNDING: <key>`, or
+    `% GROUNDING <key>:`).
 """
 import sys
 from pathlib import Path
