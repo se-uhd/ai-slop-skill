@@ -12,8 +12,10 @@ Exit codes
 ----------
   0  baseline satisfied.
   1  one or more baseline mismatches.
-  2  could not read or parse the yaml.
+  2  could not read or parse the yaml, or the yaml has the wrong shape
+     (the document or its extensions/plugins sections are not mappings).
 """
+import argparse
 import sys
 from pathlib import Path
 
@@ -23,7 +25,14 @@ VENDOR_DIR = SCRIPTS_DIR / "_vendor"
 if VENDOR_DIR.is_dir():
     sys.path.insert(0, str(VENDOR_DIR))
 
-import yaml  # noqa: E402
+try:
+    import yaml
+except ImportError:
+    sys.stderr.write(
+        "check_baseline.py: PyYAML not importable; expected the vendored "
+        f"copy under {VENDOR_DIR}\n"
+    )
+    sys.exit(2)
 
 REQUIRED_EXTENSIONS = (
     "front-matter",
@@ -46,19 +55,44 @@ def check(yaml_path):
     except yaml.YAMLError as e:
         sys.stderr.write(f"check_baseline.py: invalid yaml: {e}\n")
         return 2
+    if not isinstance(doc, dict):
+        sys.stderr.write(
+            f"check_baseline.py: top level of {yaml_path} must be a "
+            f"mapping, not {type(doc).__name__}\n"
+        )
+        return 2
+
+    sections = {}
+    for key in ("extensions", "plugins"):
+        section = doc.get(key) or {}
+        if not isinstance(section, dict):
+            sys.stderr.write(
+                f"check_baseline.py: `{key}` must be a mapping, not "
+                f"{type(section).__name__}\n"
+            )
+            return 2
+        sections[key] = section
+
+    def entry_for(section, name):
+        entry = section.get(name) or {}
+        return entry if isinstance(entry, dict) else {}
 
     problems = []
-    extensions = (doc.get("extensions") or {})
     for name in REQUIRED_EXTENSIONS:
-        entry = extensions.get(name) or {}
-        if not entry.get("enabled"):
-            problems.append(f"extension `{name}` must be enabled")
+        # PyMarkdown requires a real boolean here; a truthy non-boolean
+        # such as the string "true" leaves the extension disabled.
+        entry = entry_for(sections["extensions"], name)
+        if entry.get("enabled") is not True:
+            problems.append(
+                f"extension `{name}` must be enabled (boolean true)"
+            )
 
-    plugins = (doc.get("plugins") or {})
     for name in REQUIRED_DISABLED_PLUGINS:
-        entry = plugins.get(name) or {}
+        entry = entry_for(sections["plugins"], name)
         if entry.get("enabled", True) is not False:
-            problems.append(f"plugin `{name}` must be disabled")
+            problems.append(
+                f"plugin `{name}` must be disabled (boolean false)"
+            )
 
     for p in problems:
         sys.stderr.write(f"baseline mismatch: {p}\n")
@@ -72,10 +106,17 @@ def check(yaml_path):
 
 
 def main():
-    if len(sys.argv) > 2:
-        sys.stderr.write("usage: check_baseline.py [<lint_markdown.yaml>]\n")
-        return 2
-    target = (Path(sys.argv[1]) if len(sys.argv) == 2
+    parser = argparse.ArgumentParser(
+        description=("Verify that a skill's lint_markdown.yaml carries "
+                     "the pymarkdown-skill baseline rules."),
+    )
+    parser.add_argument(
+        "yaml_path", nargs="?", metavar="lint_markdown.yaml",
+        help=("config to check (defaults to lint_markdown.yaml next to "
+              "this script)"),
+    )
+    args = parser.parse_args()
+    target = (Path(args.yaml_path) if args.yaml_path
               else SCRIPTS_DIR / "lint_markdown.yaml")
     return check(target)
 
