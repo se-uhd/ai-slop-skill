@@ -13,8 +13,9 @@ have been broken before:
 
 1. **Every rev bump is its own commit AND a matching git tag.** After bumping
    the version, create `git tag YYYY-MM_revN` on that commit and push it. A
-   release without its tag is not done. List existing tags with
-   `git tag -l '2026-05_rev*'`; the next rev is the highest current rev + 1.
+   release without its tag is not done. List the current month's tags with
+   `git tag -l "$(date +%Y-%m)*"`; the next rev is the highest current rev + 1
+   (the bare `YYYY-MM` tag is rev0, so the release after it is `_rev1`).
 2. **Never amend, rebase, or rewrite a commit that is already tagged, released,
    or pushed.** If more work is needed after a release, it is a NEW rev with a
    NEW commit and tag — never a re-cut of the released one. Amending a released
@@ -38,5 +39,6 @@ have been broken before:
   PyMarkdown under `scripts/_vendor/`. Do not add pip-installed runtime deps.
 - All first-party Markdown must lint clean:
   `python3 plugins/ai-slop/scripts/lint_markdown.py <file>`.
-- Generated artifacts (`ai-slop-report.md`, any downloaded DBLP dump) are never
-  committed; the skills add them to the target repo's `.gitignore`.
+- Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
+  `grounding-quotes.json`) are never committed; the skills add them to the
+  target repo's `.gitignore`.
