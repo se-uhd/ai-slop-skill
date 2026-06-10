@@ -10,8 +10,10 @@ These rules target AI slop and the habits that make machine-written prose
 recognizable, plus universal points of clean writing. The general AI-trope list
 (banned words, formulaic openings, formatting tics, anaphora and tricolon abuse)
 is fetched separately from the upstream catalog; this layer carries the
-restricted-words table with alternatives and a self-check. The justification
-behind the rules lives in `rules-rationale.md`, which the skills do not load.
+restricted-words table with alternatives and a self-check. The rationale behind the
+contested rules — the ones a reader might push back on — lives in
+`rules-rationale.md`, which the skills do not load; mechanical rules carry
+their own short justification or none.
 
 ## Language
 
@@ -44,6 +46,8 @@ Legitimate words that AI overuses. Each use should be intentional. If a simpler 
 **Standard vocabulary (novel, robust, comprehensive, insights, mitigate, enhance, innovative, paradigm, framework, stakeholder, fundamentally, inherently)** is not restricted. Do not overuse it; if a simpler word works equally well, prefer it.
 
 **Transition words (moreover, furthermore, notably, conversely, crucially, etc.)** are also standard and not restricted. Do not overuse them. If more than two appear in a single paragraph, check whether any can be dropped without losing logical flow.
+
+**Precedence over the trope catalog.** The runtime-fetched trope catalog casts a wider net than these rules and lists some of the vocabulary above (e.g., robust, paradigm, framework, notably) among its banned words, just as it flags "In summary"/"In conclusion" that the **Formulaic openings and closings** rule permits in a genuine summary position. Where the catalog and a layer rule disagree, the layer rule wins: the catalog supplies candidates to inspect, and these rules state the deliberate carve-outs.
 
 ## Phrases to Avoid
 
@@ -102,7 +106,7 @@ Stock formulations that read as AI filler or stilted register. Replace each with
 
 Before presenting any written or edited text, scan it against these checks:
 
-1. **Word-level scan.** Search for banned words (per tropes.fyi) and replace any that appear. Count restricted words (per the table above); if more than 2 to 3 appear in a single paragraph, rewrite to reduce.
+1. **Word-level scan.** Search for banned words (per tropes.fyi) and replace any that appear, except vocabulary these rules explicitly leave unrestricted (see **Precedence over the trope catalog**). Count restricted words (per the table above); if more than 2 to 3 appear in a single paragraph, rewrite to reduce.
 2. **Em-dashes.** Check each em-dash: is it the right mark, or would a period, comma, or parentheses read better? Replace the ones not earning their place. As a secondary signal, more than 2 to 3 per page-equivalent (~350 words) of running prose flags over-reliance. Exclude from any count: em dashes inside quoted source material, and glyphs that are not em dashes at all — en dashes in numeric or page ranges (`pp. 12–18`), minus signs in math, and hyphens or `--` sequences inside code listings. Also exclude the two structural exceptions noted in the **Em-dashes** rule (comma-bearing appositives and nested-parens avoidance).
 3. **Colons.** Examine each colon: any that could be replaced by a period with light rewriting should be. Watch especially for colons substituting for em-dashes or parentheses, and for colon-followed-by-list patterns repeating across paragraphs. As a secondary signal, more than 2 per page-equivalent in running prose flags over-reliance.
 4. **Introducer punctuation.** For every sentence immediately followed by an enumerated list, a numbered structure (e.g., `(1) ... (2) ... (3) ...`), a bulleted block, or a paragraph that grammatically continues or elaborates it, verify the introducer ends with `:`, not `.`. AI text systematically defaults to `.` here; the `:` is correct and does not count toward the colon signal.
