@@ -27,9 +27,10 @@ Exit codes
   1  vendoring produced compiled extensions, or one or more vendored
      packages had no license text in their dist-info and no entry
      under `bundled_licenses/` (aborts before overwriting `_vendor/`).
-  2  pip install failed.
+  2  venv creation, pip install, or site-packages resolution failed.
 """
 import argparse
+import email.parser
 import os
 import shutil
 import subprocess
@@ -112,10 +113,17 @@ def strip_pycache(root: Path) -> None:
 
 
 def find_binary_extensions(root: Path) -> list[Path]:
-    """Return any compiled extensions found under root."""
+    """Return any compiled artifacts found under root.
+
+    Even a POSIX-host build can pick up `.pyd`/`.dll` files: a sdist may
+    ship them as package data, in which case pip copies them verbatim
+    into site-packages regardless of platform.
+    """
     binaries = []
     for path in root.rglob("*"):
-        if path.is_file() and path.suffix in {".so", ".pyd", ".dylib"}:
+        if path.is_file() and path.suffix.lower() in {
+            ".so", ".pyd", ".dylib", ".dll",
+        }:
             binaries.append(path)
     return binaries
 
@@ -140,8 +148,12 @@ def collect_notice(
     abort if `missing` is non-empty so the bundle is never published
     without attribution.
     """
+    # Stems, not file names: top_level.txt entries are bare module names,
+    # so a single-module dist like typing_extensions must be recorded as
+    # "typing_extensions", not "typing_extensions.py".
     vendored_names = {
-        p.name for p in vendor_dir.iterdir()
+        p.stem if p.is_file() else p.name
+        for p in vendor_dir.iterdir()
         if p.is_dir() or (p.is_file() and p.suffix == ".py")
     }
     sections = [
@@ -163,20 +175,21 @@ def collect_notice(
         metadata = di / "METADATA"
         if not metadata.is_file():
             continue
-        name = ""
-        version = ""
-        license_field = ""
-        for line in metadata.read_text(encoding="utf-8", errors="replace").splitlines():
-            if line.startswith("Name: ") and not name:
-                name = line[len("Name: "):].strip()
-            elif line.startswith("Version: ") and not version:
-                version = line[len("Version: "):].strip()
-            elif line.startswith("License: ") and not license_field:
-                license_field = line[len("License: "):].strip()
-            elif line.startswith("License-Expression: ") and not license_field:
-                license_field = line[len("License-Expression: "):].strip()
-            if line == "":
-                break
+        # METADATA is RFC 822; email.parser handles folded multiline
+        # values that naive line-prefix matching would truncate.
+        msg = email.parser.Parser().parsestr(
+            metadata.read_text(encoding="utf-8", errors="replace"),
+            headersonly=True,
+        )
+        name = (msg.get("Name") or "").strip()
+        version = (msg.get("Version") or "").strip()
+        # License-Expression (PEP 639) is canonical; the deprecated
+        # free-text License field is the fallback, whichever order the
+        # wheel's build backend emitted them in.
+        license_field = " ".join(
+            (msg.get("License-Expression") or msg.get("License") or "")
+            .split()
+        )
         # Match top-level package(s) the dist-info installs.
         top_level_path = di / "top_level.txt"
         top_levels = []
@@ -185,7 +198,11 @@ def collect_notice(
                 ln.strip() for ln in top_level_path.read_text(
                     encoding="utf-8").splitlines() if ln.strip()
             ]
-        # Skip dist-infos whose top-level entries aren't in the vendored tree.
+        # Skip dist-infos whose top-level entries aren't in the vendored
+        # tree. Dist-infos without top_level.txt are kept: dropping them
+        # on a name guess could lose attribution for packages whose
+        # module name differs from the dist name (PyYAML installs
+        # `yaml`), and over-attribution is harmless.
         if top_levels and not any(t in vendored_names for t in top_levels):
             continue
         override = LICENSE_LABEL_OVERRIDES.get(name.lower())
@@ -272,9 +289,13 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="pymd-vendor-") as tmp:
         venv_dir = Path(tmp) / "venv"
         sys.stderr.write(f"creating venv at {venv_dir}\n")
-        subprocess.check_call(
-            [sys.executable, "-m", "venv", str(venv_dir)],
-        )
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "venv", str(venv_dir)],
+            )
+        except subprocess.CalledProcessError as e:
+            sys.stderr.write(f"venv creation failed: {e}\n")
+            return 2
         pip = venv_dir / "bin" / "pip"
         sys.stderr.write(f"installing {args.version} (--no-binary :all:)\n")
         try:
@@ -286,70 +307,98 @@ def main() -> int:
             sys.stderr.write(f"pip install failed: {e}\n")
             return 2
 
-        site_packages = find_site_packages(venv_dir)
+        try:
+            site_packages = find_site_packages(venv_dir)
+        except RuntimeError as e:
+            sys.stderr.write(f"{e}\n")
+            return 2
         sys.stderr.write(f"resolved site-packages: {site_packages}\n")
 
-        # Stage the new tree in a sibling directory, swap atomically at the end.
+        # Stage the new tree in a sibling directory; swap at the end.
         staging = scripts_dir / "_vendor.new"
         if staging.exists():
             shutil.rmtree(staging)
         staging.mkdir()
 
-        copied = []
-        for entry in sorted(site_packages.iterdir()):
-            if entry.name in SKIP_ENTRIES:
-                continue
-            if entry.name.endswith(".dist-info"):
-                continue
-            if entry.is_dir():
-                shutil.copytree(entry, staging / entry.name)
-                copied.append(entry.name)
-            elif entry.is_file() and entry.suffix == ".py":
-                shutil.copy2(entry, staging / entry.name)
-                copied.append(entry.name)
+        try:
+            return _populate_and_swap(site_packages, scripts_dir, staging)
+        except BaseException:
+            # Unexpected failure (or Ctrl-C): don't leave a half-built
+            # _vendor.new in the repo. The handled failure paths inside
+            # remove it themselves before returning. If _vendor/ itself
+            # is missing we crashed mid-swap and staging may hold the
+            # only complete new tree, so leave everything for recovery.
+            if (scripts_dir / "_vendor").exists():
+                shutil.rmtree(staging, ignore_errors=True)
+            raise
 
-        strip_pycache(staging)
-        install_pyjson5_shim(staging)
 
-        binaries = find_binary_extensions(staging)
-        if binaries:
-            sys.stderr.write(
-                f"refusing to vendor compiled extensions ({len(binaries)} "
-                f"found):\n",
-            )
-            for b in binaries:
-                sys.stderr.write(f"  {b.relative_to(staging)}\n")
-            shutil.rmtree(staging)
-            return 1
+def _populate_and_swap(site_packages, scripts_dir, staging) -> int:
+    """Copy site-packages into staging, validate, and swap into _vendor/."""
+    vendor_dir = scripts_dir / "_vendor"
+    copied = []
+    for entry in sorted(site_packages.iterdir()):
+        if entry.name in SKIP_ENTRIES:
+            continue
+        if entry.name.endswith(".dist-info"):
+            continue
+        if entry.is_dir():
+            shutil.copytree(entry, staging / entry.name)
+            copied.append(entry.name)
+        elif entry.is_file() and entry.suffix == ".py":
+            shutil.copy2(entry, staging / entry.name)
+            copied.append(entry.name)
 
-        bundled_dir = scripts_dir / "bundled_licenses"
-        notice, missing = collect_notice(site_packages, staging, bundled_dir)
-        if missing:
-            sys.stderr.write(
-                "refusing to vendor: no license text found for "
-                f"{len(missing)} package(s):\n"
-            )
-            for entry in missing:
-                sys.stderr.write(f"  {entry}\n")
-            sys.stderr.write(
-                f"add the missing LICENSE text under {bundled_dir} "
-                f"(one <package-name>.txt per package) and re-run.\n"
-            )
-            shutil.rmtree(staging)
-            return 1
-        (staging / "NOTICE").write_text(notice, encoding="utf-8")
+    strip_pycache(staging)
+    install_pyjson5_shim(staging)
 
-        # Swap.
-        if vendor_dir.exists():
-            shutil.rmtree(vendor_dir)
-        staging.rename(vendor_dir)
-
+    binaries = find_binary_extensions(staging)
+    if binaries:
         sys.stderr.write(
-            f"vendored {len(copied)} top-level package(s) into "
-            f"{vendor_dir}\n",
+            f"refusing to vendor compiled extensions ({len(binaries)} "
+            f"found):\n",
         )
-        for name in copied:
-            sys.stderr.write(f"  {name}\n")
+        for b in binaries:
+            sys.stderr.write(f"  {b.relative_to(staging)}\n")
+        shutil.rmtree(staging)
+        return 1
+
+    bundled_dir = scripts_dir / "bundled_licenses"
+    notice, missing = collect_notice(site_packages, staging, bundled_dir)
+    if missing:
+        sys.stderr.write(
+            "refusing to vendor: no license text found for "
+            f"{len(missing)} package(s):\n"
+        )
+        for entry in missing:
+            sys.stderr.write(f"  {entry}\n")
+        sys.stderr.write(
+            f"add the missing LICENSE text under {bundled_dir} "
+            f"(one <package-name>.txt per package) and re-run.\n"
+        )
+        shutil.rmtree(staging)
+        return 1
+    (staging / "NOTICE").write_text(notice, encoding="utf-8")
+
+    # Swap via two renames so the old tree is never deleted before the
+    # new one is in place; a crash in the window between them leaves
+    # both trees on disk (_vendor.old and _vendor.new), recoverable by
+    # renaming either back.
+    old_dir = scripts_dir / "_vendor.old"
+    if old_dir.exists():
+        shutil.rmtree(old_dir)
+    if vendor_dir.exists():
+        vendor_dir.rename(old_dir)
+    staging.rename(vendor_dir)
+    if old_dir.exists():
+        shutil.rmtree(old_dir)
+
+    sys.stderr.write(
+        f"vendored {len(copied)} top-level package(s) into "
+        f"{vendor_dir}\n",
+    )
+    for name in copied:
+        sys.stderr.write(f"  {name}\n")
     return 0
 
 

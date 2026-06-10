@@ -24,8 +24,16 @@ PyMarkdown silently accepts these, so the wrapper runs a small pre-pass
 on the raw bytes before pymarkdown is invoked:
 
   crlf-line-endings     CR or CRLF line ending anywhere in the file.
-  unclosed-fence        a fenced code block has no matching closer.
-  unclosed-frontmatter  a leading `---` has no matching `---`.
+  unclosed-fence        a fenced code block (backtick or tilde, indented
+                        up to 3 spaces) has no matching closer. Fences
+                        nested inside lists or blockquotes are not
+                        tracked.
+  unclosed-frontmatter  a leading `---` frontmatter block is not closed
+                        before the first blank line; pymarkdown abandons
+                        such a block and silently re-parses it as body
+                        text. A bare leading thematic break (`---`
+                        followed directly by a blank line) is not
+                        frontmatter and is not flagged.
 
 Schema checks
 -------------
@@ -48,7 +56,9 @@ Exit codes
 ----------
   0  clean.
   1  one or more findings (after --fix, if used).
-  2  could not read or run the linter.
+  2  could not read the file or run the linter, including files
+     pymarkdown refuses to scan (e.g. extension not recognized as
+     Markdown) and pymarkdown-internal failures.
 """
 import argparse
 import contextlib
@@ -73,8 +83,8 @@ if not VENDOR_DIR.is_dir():
 
 sys.path.insert(0, str(VENDOR_DIR))
 
-FENCE_OPENER_RE = re.compile(r'^(`{3,})')
-FENCE_CLOSER_RE = re.compile(r'^(`{3,})\s*$')
+# CommonMark fence: backticks or tildes, indented at most 3 spaces.
+FENCE_RE = re.compile(r'^ {0,3}(`{3,}|~{3,})(.*)$')
 PYMARKDOWN_LINE_RE = re.compile(
     r'^(?P<path>.+?):(?P<line>\d+):\d+:\s+(?P<rule>[A-Za-z0-9_]+):\s+'
     r'(?P<message>.+?)(?:\s+\((?P<aliases>[^)]+)\))?\s*$'
@@ -122,43 +132,80 @@ def pre_findings(raw_text):
     if lines and lines[-1] == '':
         lines = lines[:-1]
 
-    fence_width = None
-    fence_open_line = None
-    for ln, line in enumerate(lines, 1):
-        if fence_width is not None:
-            m = FENCE_CLOSER_RE.match(line)
-            if m and len(m.group(1)) >= fence_width:
-                fence_width = None
-                fence_open_line = None
-            continue
-        m = FENCE_OPENER_RE.match(line)
-        if m:
-            fence_width = len(m.group(1))
-            fence_open_line = ln
-    if fence_width is not None:
-        findings.append((
-            fence_open_line, 'unclosed-fence',
-            f'{fence_width}-backtick fence opened with no matching closer',
-        ))
-
-    if lines and lines[0].strip() == '---':
-        closed = any(line.strip() == '---' for line in lines[1:])
-        if not closed:
+    # Frontmatter first: pymarkdown's front-matter extension opens on a
+    # first line of exactly `---` (no leading whitespace) and closes on the
+    # next `---` line, but abandons the block at the first blank line
+    # (allow_blank_lines defaults to false) or at EOF — silently re-parsing
+    # everything as body text. Flag abandonment only when the block had
+    # content; a bare `---` followed by a blank line is a thematic break,
+    # not frontmatter.
+    fence_scan_start = 0
+    if lines and lines[0].rstrip() == '---':
+        content_seen = False
+        closed_at = None
+        for idx in range(1, len(lines)):
+            if lines[idx].rstrip() == '---':
+                closed_at = idx
+                break
+            if not lines[idx].strip():
+                break
+            content_seen = True
+        if closed_at is not None:
+            # Valid frontmatter; keep the fence scan out of the YAML body.
+            fence_scan_start = closed_at + 1
+        elif content_seen:
             findings.append((
                 1, 'unclosed-frontmatter',
-                'leading `---` has no matching close',
+                'leading `---` has no matching close before a blank line; '
+                'pymarkdown silently treats the block as body text',
             ))
+
+    fence_char = None
+    fence_width = 0
+    fence_open_line = None
+    for idx in range(fence_scan_start, len(lines)):
+        m = FENCE_RE.match(lines[idx])
+        if not m:
+            continue
+        marker, rest = m.group(1), m.group(2)
+        if fence_char is not None:
+            # Inside an open fence only a closer counts: same character,
+            # at least the opener's length, nothing but whitespace after.
+            if (marker[0] == fence_char and len(marker) >= fence_width
+                    and not rest.strip()):
+                fence_char = None
+                fence_open_line = None
+            continue
+        if marker[0] == '`' and '`' in rest:
+            # A backtick run whose info string contains a backtick is
+            # inline code, not a fence opener (CommonMark).
+            continue
+        fence_char = marker[0]
+        fence_width = len(marker)
+        fence_open_line = idx + 1
+    if fence_char is not None:
+        kind = 'backtick' if fence_char == '`' else 'tilde'
+        findings.append((
+            fence_open_line, 'unclosed-fence',
+            f'{fence_width}-{kind} fence opened with no matching closer',
+        ))
 
     return findings
 
 
 def run_pymarkdown(subcommand, path, config):
-    """Invoke the vendored PyMarkdown CLI; return (rc, stdout, stderr)."""
+    """Invoke the vendored PyMarkdown CLI; return (rc, stdout, stderr).
+
+    Uses the `explicit` return-code scheme, the only one in which every
+    outcome is distinguishable: 0 success, 1 no files to scan, 2 command
+    line error, 3 fixed at least one file, 4 scan triggered at least
+    once, 5 system error (see _vendor/pymarkdown/return_code_helper.py).
+    """
     argv = [
         "pymarkdown",
         "--no-json5",
         "--config", str(config),
-        "--return-code-scheme", "minimal",
+        "--return-code-scheme", "explicit",
         subcommand, str(path),
     ]
     saved_argv = sys.argv
@@ -173,7 +220,14 @@ def run_pymarkdown(subcommand, path, config):
                 runpy.run_module("pymarkdown", run_name="__main__",
                                  alter_sys=True)
             except SystemExit as exc:
-                rc = int(exc.code) if exc.code is not None else 0
+                if exc.code is None:
+                    rc = 0
+                elif isinstance(exc.code, int):
+                    rc = exc.code
+                else:
+                    # sys.exit("message") convention: message, exit 1.
+                    err_buf.write(f"{exc.code}\n")
+                    rc = 1
     finally:
         sys.argv = saved_argv
     return rc, out_buf.getvalue(), err_buf.getvalue()
@@ -233,6 +287,9 @@ def main():
         sys.exit(2)
 
     if args.fix:
+        # Under the explicit scheme 0 means nothing to fix and 3 means at
+        # least one file was fixed; anything else is worth a warning (the
+        # scan below surfaces terminal conditions with a hard error).
         rc_fix, _, _ = run_pymarkdown('fix', p, config)
         if rc_fix not in (0, 3):
             sys.stderr.write(
@@ -247,7 +304,16 @@ def main():
             sys.exit(2)
 
     rc_scan, stdout, stderr = run_pymarkdown('scan', p, config)
-    if rc_scan not in (0, 1):
+    if rc_scan == 1:
+        # NO_FILES_TO_SCAN: pymarkdown declined the path (typically a
+        # non-Markdown extension) and emits no diagnostic of its own, so
+        # reporting "clean" here would be a lie.
+        sys.stderr.write(
+            f"lint_markdown.py: pymarkdown did not scan {args.path} "
+            f"(not recognized as a Markdown file)\n"
+        )
+        sys.exit(2)
+    if rc_scan not in (0, 4):
         sys.stderr.write(
             f"lint_markdown.py: pymarkdown scan exited {rc_scan}\n{stderr}\n"
         )
