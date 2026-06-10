@@ -4,8 +4,8 @@ This layer adds conventions for empirical research articles on top of
 `rules-general.md`. Load it together with the general layer when reviewing or
 writing a paper; add `rules-latex.md` on top when the source is LaTeX. The
 rules here draw on APA style (7th ed.) and IEEE/ACM conventions for SE
-publications. The justification behind the rules lives in `rules-rationale.md`,
-which the skills do not load.
+publications. The rationale behind the contested rules lives in
+`rules-rationale.md`, which the skills do not load.
 
 ## Research-coded phrases to avoid
 
