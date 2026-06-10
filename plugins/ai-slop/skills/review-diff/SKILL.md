@@ -9,7 +9,7 @@ metadata:
 
 # AI Slop Review — Diff Mode
 
-This skill reviews only the lines that changed in a git-versioned document. It runs `git diff <base>` (default base: `HEAD`), restricts rule and trope checks to lines added or modified in `.tex` files, and writes the same `ai-slop-report.md` schema as `/ai-slop:review` so `/ai-slop:revise` can apply the suggestions unchanged.
+This skill reviews only the lines that changed in a git-versioned document. It runs `git diff <base>` (default base: `HEAD`), restricts rule and trope checks to lines added or modified in `.tex` files (or `.tex`/`.md`/`.txt` for a non-LaTeX repo), and writes the same `ai-slop-report.md` schema as `/ai-slop:review` so `/ai-slop:revise` can apply the suggestions unchanged.
 
 **Audience and tone.** The default user is an author iterating on a draft and wants a quick pass over their latest edits before committing or sharing. Frame findings as suggestions, not violations.
 
@@ -33,7 +33,7 @@ The skill auto-detects the paper and the diff in the current working directory.
 
 If the working directory is not inside a git repository (`git rev-parse --is-inside-work-tree` returns non-zero), stop and tell the user, e.g., "Not a git repository; use `/ai-slop:review` for a full-paper review."
 
-**Paper detection.** Same as `/ai-slop:review`: run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 → use the printed path; exit 2 → multiple candidates printed, ask the user; exit 1 → no `.tex` root, stop and tell the user (PDF input is not supported in diff mode because no diff is available). When detection (step 6) returns `general`, skip LaTeX-root detection and operate directly on the changed text files.
+**Paper detection.** Same as `/ai-slop:review`: run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 → use the printed path; exit 2 → multiple candidates printed, ask the user; exit 1 → no `.tex` root — not an error in diff mode: the repo is the `general` case (scope detection in step 6 confirms it), so operate directly on the changed text files. PDF input is never reviewed in diff mode because no diff is available for it.
 
 **Trope catalog override.** `--tropes=<path>` (repeatable) replaces the default fetch with one or more user-supplied files; contents are concatenated in the order given. When `--tropes` is not passed (the common case), the catalog is fetched live — see step 7.
 
@@ -41,7 +41,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 1. **Verify git context.** Run `git rev-parse --is-inside-work-tree`. If not in a git repo, stop with the message above. Otherwise capture the repo root for later path resolution.
 
-2. **Resolve inputs.** Auto-detect the LaTeX root. Parse the base ref (default `HEAD`) and any `--tropes=<path>` arguments (repeatable) from the user's message.
+2. **Resolve inputs.** Auto-detect the LaTeX root; exit 1 means a `general`-scope repo, not a failure (see Paper detection). Parse the base ref (default `HEAD`) and any `--tropes=<path>` arguments (repeatable) from the user's message.
 
 3. **Compute the diff.** Run `git diff --unified=0 <base> -- <pathspec>` to list changed lines, where `<pathspec>` is `'*.tex'` when detection (step 6) returns `latex` and widens to `'*.tex' '*.md' '*.txt'` for `general`. Parse the unified-diff hunk headers (`@@ -<old_start>,<old_count> +<new_start>,<new_count> @@`) to extract per-file line ranges of added or modified lines in the new tree (the working-tree side). Track these as the **changed-line set** per file. If no matching files changed, write an empty report (Summary: "No changes since `<base>`."), print it, and stop.
 
@@ -81,7 +81,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
     Then Read the file back and quote its contents verbatim in your reply — do **not** regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
 
     ```text
-    **Diff scope:** base=<base ref>, files=<list of changed .tex files>
+    **Diff scope:** base=<base ref>, files=<list of changed files in the diff pathspec>
     ```
 
     Place this line under `**Reviewed:**`. The Summary should explicitly note that the review only covered changed lines, so a reader of the report does not assume the rest of the paper was checked.
@@ -96,7 +96,7 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers; load the subset the scope calls for (step 6).
 - `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the upstream Gist and tropes.fyi viewer are both unreachable.
-- `../../scripts/find_latex_root.py`, `../../scripts/fetch_tropes.py`, `../../scripts/check_bib_fields.py` implement the deterministic checks above; their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch chain, BibTeX field and reference verification, report linting); their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 

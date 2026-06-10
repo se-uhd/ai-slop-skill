@@ -1,6 +1,6 @@
 {
   "name": "ai-slop",
-  "description": "An Agent Skill that catches AI slop in any prose, adding conventions for empirical software engineering papers and mechanics for LaTeX source (BibTeX, reference checks, citation macros, grounding comments) when you target a manuscript or .tex paper. Fetches the live AI-trope catalog from tropes.fyi at invocation.",
+  "description": "An Agent Skill that catches AI slop in any prose, adding conventions for empirical software engineering papers and mechanics for LaTeX source (BibTeX, reference checks, citation macros, grounding comments) — loaded automatically for .tex source, with --scientific opting a non-LaTeX manuscript into the paper conventions. Fetches the live AI-trope catalog from tropes.fyi at invocation.",
   "owner": {
     "name": "Software Engineering Group, Heidelberg University",
     "url": "https://github.com/se-uhd"
@@ -9,7 +9,7 @@
     {
       "name": "ai-slop",
       "source": "./plugins/ai-slop",
-      "description": "Catch AI slop and apply writing conventions to any prose — drafting Markdown, documentation, or a blog post — and add empirical software engineering paper rules plus LaTeX checks (BibTeX, reference verification) when editing .tex files or auditing a manuscript for AI slop. Combines these with the community-maintained tropes.fyi catalog of general AI writing patterns.",
+      "description": "Catch AI slop and apply writing conventions to any prose — drafting Markdown, documentation, or a blog post. Editing .tex files adds the empirical software engineering paper rules plus LaTeX checks (BibTeX, reference verification) automatically; --scientific applies the paper rules to a non-LaTeX manuscript. Combines these with the community-maintained tropes.fyi catalog of general AI writing patterns.",
       "version": "2026-06_rev5",
       "homepage": "https://github.com/se-uhd/ai-slop-skill",
       "license": "CC-BY-4.0"
