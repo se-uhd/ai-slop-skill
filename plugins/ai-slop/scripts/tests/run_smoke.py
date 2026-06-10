@@ -447,6 +447,17 @@ def test_lint_markdown_multiple_h1():
         assert 'md025' in out, f"h1: md025 missing: {out!r}"
 
 
+def test_check_baseline_passes_on_bundled_yaml():
+    # check_baseline.py is synced from the upstream pymarkdown-skill repo
+    # (alongside lint_markdown.py and refresh_vendor.py) and asserts that
+    # lint_markdown.yaml still carries the upstream baseline lint config.
+    # Run it here so the sync-owned guard stays exercised and a yaml edit
+    # that drops the baseline fails the suite.
+    rc, out, err = run('check_baseline.py')
+    assert rc == 0, f"check_baseline: rc={rc} out={out!r} err={err!r}"
+    assert 'baseline ok' in err, f"check_baseline: unexpected output: {err!r}"
+
+
 def test_lint_markdown_blanks_around_headings():
     # MD022 — the rule that flags headings without blank lines around them.
     with tempfile.TemporaryDirectory() as d:
@@ -1422,6 +1433,7 @@ TESTS = [
     test_lint_markdown_fix_mode_preserves_structural_findings,
     test_lint_markdown_unreadable_exits_2,
     test_version_strings_in_sync,
+    test_check_baseline_passes_on_bundled_yaml,
     test_detect_scope_file_tex,
     test_detect_scope_file_pdf,
     test_detect_scope_file_markdown,

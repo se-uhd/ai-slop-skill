@@ -36,7 +36,11 @@ have been broken before:
 ## Other conventions
 
 - First-party Python helpers are stdlib-only; the only vendored code is
-  PyMarkdown under `scripts/_vendor/`. Do not add pip-installed runtime deps.
+  PyMarkdown (plus its pure-Python deps) under `scripts/_vendor/`. Only
+  `lint_markdown.py` and `check_baseline.py` may import from the vendored
+  tree — both are synced from the upstream pymarkdown-skill repo (with
+  `refresh_vendor.py`), so do not edit them here; fix them upstream and
+  re-sync. Do not add pip-installed runtime deps.
 - All first-party Markdown must lint clean:
   `python3 plugins/ai-slop/scripts/lint_markdown.py <file>`.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
