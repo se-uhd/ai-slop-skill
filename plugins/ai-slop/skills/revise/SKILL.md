@@ -44,7 +44,7 @@ Both inputs default to the current working directory. No arguments are required.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one: prefer the location closest to the hint and log the ambiguity in the summary.
    - If the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys): log as skipped with the reason rather than apply.
 
-4. **Insert grounding stubs.** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment immediately after that `\cite{}` call (one Edit per cite, matching the surrounding indentation and comment placement). These are TODO markers for the author to fill with a supporting quote — never invent the quote. Skip and log any cite whose location cannot be matched.
+4. **Insert grounding stubs.** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment immediately after that `\cite{}` call (one Edit per cite, matching the surrounding indentation and comment placement). These are TODO markers for a supporting quote — never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any cite whose location cannot be matched.
 
 5. **Cross-cutting metrics.** These are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section". Do not invent new edits to balance a metric.
 

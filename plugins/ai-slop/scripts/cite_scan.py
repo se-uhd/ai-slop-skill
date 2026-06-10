@@ -16,6 +16,20 @@ Grounding-comment forms recognized by has_grounding / is_grounding_comment:
 A grounding comment is any `%` comment whose first word is the GROUNDING marker;
 the key placement and the colon position do not matter.
 
+Quote-less grounding comments are TODO stubs — `% GROUNDING: TODO verify <key>`
+(planted by revise mode) or `% GROUNDING: <key> -- TODO verify -- <reason>`
+(written by insert_grounding.py when a source could not be retrieved). They
+count as grounding comments for is_grounding_comment / has_grounding (the cite
+is marked, not missing), but grounding_quality classifies them 'todo' rather
+than 'quote', so a grounding run can still pick the site up and fill the quote.
+
+A comment "belongs" to a cite when it sits on the cite's own line or in the
+contiguous run of blank and `%`-comment lines directly below it; the first code
+line ends that block. iter_comment_block is the single walker for this — the
+read side (has_grounding / grounding_quality, used by find_citation_issues.py
+and extract_cites.py) and the write side (insert_grounding.py) both use it, so
+they cannot drift on which comments count.
+
 Recognized commands:
   - natbib:   \cite, \citep, \citet, \citealp, \citealt, \citetext.
   - biblatex: \parencite, \textcite, \autocite, \fullcite, \smartcite,
@@ -98,22 +112,57 @@ def parse_keys(key_blob):
     return [k.strip() for k in key_blob.split(',') if k.strip()]
 
 
-def has_grounding(lines, idx, same_line_comment):
-    """Return True if a grounding comment (any form recognized by
-    is_grounding_comment) appears on the cite's same-line comment portion or on
-    the next non-blank line (which must itself be a comment line)."""
-    if is_grounding_comment(same_line_comment):
-        return True
+def iter_comment_block(lines, idx, same_line_comment):
+    """Yield (line_index, comment_text) for every comment attached to the cite
+    on line `idx`: the same-line comment portion first (with index `idx`), then
+    each `%` comment line in the contiguous run of blank or comment lines that
+    follows. The first non-blank, non-comment line ends the block, so a
+    grounding comment beyond intervening code or prose is not associated with
+    the cite. This is the single definition of "attached" shared by the read
+    side (has_grounding / grounding_quality) and the write side
+    (insert_grounding.already_grounded), so the two cannot drift."""
+    if same_line_comment and same_line_comment.strip():
+        yield idx, same_line_comment
     j = idx + 1
     while j < len(lines):
         stripped = lines[j].strip()
         if not stripped:
             j += 1
             continue
-        if stripped.startswith('%') and is_grounding_comment(stripped):
-            return True
-        return False
-    return False
+        if not stripped.startswith('%'):
+            break
+        yield j, stripped
+        j += 1
+
+
+def is_quote_grounding(comment):
+    """True if `comment` is a grounding comment carrying a quote (a
+    double-quoted segment) — a completed grounding, as opposed to a quote-less
+    `TODO verify` stub, which records that the quote is still owed."""
+    return is_grounding_comment(comment) and '"' in comment
+
+
+def grounding_quality(lines, idx, same_line_comment):
+    """Classify the grounding state of the cite on line `idx`:
+    'quote' — a grounding comment carrying a quote is attached;
+    'todo'  — only quote-less grounding comments (TODO stubs) are attached;
+    'none'  — no grounding comment at all."""
+    state = 'none'
+    for _, text in iter_comment_block(lines, idx, same_line_comment):
+        if is_quote_grounding(text):
+            return 'quote'
+        if is_grounding_comment(text):
+            state = 'todo'
+    return state
+
+
+def has_grounding(lines, idx, same_line_comment):
+    """Return True if a grounding comment (quote-backed or TODO stub, any form
+    recognized by is_grounding_comment) is attached to the cite on line `idx` —
+    on its own line or in the contiguous blank/comment block below it. Other
+    `%` comments in between do not break the association; the first code line
+    does."""
+    return grounding_quality(lines, idx, same_line_comment) != 'none'
 
 
 def iter_cite_calls(lines):

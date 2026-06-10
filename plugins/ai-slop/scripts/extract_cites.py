@@ -32,9 +32,11 @@ Output: one JSON object on stdout —
 `groundable` is True for the cite macros that require a grounding comment
 (\cite, \citep, \citet, \parencite, ...); style-only helpers (\citeauthor,
 \citeyear) are recorded with groundable=False so their claims enrich `by_key`
-without becoming insertion targets. `grounded` is True when the site already has
-a grounding comment (any form recognized by cite_scan.is_grounding_comment). A
-one-line summary is printed to stderr.
+without becoming insertion targets. `grounded` is True only when the site has a
+grounding comment carrying a retrieved quote; a quote-less `TODO verify` stub
+(planted by revise mode or by an earlier grounding run) counts as ungrounded,
+so a grounding workflow picks the site up and insert_grounding.py fills the
+quote the stub only promises. A one-line summary is printed to stderr.
 
 Exit codes:
   0  at least one source file was scanned.
@@ -56,7 +58,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cite_scan import (  # noqa: E402
     CITATION_COMMANDS, CITE_PATTERN, GROUNDED_COMMANDS, IGNORED_COMMANDS,
-    has_grounding, parse_keys, split_code_and_comment,
+    grounding_quality, parse_keys, split_code_and_comment,
 )
 from bib_parse import iter_entries  # noqa: E402
 from find_latex_root import find_roots  # noqa: E402
@@ -265,7 +267,9 @@ def scan_text(path, text):
         idx = line_no - 1
         if 0 <= idx < len(raw_lines):
             _, same_comment = split_code_and_comment(raw_lines[idx])
-            grounded = has_grounding(raw_lines, idx, same_comment)
+            # A quote-less TODO stub classifies as 'todo', not 'quote', so the
+            # site stays an insertion target until a retrieved quote lands.
+            grounded = grounding_quality(raw_lines, idx, same_comment) == 'quote'
         else:
             grounded = False
         yield {
@@ -368,7 +372,7 @@ def main(argv):
     ungrounded = sum(1 for s in sites if s['groundable'] and not s['grounded'])
     print(
         f"extracted {len(sites)} cite site(s), {len(by_key)} unique key(s), "
-        f"{ungrounded} groundable site(s) missing a grounding comment; "
+        f"{ungrounded} groundable site(s) without a quote-backed grounding comment; "
         f"metadata for {len(meta)}/{len(by_key)} key(s); "
         f"scanned {len(files)} file(s), {len(bib_files)} bib file(s)",
         file=sys.stderr,

@@ -1,6 +1,6 @@
 ---
 name: ground
-description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper without a grounding comment, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source — or a `TODO verify -- <reason>` stub when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
+description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper without a quote-backed grounding comment — no comment at all, or a `TODO verify` stub left by revise mode or an earlier run — fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source — or a `TODO verify -- <reason>` stub when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
 license: CC-BY-4.0
 metadata:
   version: "2026-06_rev5"
@@ -9,7 +9,7 @@ metadata:
 
 # AI Slop Review — Ground Mode
 
-This skill closes the loop that review mode opens. `/ai-slop:review` lists every `\cite{}` missing a `% GROUNDING:` comment as a grounding to-do but never fills it; ground mode fetches each cited source, extracts a verbatim quote supporting the claim the paper attributes to it, and writes the grounding comment into the LaTeX. Where the source cannot be retrieved, it writes a `TODO verify -- <reason>` stub instead — never a quote from memory.
+This skill closes the loop that review mode opens. `/ai-slop:review` lists every `\cite{}` missing a `% GROUNDING:` comment as a grounding to-do but never fills it; ground mode fetches each cited source, extracts a verbatim quote supporting the claim the paper attributes to it, and writes the grounding comment into the LaTeX. Where the source cannot be retrieved, it writes a `TODO verify -- <reason>` stub instead — never a quote from memory. Quote-less `TODO verify` stubs — planted by `/ai-slop:revise` or by an earlier ground run — count as unfilled: ground picks those sites up and replaces the stub with the retrieved quote.
 
 **Audience and tone.** The default user is an author who has citations to ground before submission. The result is an audit trail in the source: a quote co-authors and reviewers can check against each citation. Frame the summary as work completed and work still needing the author's attention, not as a verdict.
 
@@ -43,7 +43,7 @@ The skill operates on the LaTeX paper in the current working directory. No argum
 
    The script prints to stderr a one-line summary (sites, unique keys, groundable sites still missing a comment, metadata coverage). Add `grounding-cites.json` and `grounding-quotes.json` to the repo's `.gitignore` (creating it if absent); these are generated artifacts and must not be committed.
 
-3. **Pick the keys to ground.** From `by_key`, take the keys with at least one site where `groundable` is true and `grounded` is false. Keys already grounded everywhere need no work; keys that appear only in style-only helpers (`\citeauthor` / `\citeyear`, `groundable: false`) are context, not insertion targets. If a key has no entry in `meta`, note it — the `.bib` lacks that key, so the agent has only the claim text to work from, and the result is likely a `not-found` TODO.
+3. **Pick the keys to ground.** From `by_key`, take the keys with at least one site where `groundable` is true and `grounded` is false. `grounded` is true only for a quote-backed comment, so sites carrying a quote-less `TODO verify` stub are selected and filled. Keys already grounded everywhere need no work; keys that appear only in style-only helpers (`\citeauthor` / `\citeyear`, `groundable: false`) are context, not insertion targets. If a key has no entry in `meta`, note it — the `.bib` lacks that key, so the agent has only the claim text to work from, and the result is likely a `not-found` TODO.
 
 4. **Ground each unique source — one agent per key, chunked.** Author an inline grounding **Workflow** (see the reusable pattern below). Each agent receives one key's bundle — its `meta` and its list of `claims` — and is told to:
    - Identify the source from the metadata (DOI first, then title + author + year; use the `url` / `eprint` if present, or a user-supplied local file).
@@ -51,11 +51,11 @@ The skill operates on the LaTeX paper in the current working directory. No argum
    - Find a short verbatim quote from the source that supports the claim(s). Return it **only if the source was actually retrieved and the quote is copied from it.**
    - Otherwise return a TODO with a reason: `paywalled`, `abstract-only` (only the abstract was reachable and it does not contain the support), `book` (no digital full text), `not-found` (the source could not be located), or `source-does-not-support` (the source was read but does not back the claim).
 
-   Run the agents in **slices of about 8 at a time** so a burst does not trip server-side rate limits. The run is resumable: any source that errored or was skipped simply stays without a grounding comment, so a later `/ai-slop:ground` over the still-ungrounded sites fills it.
+   Run the agents in **slices of about 8 at a time** so a burst does not trip server-side rate limits. The run is resumable: any source that errored or was skipped simply stays without a quote — its site keeps the missing comment or the `TODO verify` stub — so a later `/ai-slop:ground` picks it up and fills it.
 
 5. **Assemble the quotes file.** Collect the agents' results into `grounding-quotes.json`, mapping each key to either `{"quote": "<verbatim text>"}` or `{"todo": "<reason>"}`. Write nothing for a key whose agent failed entirely — leaving it absent keeps it for a future run.
 
-6. **Insert the comments.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/insert_grounding.py grounding-cites.json grounding-quotes.json`. It writes `% GROUNDING: <key> -- "<quote>"` (or the `TODO verify -- <reason>` form) after each groundable, ungrounded cite line, matching the line's indentation. It is idempotent (a site already grounded for that key is left alone) and re-checks each line against the file before editing, so it skips any site that moved. Use `--dry-run` first if the user wants to preview the edits.
+6. **Insert the comments.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/insert_grounding.py grounding-cites.json grounding-quotes.json`. It writes `% GROUNDING: <key> -- "<quote>"` (or the `TODO verify -- <reason>` form) after each groundable, ungrounded cite line, matching the line's indentation. An existing quote-less `TODO verify` stub for the key is replaced in place; a site with a quote-backed comment for the key is left alone (idempotent), and each line is re-checked against the file before editing, so any site that moved is skipped. Use `--dry-run` first if the user wants to preview the edits.
 
 7. **Summarize.** Tell the user, in plain terms:
    - How many citations were grounded with a retrieved quote.
