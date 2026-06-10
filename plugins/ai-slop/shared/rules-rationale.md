@@ -2,14 +2,19 @@
 
 This file records the *why* behind the rules in the three rule layers
 (`rules-general.md`, `rules-scientific.md`, `rules-latex.md`). It is
-documentation only: the `ai-slop:review`, `ai-slop:review-diff`, `ai-slop:init`,
-and `ai-slop:revise` skills load the layers their scope calls for (and the trope
-catalog) by explicit path, and none of them read this file. Keeping the
+documentation only: the `ai-slop:review`, `ai-slop:review-diff`, and
+`ai-slop:init` skills load the layers their scope calls for plus the trope
+catalog by explicit path; `ai-slop:revise` and `ai-slop:ground` reference only
+the layers (revise applies a finished report, so it needs no trope source, and
+ground reads the LaTeX layer's grounding convention). None of them read this
+file. Keeping the
 justification here lets the layers carry only the operative directive, example,
 and exception for each rule, while the explanatory background that does not
 change how a rule is applied lives in one place a maintainer can consult.
 
-When a rule changes, update both: the directive in the relevant layer and the
+Not every rule has an entry: the mechanical ones carry their own short
+justification in the layer or need none. When a rule with an entry here
+changes, update both: the directive in the relevant layer and the
 justification here. The sections below are grouped by topic; each topic lives in
 the general layer (any prose), the scientific layer (research articles), or the
 LaTeX layer (markup mechanics), and several cross-cutting topics state a

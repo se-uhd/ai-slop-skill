@@ -4,8 +4,8 @@ This layer adds mechanics for LaTeX source on top of `rules-general.md` and
 `rules-scientific.md`. Load all three when reviewing or editing a `.tex`
 manuscript; the rules here cover markup that only exists in LaTeX, and several
 of them are the LaTeX expression of a principle stated more generally in a lower
-layer. The justification behind the rules lives in `rules-rationale.md`, which
-the skills do not load.
+layer. The rationale behind the contested rules lives in
+`rules-rationale.md`, which the skills do not load.
 
 ## Quotation marks
 
@@ -30,10 +30,10 @@ the skills do not load.
 
 ## BibTeX
 
-- **Verify every entry.** AI-generated BibTeX entries frequently contain wrong years, wrong venues, invented page numbers, or hallucinated DOIs. Every entry must be checked against a reliable source before it goes into the `.bib` file. A review runs an automated reference check (CrossRef by DOI then title, DBLP by title) that flags unresolvable DOIs and title/year/venue mismatches; its output is advisory — confirm before acting, and never call a reference fabricated from eyeballing.
+- **Verify every entry.** This is the BibTeX expression of the scientific layer's **Verify every reference** rule. AI-generated BibTeX entries frequently contain wrong years, wrong venues, invented page numbers, or hallucinated DOIs. Every entry must be checked against a reliable source before it goes into the `.bib` file. A review runs an automated reference check (CrossRef by DOI then title, DBLP by title) that flags unresolvable DOIs and title/year/venue mismatches; its output is advisory — confirm before acting, and never call a reference fabricated from eyeballing.
 - **Source priority.** (1) DBLP, if the work appears there. DBLP entries are curated and consistently formatted. (2) The publisher page, if a DOI is provided; resolve the DOI and pull metadata from the landing page. (3) Google Scholar or a general web search as a last resort, cross-checked against the actual paper.
 - **Check at minimum.** Author names and ordering, title (exact, including capitalization in the original), year, venue name (full and abbreviated), volume / number / pages, and DOI.
-- **Do not invent fields.** If a field (e.g., pages, volume) cannot be confirmed, omit it. A missing field is better than a wrong one.
+- **Do not invent fields.** This restates the scientific layer's **Do not invent fields** rule for the `.bib` file. If a field (e.g., pages, volume) cannot be confirmed, omit it. A missing field is better than a wrong one.
 
 ## Self-Check Before Presenting Text (LaTeX)
 
