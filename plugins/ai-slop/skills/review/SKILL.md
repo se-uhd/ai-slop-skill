@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes — and, for research papers, statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev10"
+  version: "2026-06_rev11"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -50,7 +50,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - `rules-latex.md` — LaTeX-source mechanics (LaTeX quotes, run-in caption punctuation, cross-reference and `\citeauthor` macros, `% GROUNDING` comments, BibTeX).
 
    Decide as follows:
-   - **Is it LaTeX?** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <resolved-paper-path>`. Output `latex` means LaTeX source: load all three layers (a LaTeX paper is a research article, so the scientific layer comes along automatically). Output `general` means anything else — Markdown, plain text, or PDF.
+   - **Is it LaTeX?** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <resolved-paper-path>`. Output `latex` means LaTeX source: load all three layers (a LaTeX paper is a research article, so the scientific layer loads automatically). Output `general` means anything else — Markdown, plain text, or PDF.
    - **Research article?** For `general` input, also load `rules-scientific.md` when the user passed `--scientific`, to treat a non-LaTeX manuscript (a Markdown or PDF paper) as a research article. Without the flag, load `rules-general.md` only.
 
    Read each selected layer file. Each contributes its own rules and its own self-check section; apply them together. A finding's `Rule` name comes from whichever layer defines it.
@@ -84,7 +84,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
      - Biblatex multi-cite forms (`\textcites`, `\autocites`, `\fullcites`) read only the first key group.
      - "Nearby grounding" means the cite's attached comment block: the same line plus the contiguous run of blank and `%`-comment lines directly below it. A comment placed after intervening code or prose is not credited. A quote-less `TODO verify` stub counts as attached (marked, not missing); `/ai-slop:ground` fills such stubs.
    - For each cluster, only flag it as a finding if the surrounding prose does not explain what each cited work contributes. A cluster followed by sentences that distinguish each work is fine.
-   - For missing-grounding, always surface the result as a **Grounding to-do** list in the report: every `\cite{}` lacking a grounding comment, by `file:line` and key. This list is always emitted, not a project-internal decision. (A paper may use the per-key `% GROUNDING <key>: "..."` convention; the script credits it, so do not re-report those cites as ungrounded.) To fill genuinely missing comments — fetch each cited source and insert a retrieved supporting quote — point the user to `/ai-slop:ground`.
+   - For missing-grounding, always report the result as a **Grounding to-do** list in the report: every `\cite{}` lacking a grounding comment, by `file:line` and key. This list is always emitted, not a project-internal decision. (A paper may use the per-key `% GROUNDING <key>: "..."` convention; the script credits it, so do not re-report those cites as ungrounded.) To fill genuinely missing comments — fetch each cited source and insert a retrieved supporting quote — point the user to `/ai-slop:ground`.
    - Spelled-out author names that should use `\citeauthor{}`. The script does not check this. Scan manually.
    - `.bib` entries with missing required fields. To find the bib files, grep the LaTeX root (and any `\input`-ed files) for `\bibliography{...}` and `\addbibresource{...}` directives and resolve each path. If at least one is found, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfile1> <bibfile2> ...` and report each printed entry as a finding. The script uses standard BibTeX required-field semantics (Patashnik's `btxdoc`) and does not honor `crossref` inheritance, so sanity-check flagged entries before reporting them, and skip the check entirely if no bib files are referenced. The script always prints a one-line summary to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field issue(s)`). Use it to confirm the run completed.
    - Hallucinated or mismatched references. After the field check, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/verify_references.py <bibfile1> [<bibfile2> ...] [--mailto you@example.org]` over the same `.bib` files. It looks each entry up in CrossRef (by DOI, then title) and DBLP (by title) and prints one tab-separated line per entry that is not cleanly verified: `<key>\t<verdict>\t<detail>`, where `<verdict>` is `doi-not-found`, `title-mismatch`, `year-mismatch`, `venue-mismatch`, `not-found`, `unchecked-offline`, or `unchecked`. Report these under **Reference verification**. This check is advisory and online-first: with no network every entry returns `unchecked-offline` and the run still exits 0. Never assert a reference is fabricated from eyeballing — treat `doi-not-found` and `not-found` as likely-fabricated only after a sanity check, and for entries the databases cannot confirm, do a web search to validate before flagging. DBLP's curated BibTeX is the canonical record for CS/SE venues; prefer the publisher/DOI metadata only when DBLP holds just a preprint of a now-published paper. For an exhaustive non-LLM audit of someone else's submission, point the user to the `hallucite` skill.
@@ -105,7 +105,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-06_rev10 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-06_rev11 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at

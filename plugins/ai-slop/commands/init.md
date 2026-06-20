@@ -1,5 +1,5 @@
 ---
-description: Generate a project-local WRITING.md file from the layered writing rules and wire it into CLAUDE.md (creating CLAUDE.md if it does not exist).
+description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in CLAUDE.md (creating CLAUDE.md if it does not exist).
 ---
 
 Use the `ai-slop:init` skill.

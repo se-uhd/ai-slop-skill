@@ -3,13 +3,13 @@ name: ground
 description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper without a quote-backed grounding comment — no comment at all, or a `TODO verify` stub left by revise mode or an earlier run — fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source — or a `TODO verify -- <reason>` stub when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev10"
+  version: "2026-06_rev11"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
 # AI Slop Review — Ground Mode
 
-This skill closes the loop that review mode opens. `/ai-slop:review` lists every `\cite{}` missing a `% GROUNDING:` comment as a grounding to-do but never fills it; ground mode fetches each cited source, extracts a verbatim quote supporting the claim the paper attributes to it, and writes the grounding comment into the LaTeX. Where the source cannot be retrieved, it writes a `TODO verify -- <reason>` stub instead — never a quote from memory. Quote-less `TODO verify` stubs — planted by `/ai-slop:revise` or by an earlier ground run — count as unfilled: ground picks those sites up and replaces the stub with the retrieved quote.
+This skill fills the grounding comments review mode flags as missing. `/ai-slop:review` lists every `\cite{}` missing a `% GROUNDING:` comment as a grounding to-do but never fills it; ground mode fetches each cited source, extracts a verbatim quote supporting the claim the paper attributes to it, and writes the grounding comment into the LaTeX. Where the source cannot be retrieved, it writes a `TODO verify -- <reason>` stub instead — never a quote from memory. Quote-less `TODO verify` stubs — planted by `/ai-slop:revise` or by an earlier ground run — count as unfilled: ground picks those sites up and replaces the stub with the retrieved quote.
 
 **Audience and tone.** The default user is an author who has citations to ground before submission. The result is an audit trail in the source: a quote co-authors and reviewers can check against each citation. Frame the summary as work completed and work still needing the author's attention, not as a verdict.
 
@@ -60,7 +60,7 @@ The skill operates on the LaTeX paper in the current working directory. No argum
 7. **Summarize.** Tell the user, in plain terms:
    - How many citations were grounded with a retrieved quote.
    - How many got a TODO, broken down by reason.
-   - **The `source-does-not-support` cases, called out first.** These are not mere gaps — the source was read and does not back the claim, which flags a likely miscitation (a wrong key, or a cite stretched past what the source says). Surface each one with its key and the claim so the author can fix the citation, not just the comment.
+   - **The `source-does-not-support` cases, called out first.** These are not mere gaps — the source was read and does not back the claim, which flags a likely miscitation (a wrong key, or a cite stretched past what the source says). Report each one with its key and the claim so the author can fix the citation, not just the comment.
    - Any keys missing `.bib` metadata.
 
 8. **Stop.** Leave the edits in the working tree. The user inspects them with `git diff` and commits when satisfied. Do not commit; do not run a review.
@@ -121,7 +121,7 @@ Map each result to `grounding-quotes.json`: `status: 'quote'` → `{quote}`, `st
 ## Constraints
 
 - **Never fabricate a quote.** A quote is written only when the source was retrieved and the text was copied from it. Otherwise it is `TODO verify -- <reason>`. This is non-negotiable.
-- **Surface `source-does-not-support` as a finding.** It marks a likely miscitation, not a missing quote. Report these prominently with the key and claim.
+- **Report `source-does-not-support` as a finding.** It marks a likely miscitation, not a missing quote. Report these prominently with the key and claim.
 - **LaTeX only.** Stop on a non-LaTeX target; only LaTeX has the inline source comment this audit trail relies on.
 - **Edit only the grounding comments.** Do not change prose, citations, figures, or BibTeX. The only edits are the inserted `% GROUNDING:` lines.
 - **Stay within rate limits.** Chunk the agent fan-out (~8 per slice). The run is resumable over still-ungrounded sites.
