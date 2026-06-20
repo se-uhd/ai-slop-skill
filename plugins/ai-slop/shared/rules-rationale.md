@@ -82,7 +82,7 @@ the paper exists in the reader's hands now, while the study happened in the past
 
 ## Punctuation
 
-Most punctuation rules target the same underlying phenomenon: AI text leans on
+Most punctuation rules target the same underlying phenomenon: AI text uses
 mid-sentence pause marks (em dashes, colons, semicolons) far more than human
 text, and restricting one mark merely displaces the load onto the others. The
 primary test is per mark — is each pause genuinely the right choice? — and the
@@ -91,11 +91,11 @@ cannot tell a well-placed dash from a lazy one.
 
 - **Em dashes.** An em dash (and the parenthesis it is often swapped for) usually
   signals a sentence trying to do too much; splitting into two sentences is the
-  fix. The carve-outs (comma-bearing appositives, nested-parenthesis avoidance,
+  fix. The exceptions (comma-bearing appositives, nested-parenthesis avoidance,
   quoted material) are cases where the dash does structural work the commas or
   parentheses cannot, so they do not count as over-reliance.
-- **Colons.** AI text falls back to colons for a generic mid-sentence pause and
-  reaches for the colon-then-list shape reflexively, which is why both are flagged
+- **Colons.** AI text defaults to colons for a generic mid-sentence pause and
+  uses the colon-then-list shape reflexively, which is why both are flagged
   even when each individual colon is defensible.
 - **Introducer punctuation (`:` not `.`).** AI text systematically ends a list- or
   continuation-introducing clause with a period for three reinforcing reasons:
@@ -118,8 +118,8 @@ cannot tell a well-placed dash from a lazy one.
   words per sentence, low burstiness), so deliberate variation is itself a signal
   of human editing.
 - **Hyphenation of compound modifiers.** AI text over-hyphenates noun-noun stacks
-  placed before another noun ("code-generation benchmarks"). The hyphen earns its
-  place only when dropping it invites a real misread, typically when one element
+  placed before another noun ("code-generation benchmarks"). The hyphen is needed
+  only when dropping it invites a real misread, typically when one element
   is a participle that could re-attach as a verb.
 
 ## Structure
@@ -164,7 +164,7 @@ cannot tell a well-placed dash from a lazy one.
   abstract can still misstate what the study found.
 - **No citations in the abstract.** Many ACM, EMSE, and IEEE author guidelines
   require the abstract to stand alone, so references move to the introduction.
-- **The body must stand independent of the abstract.** The abstract is consumed
+- **The body must stand independent of the abstract.** The abstract is read
   independently by readers, indexers, and search engines, and a body reader may
   skip it, so no section of the body can depend on it. Anything the abstract
   introduces — an acronym, term, definition, or notation — must be introduced

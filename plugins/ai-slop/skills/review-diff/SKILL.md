@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev10"
+  version: "2026-06_rev11"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -100,7 +100,7 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 
 ## Constraints
 
-- **Diff scope is strict.** Only flag a finding when at least one line of its quote lies in the changed-line set. Do not surface pre-existing issues on untouched lines, even when they sit inside a changed paragraph.
+- **Diff scope is strict.** Only flag a finding when at least one line of its quote lies in the changed-line set. Do not report pre-existing issues on untouched lines, even when they sit inside a changed paragraph.
 - **Same report schema.** The report must match the schema produced by `/ai-slop:review` so `/ai-slop:revise` works without changes. The only difference is the extra "Diff scope" header line and the scoping note in the Summary.
 - **Do not modify the paper.** Diff mode writes only `ai-slop-report.md` in the working directory.
 - **Do not stash, commit, or alter the working tree.** The skill reads the diff and the working-tree files; it never runs `git add`, `git stash`, `git commit`, or any other state-changing git command.
