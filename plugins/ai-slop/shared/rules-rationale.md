@@ -63,6 +63,8 @@ statistical results.
 
 "Navigate" is restricted only in its metaphorical sense (navigating complexity, challenges, or a landscape), the pattern that reads as AI prose. Its literal sense, moving through a UI, website, menu, or file tree, is precise and not flagged. "Worked example" sits in the phrases-to-avoid list because the "worked" qualifier is usually empty padding that "example" already carries, with the lone exception of a fully solved problem presented step by step.
 
+The **Plain, literal language** rules extend the same logic from single listed words to three classes the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision the plain form loses) and carry a short seed list for recall. The seed list also guards against the reviewer sharing the writer's blind spot: a literal match flags a known word even when the prose reads fine to a model with the same habit.
+
 ## Terminology consistency
 
 What reads as elegant variation in literary writing creates ambiguity in
