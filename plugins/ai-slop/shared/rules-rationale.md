@@ -94,6 +94,10 @@ cannot tell a well-placed dash from a lazy one.
   fix. The exceptions (comma-bearing appositives, nested-parenthesis avoidance,
   quoted material) are cases where the dash does structural work the commas or
   parentheses cannot, so they do not count as over-reliance.
+- **Literal em-dash glyphs in source.** Word processors autocorrect `--` into `—`;
+  code editors don't. So a literal `—` in Markdown, source, or `.tex` (where the
+  em-dash is `---`) rarely comes from a human and usually marks pasted or
+  generated text.
 - **Colons.** AI text defaults to colons for a generic mid-sentence pause and
   uses the colon-then-list shape reflexively, which is why both are flagged
   even when each individual colon is defensible.
