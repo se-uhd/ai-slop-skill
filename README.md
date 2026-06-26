@@ -18,7 +18,7 @@ The writing rules ship as three layers. Which ones load depends on whether the i
 
 ## Versioning
 
-The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string lives in nine callsites, kept in sync by the smoke suite: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `version` field of each of the five `SKILL.md` files, the `**Skill version:**` line in `review/SKILL.md`'s report template, and the `skill version` reference in `init/SKILL.md`'s WRITING.md header. Git tags follow the same scheme.
+The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string lives in ten callsites, kept in sync by the smoke suite: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `version` field of each of the six `SKILL.md` files, the `**Skill version:**` line in `review/SKILL.md`'s report template, and the `skill version` reference in `init/SKILL.md`'s WRITING.md header. Git tags follow the same scheme.
 
 ## Dependencies
 
@@ -35,19 +35,20 @@ No other runtime dependencies. Two helpers reach the network: the reference chec
 /plugin install ai-slop
 ```
 
-Five slash commands become available:
+Six slash commands become available:
 
 ```text
 /ai-slop:review
 /ai-slop:review-diff
+/ai-slop:review-repo
 /ai-slop:revise
 /ai-slop:ground
 /ai-slop:init
 ```
 
-`review`, `review-diff`, and `init` detect LaTeX source automatically and load all three rule layers for it; any other input loads the general layer. Add `--scientific` to also apply the research article rules to a non-LaTeX manuscript (a Markdown or PDF paper).
+`review`, `review-diff`, and `init` detect LaTeX source automatically and load all three rule layers for it; any other input loads the general layer. Add `--scientific` to also apply the research article rules to a non-LaTeX manuscript (a Markdown or PDF paper). `review-repo` is the whole-codebase mode and always loads the general layer (`--scientific` optional); it never loads the LaTeX layer, since it reviews a repository's prose and code comments rather than a single paper.
 
-Run them from your project directory. `/ai-slop:review` finds the document to review in the current directory (a LaTeX root or a PDF; pass an explicit path for a Markdown or plain-text draft), walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:revise` reads the report and applies its suggested revisions to the source; the same report schema is used for both review modes. `/ai-slop:ground` fills the grounding comments the review flags as missing, for LaTeX papers: review *finds* the `\cite{}` calls missing a grounding comment, ground *fills* them by fetching each cited source and inserting a retrieved verbatim quote (or a `TODO verify -- <reason>` stub when the source cannot be retrieved). `/ai-slop:init` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and adds a reference to it in the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so collaborators and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "ground the citations", "set up writing rules in this repo").
+Run them from your project directory. `/ai-slop:review` finds the document to review in the current directory (a LaTeX root or a PDF; pass an explicit path for a Markdown or plain-text draft), walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:review-repo` sweeps a whole repository instead of one document: it extracts every Markdown and plain-text file plus the comments and doc-comments of the source and config files (Shell, Java, Kotlin, Python, JavaScript, TypeScript, and the common config formats such as YAML, TOML, and `.properties`), then reports slop grouped by file, so prose that drifted across many commits gets caught the way a diff review never does. In a git repository it covers the tracked files (so `.gitignore`d build output and dependencies drop out); generated files, lockfiles, binaries, and vendored directories are skipped. `/ai-slop:revise` reads the report and applies its suggested revisions to the source; the same report schema is used for both review modes. `/ai-slop:ground` fills the grounding comments the review flags as missing, for LaTeX papers: review *finds* the `\cite{}` calls missing a grounding comment, ground *fills* them by fetching each cited source and inserting a retrieved verbatim quote (or a `TODO verify -- <reason>` stub when the source cannot be retrieved). `/ai-slop:init` is a one-shot setup command: it copies the bundled writing rules into a project-local `WRITING.md` and adds a reference to it in the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so collaborators and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "ground the citations", "set up writing rules in this repo").
 
 To pick up a new release, refresh the marketplace catalog and reload plugins:
 
@@ -62,7 +63,7 @@ To skip the manual refresh, enable auto-update for the marketplace: run `/plugin
 
 ## Use in other Agent Skills clients
 
-The skills are laid out per the [Agent Skills specification](https://agentskills.io/specification): each `SKILL.md` is self-contained and ships under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/revise/`, `plugins/ai-slop/skills/ground/`, and `plugins/ai-slop/skills/init/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To use the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
+The skills are laid out per the [Agent Skills specification](https://agentskills.io/specification): each `SKILL.md` is self-contained and ships under `plugins/ai-slop/skills/review/`, `plugins/ai-slop/skills/review-diff/`, `plugins/ai-slop/skills/review-repo/`, `plugins/ai-slop/skills/revise/`, `plugins/ai-slop/skills/ground/`, and `plugins/ai-slop/skills/init/`, with shared content in `plugins/ai-slop/shared/` and helper scripts in `plugins/ai-slop/scripts/`. Each `SKILL.md` references the shared bundle via `../../shared/...` and the scripts via `${CLAUDE_SKILL_DIR}/../../scripts/...`. To use the bundle outside Claude Code's plugin loader, reproduce the `plugins/ai-slop/` subtree under your client's skills directory so those paths resolve, and ensure the client exposes `${CLAUDE_SKILL_DIR}` (or a documented equivalent) when invoking shell commands from skills. Each client's docs are linked from the [Agent Skills client list](https://agentskills.io/clients).
 
 ## Use as a system prompt
 
@@ -89,6 +90,12 @@ Review mode does not modify the document. The report is the only output.
 Diff mode is a variant of `/ai-slop:review` for git-versioned documents. Instead of walking the full draft, it runs `git diff <base>` (default `HEAD`) and restricts the rule and trope checks to the lines you added or modified — in `.tex` files for a LaTeX project, or `.tex`/`.md`/`.txt` otherwise. The output is the same `ai-slop-report.md` schema with one extra header line (`**Diff scope:** base=<ref>, files=<list>`), so `/ai-slop:revise` can apply the suggestions unchanged.
 
 A finding is in scope only when at least one line of its quote falls inside the changed-line set; pre-existing issues on untouched lines are not reported. Cross-cutting metrics that need full-document context (e.g., em-dash *density* per page, sentence-length variance over runs of three sentences) are skipped, and only newly added or modified `\cite{}` calls are checked. Diff mode requires a git working tree; outside one, fall back to `/ai-slop:review`.
+
+### `/ai-slop:review-repo`
+
+Repo mode is the whole-codebase counterpart to review and diff modes. Instead of one document, it runs `scripts/scan_repo.py` to extract the repository's natural-language text (every Markdown and plain-text file in full, plus the comments and doc-comments of the source and config files: Shell, Java, Kotlin, Python, JavaScript, TypeScript, CSS/SCSS, HTML/XML, SQL, and config formats such as YAML, TOML, INI, and `.properties`), then scans that prose against the general rules and the trope catalog and writes `ai-slop-report.md` with findings grouped by file (`### <relpath>`) and a `**Repo scope:**` header line. Comment detection is string-aware, so a `//` or `#` inside a string literal is not mistaken for a comment.
+
+In a git repository the scan covers the tracked files, so `.gitignore`d build output and dependencies are excluded automatically; outside one it walks the tree minus a denylist of build and dependency directories. Generated files (those with a "DO NOT EDIT" or `@generated` header), lockfiles, binaries, vendored directories, and `.tex` source are skipped. Because the report spans many files, `/ai-slop:revise` (a single-document tool) does not auto-apply it; fix each file directly, or run revise against one file at a time. This mode catches the slop a diff review never revisits: a British spelling, an em-dash, or a trope that has sat in a committed comment for many commits.
 
 ### `/ai-slop:revise`
 
@@ -122,7 +129,7 @@ The init skill is a one-shot setup command for new (or existing) project reposit
 
 ## Repository layout
 
-The plugin lives under `plugins/ai-slop/`: `commands/` holds the five slash commands, `skills/` the five `SKILL.md` workflows (review, review-diff, revise, ground, init), `shared/` the three rule layers plus the rationale doc and the bundled trope snapshot, and `scripts/` the stdlib Python helpers — scope and LaTeX root detection, the trope fetch chain, citation, BibTeX, and reference checks, citation extraction and grounding-comment insertion, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
+The plugin lives under `plugins/ai-slop/`: `commands/` holds the six slash commands, `skills/` the six `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, init), `shared/` the three rule layers plus the rationale doc and the bundled trope snapshot, and `scripts/` the stdlib Python helpers — scope and LaTeX root detection, the repository prose extractor (`scan_repo.py`), the trope fetch chain, citation, BibTeX, and reference checks, citation extraction and grounding-comment insertion, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
 
 ## Maintainer notes
 

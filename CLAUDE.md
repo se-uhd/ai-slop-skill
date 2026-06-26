@@ -22,7 +22,7 @@ have been broken before:
    commit orphans its tag and breaks the linear release history. (This is the
    mistake that produced the dangling-tag situation at the release now
    numbered `2026-05_rev15`.)
-3. **Keep the 9 version callsites in sync.** The version string lives in
+3. **Keep the 10 version callsites in sync.** The version string lives in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
    `.claude-plugin/marketplace.json`, the `version:` frontmatter of each
    `SKILL.md`, the `**Skill version:**` line in `review/SKILL.md`'s report

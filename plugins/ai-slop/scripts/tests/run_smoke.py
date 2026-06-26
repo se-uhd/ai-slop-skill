@@ -681,6 +681,214 @@ def test_detect_scope_commented_tex_is_not_latex():
         assert out.strip() == 'general', f"commented tex: out={out!r}"
 
 
+# ---------- scan_repo.py ----------
+
+def _scan_lines(out):
+    return [line for line in out.split('\n') if line]
+
+
+def _scan_text(out):
+    # join just the <text> field of each `relpath:line:text` output line
+    return '\n'.join(line.split(':', 2)[2] for line in _scan_lines(out))
+
+
+def _scan_paths(out):
+    return {line.split(':', 1)[0] for line in _scan_lines(out)}
+
+
+def test_scan_repo_prose_markdown_skips_code_fences():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'doc.md',
+              '# Title\n\nReal prose line.\n\n```\ncode_in_fence();\n```\n\nMore prose.\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"md: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'Real prose line.' in text and 'More prose.' in text, f"md prose missing: {out!r}"
+        assert '# Title' in text, f"md heading missing: {out!r}"
+        assert 'code_in_fence' not in text, f"md fenced code not skipped: {out!r}"
+
+
+def test_scan_repo_extracts_only_comments_from_source():
+    src = ('package x\n'
+           '/** A KDoc comment about coffee. */\n'
+           'fun brew() {\n'
+           '  // a line comment here\n'
+           '  val url = "https://example.com/not-a-comment"\n'
+           '  println(url)\n'
+           '}\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'A.kt', src)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"kt: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'A KDoc comment about coffee.' in text, f"kt KDoc missing: {out!r}"
+        assert 'a line comment here' in text, f"kt line comment missing: {out!r}"
+        assert 'fun brew' not in text and 'println' not in text, f"kt code leaked: {out!r}"
+        # the // inside the URL string literal must NOT be read as a comment
+        assert 'example.com' not in text, f"kt string-// leaked as a comment: {out!r}"
+
+
+def test_scan_repo_hash_comments_not_values():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'config.yml', '# a config comment\nkey: value  # trailing note\nother: 3\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"yaml: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'a config comment' in text, f"yaml comment missing: {out!r}"
+        assert 'trailing note' in text, f"yaml trailing comment missing: {out!r}"
+        assert 'value' not in text, f"yaml value leaked as prose: {out!r}"
+
+
+def test_scan_repo_skips_generated_file():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'gen.ts',
+              '/* eslint-disable */\n/**\n * Do not edit the class manually.\n */\n'
+              'export const x = 1; // a real comment\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"generated: rc={rc} err={err!r}"
+        assert 'a real comment' not in out and 'Do not edit' not in out, \
+            f"generated file not skipped: {out!r}"
+
+
+def test_scan_repo_skips_lockfile_and_binary():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'package-lock.json', '{"x": "// not prose"}\n')
+        (Path(d) / 'blob.bin').write_bytes(b'\x00\x01binary // text')
+        write(Path(d) / 'ok.md', 'real prose\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"skip: rc={rc} err={err!r}"
+        paths = _scan_paths(out)
+        assert 'ok.md' in paths, f"prose missing: {paths!r}"
+        assert 'package-lock.json' not in paths, f"lockfile scanned: {paths!r}"
+        assert 'blob.bin' not in paths, f"binary scanned: {paths!r}"
+
+
+def test_scan_repo_walk_prunes_denylisted_dirs():
+    # A plain temp dir is not a git work tree, so list_files falls back to os.walk
+    # and must prune build/ and node_modules/.
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'keep.md', 'kept prose\n')
+        (Path(d) / 'build').mkdir()
+        write(Path(d) / 'build' / 'skip.md', 'build artifact prose\n')
+        (Path(d) / 'node_modules').mkdir()
+        write(Path(d) / 'node_modules' / 'dep.md', 'dependency prose\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"walk: rc={rc} err={err!r}"
+        paths = _scan_paths(out)
+        assert 'keep.md' in paths, f"keep.md missing: {paths!r}"
+        assert not any('build' in p or 'node_modules' in p for p in paths), \
+            f"denylisted dir scanned: {paths!r}"
+
+
+def test_scan_repo_respects_gitignore():
+    import subprocess as sp
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'tracked.md', 'tracked prose\n')
+        write(Path(d) / 'ignored.md', 'ignored prose\n')
+        write(Path(d) / '.gitignore', 'ignored.md\n')
+        sp.run(['git', 'init', '-q'], cwd=d, check=True)
+        sp.run(['git', 'add', '-A'], cwd=d, check=True)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"gitignore: rc={rc} err={err!r}"
+        paths = _scan_paths(out)
+        assert 'tracked.md' in paths, f"tracked file missing: {paths!r}"
+        assert 'ignored.md' not in paths, f"gitignored file scanned: {paths!r}"
+
+
+def test_scan_repo_excludes_committed_vendor_dir():
+    # A vendored/third-party directory that is committed (so `git ls-files` lists
+    # it) must still be excluded: it is not the repository's own prose.
+    import subprocess as sp
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'own.md', 'first-party prose\n')
+        (Path(d) / '_vendor').mkdir()
+        write(Path(d) / '_vendor' / 'lib.py', '# vendored upstream comment\n')
+        sp.run(['git', 'init', '-q'], cwd=d, check=True)
+        sp.run(['git', 'add', '-A'], cwd=d, check=True)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"vendor: rc={rc} err={err!r}"
+        paths = _scan_paths(out)
+        assert 'own.md' in paths, f"first-party file missing: {paths!r}"
+        assert not any('_vendor' in p for p in paths), f"committed vendor dir scanned: {paths!r}"
+
+
+def test_scan_repo_not_a_directory_exits_2():
+    rc, out, err = run('scan_repo.py', '/nonexistent/path/xyzzy')
+    assert rc == 2, f"missing dir: rc={rc} err={err!r}"
+    assert 'not a directory' in err, f"missing dir: err={err!r}"
+
+
+def test_scan_repo_summary_on_stderr():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'a.md', 'one\ntwo\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"summary: rc={rc} err={err!r}"
+        assert 'scanned' in err and 'line(s)' in err, f"summary missing: {err!r}"
+
+
+def test_scan_repo_python_docstring_and_hash():
+    src = ('def f():\n'
+           '    """A module docstring about brewing."""\n'
+           '    label = "value # not a comment"\n'
+           '    # a real comment\n'
+           '    return label\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'm.py', src)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"py: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'A module docstring about brewing.' in text, f"py docstring missing: {out!r}"
+        assert 'a real comment' in text, f"py hash comment missing: {out!r}"
+        assert 'not a comment' not in text, f"py string-# leaked: {out!r}"
+        assert 'return label' not in text, f"py code leaked: {out!r}"
+
+
+def test_scan_repo_shell_comments_skip_shebang():
+    src = '#!/usr/bin/env bash\n# a real shell comment\necho "# not a comment"\n'
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 's.sh', src)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"sh: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'a real shell comment' in text, f"sh comment missing: {out!r}"
+        assert 'usr/bin/env' not in text, f"sh shebang not skipped: {out!r}"
+        assert 'not a comment' not in text, f"sh string-# leaked: {out!r}"
+
+
+def test_scan_repo_java_javadoc_and_line():
+    src = ('/**\n'
+           ' * A Javadoc paragraph about beans.\n'
+           ' */\n'
+           'public class A { // a trailing note\n'
+           '}\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'A.java', src)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"java: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'A Javadoc paragraph about beans.' in text, f"java javadoc missing: {out!r}"
+        assert 'a trailing note' in text, f"java line comment missing: {out!r}"
+        assert 'public class A' not in text, f"java code leaked: {out!r}"
+
+
+def test_scan_repo_js_ts_block_and_line():
+    ts = ('// a TS line comment\n'
+          '/* a TS\n'
+          '   block comment */\n'
+          'const x: number = 1;\n')
+    js = ('function g() {} // a JS line comment\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 't.ts', ts)
+        write(Path(d) / 'j.js', js)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"jsts: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'a TS line comment' in text, f"ts line missing: {out!r}"
+        assert 'block comment' in text, f"ts block (multiline) missing: {out!r}"
+        assert 'a JS line comment' in text, f"js line missing: {out!r}"
+        assert 'const x' not in text and 'function g' not in text, f"js/ts code leaked: {out!r}"
+
+
 # ---------- verify_references.py ----------
 
 sys.path.insert(0, str(SCRIPTS))
@@ -1442,6 +1650,20 @@ TESTS = [
     test_detect_scope_dir_general,
     test_detect_scope_dir_empty_defaults_general,
     test_detect_scope_commented_tex_is_not_latex,
+    test_scan_repo_prose_markdown_skips_code_fences,
+    test_scan_repo_extracts_only_comments_from_source,
+    test_scan_repo_hash_comments_not_values,
+    test_scan_repo_skips_generated_file,
+    test_scan_repo_skips_lockfile_and_binary,
+    test_scan_repo_walk_prunes_denylisted_dirs,
+    test_scan_repo_respects_gitignore,
+    test_scan_repo_excludes_committed_vendor_dir,
+    test_scan_repo_not_a_directory_exits_2,
+    test_scan_repo_summary_on_stderr,
+    test_scan_repo_python_docstring_and_hash,
+    test_scan_repo_shell_comments_skip_shebang,
+    test_scan_repo_java_javadoc_and_line,
+    test_scan_repo_js_ts_block_and_line,
     test_rule_layers_exist,
     test_rule_layers_lint_clean,
     test_no_dangling_rules_md_references,
