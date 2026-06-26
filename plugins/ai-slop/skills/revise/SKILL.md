@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source — replace each flagged quote with its suggested revision, and insert `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev12"
+  version: "2026-06_rev13"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
