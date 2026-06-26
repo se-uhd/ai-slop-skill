@@ -889,6 +889,24 @@ def test_scan_repo_js_ts_block_and_line():
         assert 'const x' not in text and 'function g' not in text, f"js/ts code leaked: {out!r}"
 
 
+def test_scan_repo_latex_body_and_comments():
+    # repo mode reviews .tex as prose: the document body AND its % comments (the
+    # latter are content too, just as comments are in source files).
+    src = ('\\documentclass{article}\n'
+           '\\begin{document}\n'
+           'The results are seamless and robust.  % TODO fix this wording\n'
+           '% a standalone note about the phrasing\n'
+           '\\end{document}\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'paper.tex', src)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"tex: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'The results are seamless and robust.' in text, f"tex body missing: {out!r}"
+        assert 'TODO fix this wording' in text, f"tex inline comment dropped: {out!r}"
+        assert 'a standalone note about the phrasing' in text, f"tex standalone comment dropped: {out!r}"
+
+
 # ---------- verify_references.py ----------
 
 sys.path.insert(0, str(SCRIPTS))
@@ -1664,6 +1682,7 @@ TESTS = [
     test_scan_repo_shell_comments_skip_shebang,
     test_scan_repo_java_javadoc_and_line,
     test_scan_repo_js_ts_block_and_line,
+    test_scan_repo_latex_body_and_comments,
     test_rule_layers_exist,
     test_rule_layers_lint_clean,
     test_no_dangling_rules_md_references,

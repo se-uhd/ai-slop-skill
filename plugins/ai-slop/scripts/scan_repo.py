@@ -30,8 +30,10 @@ What is scanned:
     denylist of common build/dependency directories.
 
     Prose files (reviewed in full): .md .markdown .mdx .txt .text .rst .adoc
-    .asciidoc .org. Fenced code blocks inside Markdown are skipped (they are code,
-    not prose); blank lines are skipped.
+    .asciidoc .org .tex. Every non-blank line is emitted, so a LaTeX file's `%`
+    comments are reviewed alongside its body (just as comments are in source
+    files). Fenced code blocks inside Markdown are skipped (they are code, not
+    prose); blank lines are skipped.
 
     Comment-bearing files (only the comments are reviewed): source and config
     files whose extension or name maps to a comment syntax (see COMMENT_SPECS /
@@ -53,9 +55,10 @@ Known limitations (this is a heuristic extractor, not a lexer for every language
     - At most the first comment opener on a line plus any block continuation is
       captured; a second, trailing comment on the same physical line is rare and
       not extracted.
-    - LaTeX (`.tex`) is intentionally not in the comment table: a LaTeX project is
-      reviewed by `/ai-slop:review` with the dedicated LaTeX layer, where `%` is a
-      source mechanic rather than prose.
+    - LaTeX (`.tex`) is reviewed as prose (its body and `%` comments, with markup
+      the reviewer ignores) against the general rules only. The dedicated
+      `/ai-slop:review` LaTeX layer remains the tool for citations, BibTeX, and
+      section-aware checks; repo mode does not load it.
 """
 import os
 import re
@@ -106,7 +109,7 @@ NAME_SPECS = {
     '.dockerignore': HASH, '.npmignore': HASH, '.env': HASH,
 }
 
-PROSE_EXTS = {'md', 'markdown', 'mdx', 'txt', 'text', 'rst', 'adoc', 'asciidoc', 'org'}
+PROSE_EXTS = {'md', 'markdown', 'mdx', 'txt', 'text', 'rst', 'adoc', 'asciidoc', 'org', 'tex'}
 
 # Lockfiles and other tracked-but-not-prose files, matched on the basename.
 SKIP_NAMES = {
