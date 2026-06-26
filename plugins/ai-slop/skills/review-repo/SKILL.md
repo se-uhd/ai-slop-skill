@@ -3,7 +3,7 @@ name: review-repo
 description: Review a whole code repository's natural-language text for AI slop and rule violations — every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default; `--scientific` adds the research-article layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev13"
+  version: "2026-06_rev14"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -20,7 +20,7 @@ Invoke this skill when the user:
 1. Asks to scan or audit the prose across a whole repository — for example, "check the repo for slop", "audit the comments and docs", or "find British spellings and tropes across the codebase".
 2. Runs `/ai-slop:review-repo`, optionally with a path to the repo root and/or `--scientific`.
 
-Do **not** invoke for a single document (use `/ai-slop:review`), for only the changed lines (use `/ai-slop:review-diff`), or for a LaTeX paper: the extractor skips `.tex` on purpose, since a LaTeX project is reviewed by `/ai-slop:review` with the dedicated LaTeX layer.
+Do **not** invoke for a single document (use `/ai-slop:review`) or for only the changed lines (use `/ai-slop:review-diff`). Repo mode does scan a repository's `.tex` files (as prose, against the general rules), but for the LaTeX-specific checks (citations, BibTeX, section-aware rules) a single paper is still better served by `/ai-slop:review` with the dedicated LaTeX layer.
 
 ## Inputs
 
@@ -28,9 +28,9 @@ The skill scans the repository rooted at the current working directory by defaul
 
 **Repo root.** A positional path argument overrides the default (`/ai-slop:review-repo path/to/repo`). The path must be a directory.
 
-**Scope of the text scanned** is decided by `scripts/scan_repo.py` (see Workflow). In a git repository it scans the tracked files, so `.gitignore`d build output and dependencies are excluded automatically; outside one it walks the tree minus a denylist of build and dependency directories. Markdown and plain-text files are read in full; source and config files contribute only their comments and doc-comments. Generated files, lockfiles, and binaries are skipped.
+**Scope of the text scanned** is decided by `scripts/scan_repo.py` (see Workflow). In a git repository it scans the tracked files, so `.gitignore`d build output and dependencies are excluded automatically; outside one it walks the tree minus a denylist of build and dependency directories. Markdown, plain-text, and LaTeX files are read in full (a `.tex` file's `%` comments are reviewed alongside its body); source and config files contribute only their comments and doc-comments. Generated files, lockfiles, and binaries are skipped.
 
-**Rule layers.** The general layer always loads. Pass `--scientific` to also load the research-article layer when the repository's prose is research writing (a thesis, or a paper repo's Markdown). LaTeX source is not scanned in this mode.
+**Rule layers.** The general layer always loads. Pass `--scientific` to also load the research-article layer when the repository's prose is research writing (a thesis, or a paper repo's Markdown or LaTeX). `.tex` files are scanned as prose (their body and `%` comments) against the general (and, with `--scientific`, the research-article) layer; repo mode does not load the dedicated LaTeX layer.
 
 **Trope catalog override.** `--tropes=<path>` (repeatable) replaces the live fetch with one or more user-supplied files, concatenated in the order given, exactly as in `/ai-slop:review`.
 
@@ -40,7 +40,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
 2. **Extract the repository's prose.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_repo.py <repo-root>`. Each stdout line is `<relpath>:<line>:<text>`: a Markdown or plain-text line, or an extracted comment, grouped by file and sorted. The script prints a one-line summary to stderr (files scanned, prose vs comment-bearing, total lines). If stdout is empty, write an empty report (Summary: "No natural-language text found to review.") and stop. The script's module docstring documents what is scanned and its heuristic limits (string-aware comment detection, first-comment-per-line, the generated-file skip).
 
-3. **Determine which rule layers to load.** Read `../../shared/rules-general.md` always. Read `../../shared/rules-scientific.md` too when the user passed `--scientific`. Repo mode never loads the LaTeX layer, since the extractor skips `.tex`. Each layer contributes its own rules and self-check; a finding's `Rule` name comes from whichever layer defines it.
+3. **Determine which rule layers to load.** Read `../../shared/rules-general.md` always. Read `../../shared/rules-scientific.md` too when the user passed `--scientific`. Repo mode never loads the dedicated LaTeX layer; it reviews any `.tex` files as prose against the general layer. Each layer contributes its own rules and self-check; a finding's `Rule` name comes from whichever layer defines it.
 
 4. **Load the AI-trope catalog.** Same as `/ai-slop:review` step 3: if `--tropes=<path>` was passed, read each named file and concatenate them in order; otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout.
 
@@ -60,7 +60,7 @@ The skill scans the repository rooted at the current working directory by defaul
    **Repo scope:** root=<repo root>, files=<N scanned>, prose lines=<N>
    ```
 
-   The Summary should state that the review covered the repository's Markdown, plain-text, and code/config comments, and name what the scan skipped (generated files, binaries, `.tex`).
+   The Summary should state that the review covered the repository's Markdown, plain-text, LaTeX, and code/config comments, and name what the scan skipped (generated files, binaries, vendored directories).
 
 8. **Stop after the report.** Do not modify the repository. `/ai-slop:revise` operates on a single document, so a repo-wide report is not auto-applied; the user fixes each file directly, or runs `/ai-slop:revise` against one file at a time.
 
