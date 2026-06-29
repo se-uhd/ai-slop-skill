@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes — and, for research papers, statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev15"
+  version: "2026-06_rev16"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -63,8 +63,9 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - A short verbatim quote of the offending text, with enough surrounding context to make the quote unique within the paper.
    - A concrete suggested replacement that follows the rules.
 
-5. **Cross-cutting metrics.** Compute and record the metrics whose layer is in scope (skip the scientific ones — verb-tense compliance, the "significant" audit — when only the general layer is loaded):
-   - Em-dash density (target: ≤ 2 to 3 per page-equivalent of ~350 words, matching the general layer's em-dash ceiling).
+5. **Cross-cutting metrics.** Compute and record the metrics whose layer is in scope (skip the scientific ones — verb-tense compliance, the "significant" audit — when only the general layer is loaded). Run the deterministic glyph recheck first, because the per-section eyeball reliably undercounts these:
+   - **Unicode glyph tells (run `scan_glyphs.py`; do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py <paper-file> [<input.tex> ...]` over the paper file(s). Each stdout line is `<file>:<line>:<col>\t<glyph-name>\t<context>` for one literal Unicode tell — `em-dash`, `en-dash`, `arrow`, `curly-quote`, `ellipsis`, or `nbsp` — and the stderr summary gives the per-category totals (e.g. `15 Unicode tell(s) [em-dash=15 ...]`). Take the em-dash-density count below from this output, not an eyeball. Report every `em-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` row as a per-section finding with its ASCII replacement. For `en-dash`, keep the ones in numeric or page ranges (`pp. 12–18`); for any glyph, skip the ones inside quoted source material or a code string. A glyph inside a code *comment* is still a finding (the comment is prose). The script exits 0 once it read a file (with or without findings) and 2 on a usage error.
+   - Em-dash density (target: ≤ 2 to 3 per page-equivalent of ~350 words, matching the general layer's em-dash ceiling; take the count from `scan_glyphs.py`).
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
    - Capitalization after a colon in running prose (flag colons whose post-colon clause is a complete sentence beginning lowercase — except the first item of an enumerated series of independent clauses, which the capitalization rule treats as a list and keeps lowercase — and flag colons whose post-colon text is a fragment or list beginning uppercase).
    - Semicolon density in running prose (target: ≤ 1 to 2 per page-equivalent).
@@ -105,7 +106,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-06_rev15 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
+**Skill version:** 2026-06_rev16 <!-- maintainer: bump on every release; see README "Maintainer notes" -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -192,7 +193,7 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers (general prose; research-article conventions; LaTeX mechanics). Load the subset the scope calls for (step 2).
 - `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the upstream Gist and tropes.fyi viewer are both unreachable.
-- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch chain, citation issues, BibTeX field and reference verification, report linting); their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, `../../scripts/scan_glyphs.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch chain, citation issues, BibTeX field and reference verification, the Unicode-glyph recheck, report linting); their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 
