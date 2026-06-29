@@ -3,7 +3,7 @@ name: ground
 description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper without a quote-backed grounding comment — no comment at all, or a `TODO verify` stub left by revise mode or an earlier run — fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source — or a `TODO verify -- <reason>` stub when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-06_rev15"
+  version: "2026-06_rev16"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
