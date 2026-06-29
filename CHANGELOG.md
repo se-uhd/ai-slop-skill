@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-06_rev16] - 2026-06-29
+
+- **Added:** `scan_glyphs.py`, a deterministic recheck for the Unicode "tells" the per-section LLM pass undercounts. It reads the paper byte for byte and prints one row per literal `—` (em-dash), `–` (en-dash), arrow (`→` and family), curly quote, ellipsis, or non-breaking space, with a `<file>:<line>:<col>` location, so two em-dashes on one line are two distinct rows and the count is exact. `/ai-slop:review` runs it at the start of the cross-cutting-metrics step and takes the em-dash-density count from it instead of an eyeball; every em-dash, arrow, curly-quote, ellipsis, and nbsp row becomes a per-section finding, while en-dashes in ranges and glyphs inside quotes or code are left to the caller's judgment.
+- **Changed:** the **Plain, literal language** rule (general layer) now names the systems-jargon count nouns "a write", "a read", "a create", and "a delete" as verb-as-noun seeds (alongside the existing "a full delete", "the ask"), with the rewrite to "a write request" or "a write operation". The plain-language self-check lists them too, so the reviewer stops walking past "each write", "the failed write", or "repeat the create".
+- **Added:** smoke tests for `scan_glyphs.py` (exact per-category counts including a code-comment em-dash, distinct columns for two glyphs on one line, the ASCII-is-clean case, and the unreadable and partial-read exit codes).
+
 ## [2026-06_rev15] - 2026-06-29
 
 - **Added:** `/ai-slop:review-repo` now also scans the repository's commit messages. `scan_repo.py` reads each commit's subject and body from `git log` and emits them under a `commit <short-sha>` pseudo-path, so the report groups commit-message findings by commit alongside the per-file groups. Merge commits and the standard trailer lines (`Co-authored-by`, `Signed-off-by`, ...) are dropped, since neither is hand-written prose.

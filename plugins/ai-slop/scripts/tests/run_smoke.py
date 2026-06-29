@@ -1674,9 +1674,82 @@ def test_grounding_comment_block_read_write_agree():
         assert '% GROUNDING: mk -- "mk quote"' in body, f"block/insert: mk: {body!r}"
 
 
+# ---------- scan_glyphs.py ----------
+
+GLYPH_FIXTURE = (
+    'Plain line, no tells.\n'
+    'An em-dash here — and another — on one line.\n'    # two em-dashes
+    '// a code comment with an em-dash —\n'                  # em-dash in a comment
+    'An arrow → and a heavy ⇒ arrow.\n'                 # two arrows
+    'Curly ‘single’ and “double” quotes.\n'   # four curly quotes
+    'A range pp. 12–18 and an ellipsis…\n'             # en-dash + ellipsis
+    'A non breaking space.\n'                               # nbsp
+)
+
+
+def test_scan_glyphs_counts_every_occurrence():
+    # The exact-count recheck the LLM eyeball undercounts: three em-dashes
+    # (two on a prose line, one in a code comment) must all be reported.
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, GLYPH_FIXTURE)
+        rc, out, err = run('scan_glyphs.py', str(p))
+        assert rc == 0, f"glyphs: rc={rc} err={err!r}"
+        em = [l for l in out.split('\n') if '\tem-dash\t' in l]
+        assert len(em) == 3, f"glyphs: expected 3 em-dash rows, got {len(em)}: {em!r}"
+        assert any('code comment' in l for l in em), f"glyphs: comment em-dash missed: {em!r}"
+        for token in ('em-dash=3', 'arrow=2', 'curly-quote=4', 'en-dash=1',
+                      'ellipsis=1', 'nbsp=1', '12 Unicode tell(s)'):
+            assert token in err, f"glyphs: summary missing {token!r}: {err!r}"
+
+
+def test_scan_glyphs_two_on_one_line_distinct_columns():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'a — b — c\n')
+        rc, out, err = run('scan_glyphs.py', str(p))
+        assert rc == 0, f"cols: rc={rc} err={err!r}"
+        locs = [l.split('\t')[0] for l in out.split('\n') if '\tem-dash\t' in l]
+        assert len(locs) == 2 and locs[0] != locs[1], f"cols: not two distinct rows: {locs!r}"
+        # location is <path>:<line>:<col>, so it carries line and column
+        assert all(loc.count(':') >= 2 for loc in locs), f"cols: no line:col in {locs!r}"
+
+
+def test_scan_glyphs_clean_ascii_file():
+    # ASCII `--` and `->` are NOT tells; only the non-ASCII glyphs are matched.
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'clean.md'
+        write(p, 'Plain ASCII prose -- with hyphens and -> arrows.\n')
+        rc, out, err = run('scan_glyphs.py', str(p))
+        assert rc == 0, f"clean: rc={rc} err={err!r}"
+        assert out == '', f"clean: expected empty stdout, got {out!r}"
+        assert '0 Unicode tell(s)' in err, f"clean: summary wrong: {err!r}"
+
+
+def test_scan_glyphs_all_unreadable_exits_2():
+    with tempfile.TemporaryDirectory() as d:
+        rc, out, err = run('scan_glyphs.py', str(Path(d) / 'missing.md'))
+        assert rc == 2, f"unreadable: rc={rc} err={err!r}"
+        assert 'none of the 1 path(s)' in err, f"unreadable: no error line: {err!r}"
+
+
+def test_scan_glyphs_partial_read_exits_0():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'an em-dash — here\n')
+        rc, out, err = run('scan_glyphs.py', str(p), str(Path(d) / 'gone.md'))
+        assert rc == 0, f"partial: rc={rc} err={err!r}"
+        assert 'scanned 1 file(s)' in err, f"partial: file count wrong: {err!r}"
+
+
 # ---------- runner ----------
 
 TESTS = [
+    test_scan_glyphs_counts_every_occurrence,
+    test_scan_glyphs_two_on_one_line_distinct_columns,
+    test_scan_glyphs_clean_ascii_file,
+    test_scan_glyphs_all_unreadable_exits_2,
+    test_scan_glyphs_partial_read_exits_0,
     test_find_latex_root_empty,
     test_find_latex_root_single,
     test_find_latex_root_prefer_main,
