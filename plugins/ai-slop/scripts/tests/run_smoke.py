@@ -4,6 +4,7 @@
 Runs each script against fixtures and asserts exit codes + stdout/stderr.
 Exits 0 if all pass; non-zero on the first failure (with a summary at the end).
 """
+import os
 import subprocess
 import sys
 import tempfile
@@ -907,6 +908,58 @@ def test_scan_repo_latex_body_and_comments():
         assert 'a standalone note about the phrasing' in text, f"tex standalone comment dropped: {out!r}"
 
 
+def _git_repo_with_commit(d, subject, body):
+    import subprocess as sp
+    env = {**os.environ, 'GIT_AUTHOR_NAME': 'T', 'GIT_AUTHOR_EMAIL': 't@e.x',
+           'GIT_COMMITTER_NAME': 'T', 'GIT_COMMITTER_EMAIL': 't@e.x'}
+    write(Path(d) / 'f.txt', 'tracked file prose\n')
+    sp.run(['git', 'init', '-q'], cwd=d, check=True, env=env)
+    sp.run(['git', 'add', '-A'], cwd=d, check=True, env=env)
+    sp.run(['git', 'commit', '-q', '-m', subject, '-m', body],
+           cwd=d, check=True, env=env)
+
+
+def test_scan_repo_commit_messages_scanned():
+    # A commit's subject and body are reviewed under a `commit <sha>` pseudo-path;
+    # the trailer line is metadata and must be dropped.
+    body = ('This delivers a comprehensive solution.\n\n'
+            'Co-authored-by: Someone <s@e.x>')
+    with tempfile.TemporaryDirectory() as d:
+        _git_repo_with_commit(d, 'Add a robust and seamless feature', body)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"commit: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'Add a robust and seamless feature' in text, f"commit subject missing: {out!r}"
+        assert 'This delivers a comprehensive solution.' in text, f"commit body missing: {out!r}"
+        assert 'Co-authored-by' not in text, f"trailer line leaked: {out!r}"
+        assert any(p.startswith('commit ') for p in _scan_paths(out)), \
+            f"commit pseudo-path missing: {out!r}"
+        assert 'commit message(s)' in err, f"commit count missing from summary: {err!r}"
+
+
+def test_scan_repo_no_commits_flag_suppresses():
+    with tempfile.TemporaryDirectory() as d:
+        _git_repo_with_commit(d, 'A slop-laden subject', 'body text here')
+        rc, out, err = run('scan_repo.py', d, '--no-commits')
+        assert rc == 0, f"no-commits: rc={rc} err={err!r}"
+        assert not any(p.startswith('commit ') for p in _scan_paths(out)), \
+            f"--no-commits still scanned commits: {out!r}"
+        assert 'tracked file prose' in _scan_text(out), f"file prose dropped: {out!r}"
+        assert 'and 0 commit message(s)' in err, f"summary count not zero: {err!r}"
+
+
+def test_scan_repo_commits_count_selector():
+    rc, out, err = run('scan_repo.py', '/nonexistent/zz', '--commits=5')
+    # a count spec is accepted (the dir error, not a usage error, is what trips)
+    assert rc == 2 and 'not a directory' in err, f"count selector: rc={rc} err={err!r}"
+
+
+def test_scan_repo_bad_commits_value_is_usage_error():
+    with tempfile.TemporaryDirectory() as d:
+        rc, out, err = run('scan_repo.py', d, '--commits=')
+        assert rc == 2 and 'usage' in err, f"empty --commits: rc={rc} err={err!r}"
+
+
 # ---------- verify_references.py ----------
 
 sys.path.insert(0, str(SCRIPTS))
@@ -1683,6 +1736,10 @@ TESTS = [
     test_scan_repo_java_javadoc_and_line,
     test_scan_repo_js_ts_block_and_line,
     test_scan_repo_latex_body_and_comments,
+    test_scan_repo_commit_messages_scanned,
+    test_scan_repo_no_commits_flag_suppresses,
+    test_scan_repo_commits_count_selector,
+    test_scan_repo_bad_commits_value_is_usage_error,
     test_rule_layers_exist,
     test_rule_layers_lint_clean,
     test_no_dangling_rules_md_references,

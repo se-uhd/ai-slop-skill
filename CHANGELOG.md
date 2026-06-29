@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-06_rev15] - 2026-06-29
+
+- **Added:** `/ai-slop:review-repo` now also scans the repository's commit messages. `scan_repo.py` reads each commit's subject and body from `git log` and emits them under a `commit <short-sha>` pseudo-path, so the report groups commit-message findings by commit alongside the per-file groups. Merge commits and the standard trailer lines (`Co-authored-by`, `Signed-off-by`, ...) are dropped, since neither is hand-written prose.
+- **Added:** commit-message scope controls. The default covers the most recent 200 commits; `--commits=<N>` sets another count, `--commits=all` the full history, `--commits=<range>` a git revision range (e.g. `main..HEAD` for one branch), and `--no-commits` turns commit scanning off. Because published commit history is immutable, commit-message findings are advisory (a guide for future messages, or for rewording a branch's unpushed commits) and are not applied by `/ai-slop:revise`.
+- **Added:** smoke tests for commit-message extraction, the `--no-commits` flag, the count selector, and the bad-value usage error.
+
 ## [2026-06_rev14] - 2026-06-26
 
 - **Added:** `/ai-slop:review-repo` now also scans LaTeX (`.tex`) files. A `.tex` file is reviewed as prose, its document body and its `%` comments alike (the comments are content too, just as comments are in source files), against the general rules. The dedicated `/ai-slop:review` LaTeX layer remains the tool for citations, BibTeX, and section-aware checks.
