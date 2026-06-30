@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-07] - 2026-07-01
+
+- **Added:** `refresh_tropes.py`, a maintainer script that re-pulls the bundled AI-trope snapshot (`shared/tropes-snapshot.md`) from upstream — the same Gist-then-tropes.fyi chain `fetch_tropes.py` serves at review time, minus the bundled fallback. It keeps the snapshot bit-identical to upstream, reports "already up to date" without rewriting when the fetch matches the bundled copy, and leaves the snapshot untouched (exiting non-zero) when both sources are unreachable rather than clobbering it.
+- **Changed:** the release protocol now refreshes the bundled tropes snapshot with every rev (`CLAUDE.md` rule 6 and the README "Maintainer notes"), so the offline fallback never drifts from the live catalog. The README "Refreshing the tropes.fyi snapshot" recipe is now the script instead of a raw `curl`.
+- **Added:** smoke tests for `refresh_tropes.py` (writes the fetched body, falls back to the viewer, no-op when identical, leaves the snapshot unchanged when offline, and the usage error).
+
 ## [2026-06_rev16] - 2026-06-29
 
 - **Added:** `scan_glyphs.py`, a deterministic recheck for the Unicode "tells" the per-section LLM pass undercounts. It reads the paper byte for byte and prints one row per literal `—` (em-dash), `–` (en-dash), arrow (`→` and family), curly quote, ellipsis, or non-breaking space, with a `<file>:<line>:<col>` location, so two em-dashes on one line are two distinct rows and the count is exact. `/ai-slop:review` runs it at the start of the cross-cutting-metrics step and takes the em-dash-density count from it instead of an eyeball; every em-dash, arrow, curly-quote, ellipsis, and nbsp row becomes a per-section finding, while en-dashes in ranges and glyphs inside quotes or code are left to the caller's judgment.

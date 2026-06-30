@@ -33,6 +33,15 @@ have been broken before:
 5. **Release tags must be ancestors of `main`.** The release history is linear:
    `… revN → revN+1 → …`. If a tag is not reachable from `main`, the history is
    broken and must be repaired before the next release.
+6. **Refresh the bundled tropes snapshot with every rev.** Before bumping, run
+   `python3 plugins/ai-slop/scripts/refresh_tropes.py` to re-pull
+   `plugins/ai-slop/shared/tropes-snapshot.md` from upstream so the offline
+   fallback never drifts from the live catalog. The snapshot is kept
+   bit-identical to upstream: when upstream is unchanged the script reports
+   "already up to date" and leaves the file untouched, so the rev carries no
+   snapshot change; when it has changed, commit the refreshed catalog as part
+   of the rev. Never hand-edit the snapshot — edits are overwritten on the next
+   refresh (see `tropes-snapshot.ATTRIBUTION.md`).
 
 ## Other conventions
 
