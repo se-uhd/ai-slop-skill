@@ -117,6 +117,95 @@ def test_fetch_tropes_emits_body_and_source():
         assert 'source:' in err, f"fetch: no 'source:' line in stderr ({err!r})"
 
 
+# ---------- refresh_tropes.py ----------
+
+def _run_refresh(out_path, fetch_results):
+    """Call refresh_tropes.main with try_fetch stubbed and stderr captured.
+
+    fetch_results maps a source URL to the body try_fetch should return for it
+    (a URL absent from the map, or mapped to None, models a failed fetch). This
+    keeps the test fully offline — no real network call is made. Returns
+    (rc, stderr_text).
+    """
+    import contextlib
+    import io
+    import refresh_tropes
+    orig = refresh_tropes.try_fetch
+    refresh_tropes.try_fetch = lambda url: fetch_results.get(url)
+    err = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(err):
+            rc = refresh_tropes.main(['refresh_tropes.py', str(out_path)])
+    finally:
+        refresh_tropes.try_fetch = orig
+    return rc, err.getvalue()
+
+
+def test_refresh_tropes_writes_fetched_content():
+    import refresh_tropes
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / 'snap.md'
+        write(out, '# stale snapshot\n')
+        rc, err = _run_refresh(out, {refresh_tropes.GIST_URL: '# fresh upstream catalog\n'})
+        assert rc == 0, f"refresh write: rc={rc} err={err!r}"
+        assert out.read_text(encoding='utf-8') == '# fresh upstream catalog\n', \
+            f"refresh write: snapshot not overwritten: {out.read_text(encoding='utf-8')!r}"
+        assert 'source: gist' in err and 'updated' in err, f"refresh write: err={err!r}"
+
+
+def test_refresh_tropes_falls_back_to_viewer():
+    # Gist fetch fails -> the viewer body is used, mirroring fetch_tropes' chain.
+    import refresh_tropes
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / 'snap.md'
+        rc, err = _run_refresh(out, {
+            refresh_tropes.GIST_URL: None,
+            refresh_tropes.VIEWER_URL: '# viewer catalog\n',
+        })
+        assert rc == 0, f"refresh viewer: rc={rc} err={err!r}"
+        assert out.read_text(encoding='utf-8') == '# viewer catalog\n', \
+            f"refresh viewer: viewer body not written: {err!r}"
+        assert 'source: tropes.fyi' in err, f"refresh viewer: wrong source line: {err!r}"
+
+
+def test_refresh_tropes_noop_when_identical():
+    # A fetched body byte-identical to the bundled copy must not rewrite the file
+    # (no spurious diff): report "already up to date" and leave it untouched.
+    import refresh_tropes
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / 'snap.md'
+        write(out, '# same content\n')
+        before = out.stat().st_mtime_ns
+        rc, err = _run_refresh(out, {refresh_tropes.GIST_URL: '# same content\n'})
+        assert rc == 0, f"refresh noop: rc={rc} err={err!r}"
+        assert 'already up to date' in err, f"refresh noop: err={err!r}"
+        assert out.stat().st_mtime_ns == before, "refresh noop: file was rewritten"
+
+
+def test_refresh_tropes_offline_leaves_snapshot_unchanged():
+    # Both upstream sources unreachable: exit 1 and DO NOT clobber the existing
+    # snapshot with empty/stale content (the whole point of a fallback).
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / 'snap.md'
+        write(out, '# preexisting bundled snapshot\n')
+        rc, err = _run_refresh(out, {})  # every fetch returns None
+        assert rc == 1, f"refresh offline: rc={rc} err={err!r}"
+        assert 'unreachable' in err, f"refresh offline: err={err!r}"
+        assert out.read_text(encoding='utf-8') == '# preexisting bundled snapshot\n', \
+            "refresh offline: snapshot was clobbered"
+
+
+def test_refresh_tropes_usage_error_too_many_args():
+    import contextlib
+    import io
+    import refresh_tropes
+    err = io.StringIO()
+    with contextlib.redirect_stderr(err):
+        rc = refresh_tropes.main(['refresh_tropes.py', 'a', 'b'])
+    assert rc == 2, f"refresh usage: rc={rc}"
+    assert 'usage' in err.getvalue(), f"refresh usage: err={err.getvalue()!r}"
+
+
 # ---------- check_bib_fields.py ----------
 
 BIB_FIXTURE = """
@@ -1759,6 +1848,11 @@ TESTS = [
     test_find_latex_root_subdir,
     test_find_latex_root_root_with_includes,
     test_fetch_tropes_emits_body_and_source,
+    test_refresh_tropes_writes_fetched_content,
+    test_refresh_tropes_falls_back_to_viewer,
+    test_refresh_tropes_noop_when_identical,
+    test_refresh_tropes_offline_leaves_snapshot_unchanged,
+    test_refresh_tropes_usage_error_too_many_args,
     test_check_bib_fields_flags_only_missing,
     test_check_bib_fields_summary_on_clean_input,
     test_check_bib_fields_all_unreadable_exits_2,
