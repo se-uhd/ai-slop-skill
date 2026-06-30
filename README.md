@@ -135,12 +135,21 @@ The plugin lives under `plugins/ai-slop/`: `commands/` holds the six slash comma
 
 ### Refreshing the tropes.fyi snapshot
 
-The bundled snapshot is a copy of the upstream Gist. To refresh it:
+The bundled snapshot is a copy of the upstream Gist. Refresh it with:
 
 ```bash
-curl -sSf https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/ \
-  -o plugins/ai-slop/shared/tropes-snapshot.md
+python3 plugins/ai-slop/scripts/refresh_tropes.py
 ```
+
+The script re-pulls the catalog from the same upstream chain `fetch_tropes.py`
+uses (the Gist, then the tropes.fyi viewer) and overwrites
+`plugins/ai-slop/shared/tropes-snapshot.md`, keeping it bit-identical to
+upstream. If the fetched catalog already matches the bundled copy it reports
+"already up to date" and leaves the file untouched; if both sources are
+unreachable it exits non-zero and leaves the snapshot unchanged rather than
+clobbering it. Run it as part of every release rev (see the release protocol
+in [`CLAUDE.md`](CLAUDE.md)) so the offline fallback never drifts from the
+live catalog.
 
 ### Refreshing the vendored Markdown linter
 
@@ -152,7 +161,7 @@ python3 plugins/ai-slop/scripts/refresh_vendor.py
 
 The script creates a clean venv, installs `pymarkdownlnt` with `--no-binary :all:` so every dep is built from source (pure-Python where the package supports it), copies the resolved tree into `_vendor/`, replaces `pyjson5/` with a stdlib shim (PyMarkdown is always invoked with `--no-json5`, so the C-extension is never reached), asserts no compiled extensions land in the tree, and regenerates `_vendor/NOTICE` from each package's dist-info. Pin to a specific version with `--version pymarkdownlnt==0.9.37`.
 
-Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter; the next rev is the highest existing rev for the month plus one — the bare `YYYY-MM` tag is rev0, so the release after it is `_rev1`) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init/SKILL.md`'s WRITING.md header. After committing the bump, create the matching tag (`git tag YYYY-MM_revN`) and push it; every release commit gets one, and tags must stay ancestors of `main`. Never amend or rebase a commit that has already been tagged or pushed — additional work is a new rev, not a re-cut of the released one.
+Bump the version per the scheme above (`YYYY-MM` for the first release of a calendar month, `YYYY-MM_revN` thereafter; the next rev is the highest existing rev for the month plus one — the bare `YYYY-MM` tag is rev0, so the release after it is `_rev1`) in `plugins/ai-slop/.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, the `version` field of each `SKILL.md` under `plugins/ai-slop/skills/`, and the `**Skill version:**` line in `review/SKILL.md`'s report template and `init/SKILL.md`'s WRITING.md header. Also refresh the bundled tropes snapshot for the rev (`python3 plugins/ai-slop/scripts/refresh_tropes.py`, see above). After committing the bump, create the matching tag (`git tag YYYY-MM_revN`) and push it; every release commit gets one, and tags must stay ancestors of `main`. Never amend or rebase a commit that has already been tagged or pushed — additional work is a new rev, not a re-cut of the released one.
 
 ### Validating the manifests
 
