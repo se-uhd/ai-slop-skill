@@ -118,6 +118,16 @@ cannot tell a well-placed dash from a lazy one.
   frequent tic.
 - **Semicolons.** Like colons and em dashes, semicolons become filler punctuation
   in AI text; two sentences usually read more clearly.
+- **Example/restatement connectives.** The pause-mark rules above tell the reviewer
+  which marks to remove; this rule supplies the positive alternative they were
+  standing in for. AI text tends to name a logical relation with a generic mid-sentence
+  pause (a dash or colon) rather than the explicit connective, so `e.g.`/`such as` and
+  `i.e.`/`that is`/`namely` are comparatively under-produced even though they are
+  routine in academic prose. Recommending them where the mark introduces an example or
+  a restatement therefore does double duty: it removes an over-used pause and restores
+  a construction whose relative absence is itself a tell. The rule is deliberately
+  meaning-gated (illustrates vs. renames vs. sets up a payoff clause) so it does not
+  become a mechanical dash-to-`e.g.` swap that merely shifts the load onto a new formula.
 - **Sentence length.** AI text is detectable by its uniformity (roughly 15 to 25
   words per sentence, low burstiness), so deliberate variation is itself a signal
   of human editing.
