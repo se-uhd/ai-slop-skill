@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-07_rev2] - 2026-07-24
+
+- **Added:** a **Phrases to Avoid** entry (general layer) banning **"headline numbers" / "headline figures"** in favor of naming the figures plainly (e.g., "the largest claims", "the most-cited figures", or just "the figures"). "Headline" imports a journalistic, attention-grabbing register that editorializes the numbers instead of stating them.
+
 ## [2026-07_rev1] - 2026-07-09
 
 - **Added:** a general-layer punctuation rule, **Name the relation with a connective; don't just drop the pause.** When a flagged em-dash or colon is introducing an example or a restatement, the fix is the connective that names that relation — an example connective (such as, e.g., for example, including) or a restatement connective (i.e., that is, in other words, namely) — rather than a bare period or comma. These connectives are routine in academic prose and under-produced by AI text, which reaches for a dash or colon instead, so the swap sharpens the meaning and removes a tell. The rule is meaning-gated (a mark that sets up a single payoff clause or introduces a true list is left alone) and defers to the parenthetical-list rules on keeping one example signal per document. Self-check item #23 wires it into the em-dash and colon passes, and `rules-rationale.md` records the rationale.

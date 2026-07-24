@@ -55,6 +55,7 @@ Stock formulations that read as AI filler or stilted register. Replace each with
 
 - **"worked example(s)"** → "example(s)". The qualifier "worked" rarely adds information and reads as padded pedagogical register. Keep it only in the narrow technical sense of a fully solved problem walked through step by step (a textbook "worked solution"), where the contrast with an unsolved exercise is the point.
 - **"earn its keep" / "earn its place" / "pull its weight"** → state what the element contributes (e.g., "the opener introduces the list that follows"). The idiom states a plain judgment as figurative filler.
+- **"headline numbers" / "headline figures"** → name the figures plainly (e.g., "the largest claims", "the most-cited figures", or just "the figures"). "Headline" imports a journalistic, attention-grabbing register that editorializes the numbers instead of stating them.
 
 ## Terminology Consistency
 
