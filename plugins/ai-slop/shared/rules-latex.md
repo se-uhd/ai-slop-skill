@@ -11,6 +11,10 @@ layer. The rationale behind the contested rules lives in
 
 - **LaTeX quotation marks.** Use LaTeX-style quotes, not straight `"` or `'`. Double quotes: <code>``...''</code> (two backticks to open, two apostrophes to close). Single quotes: <code>`...'</code> (one backtick to open, one apostrophe to close). Straight quotes render as two closing quotes in typeset output.
 
+## Dashes
+
+- **Em dashes are unspaced.** Write `word---word` in LaTeX source, with no spaces around the `---` — the American typographic convention, matching the general layer's **Use American English consistently** rule. This rule governs spacing only: whether a dash is the right mark at all is the general layer's **Em-dashes** judgment, and the literal `—` glyph is covered there by **Literal em-dash glyphs in source**. Verbatim quotes keep their source's spacing.
+
 ## Caption punctuation
 
 - **Caption punctuation: `.` by default, `:` before a list or continuation.** Run-in paragraph captions — `\paragraph{Title.}`, `\subparagraph{Title.}`, and the LaTeX-template pattern `\textbf{Title.}` used to lead a paragraph — end with a period by default. The caption is a self-contained label, and the body that follows is a separate sentence on the captioned topic. Substitute a colon when the caption grammatically introduces what follows: a list (`itemize` / `enumerate` / a `(1) … (2) … (3) …` numbered structure), a definition or paraphrase that completes the caption's phrase, or a run of examples. AI text systematically defaults to `.` here. Display headings (`\section{}`, `\subsection{}`, `\subsubsection{}`) usually take no terminal punctuation.
@@ -46,3 +50,4 @@ Apply these in addition to the general- and scientific-layer self-checks:
 5. **Grounding comments.** List every `\cite{}` that lacks a grounding comment as a grounding to-do (always, not conditionally); a complete grounding comment leads with `% GROUNDING` (either `% GROUNDING: "..."` or `% GROUNDING <key>: "..."`) and carries a direct quote from the cited paper.
 6. **Metacommentary placement.** Move any author-voice aside or note-to-self out of body text into a `\todo{}` / `\sba{}` / `%` comment.
 7. **BibTeX verification (if applicable).** Verify each entry against DBLP (preferred), the publisher page via DOI, or Google Scholar. Confirm author names, title, year, venue, and DOI. Omit any field that cannot be confirmed. Run `verify_references.py` to flag unresolvable DOIs and metadata mismatches; sanity-check before treating an entry as fabricated.
+8. **Em-dash spacing.** Replace spaced ` --- ` with unspaced `word---word`. Leave verbatim quotes as their source spaces them.
