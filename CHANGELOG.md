@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-08] - 2026-08-26
+
+- **Added:** a LaTeX-layer punctuation rule, **Em dashes are unspaced.** Write `word---word` in LaTeX source with no surrounding spaces — the American typographic convention, matching the general layer's American English rule. The rule governs spacing only: whether a dash is the right mark at all stays with the general layer's **Em-dashes** judgment, and the literal `—` glyph with **Literal em-dash glyphs in source**; verbatim quotes keep their source's spacing. Self-check item #8 wires it into the LaTeX pass.
+
 ## [2026-07_rev2] - 2026-07-24
 
 - **Added:** a **Phrases to Avoid** entry (general layer) banning **"headline numbers" / "headline figures"** in favor of naming the figures plainly (e.g., "the largest claims", "the most-cited figures", or just "the figures"). "Headline" imports a journalistic, attention-grabbing register that editorializes the numbers instead of stating them.
