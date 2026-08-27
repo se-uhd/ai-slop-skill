@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-08_rev1] - 2026-08-27
+
+- **Changed:** the **No invented compounds or verbs-as-nouns** rule (general layer) now also covers noun phrases coined ad hoc to name a specific artifact, document, or table — hyphenated or not ("data sources table" and "track changes file" are the same coinages unhyphenated). The fix is to describe what the thing is: "track-changes file" → "the accompanying PDF" (or "the latexdiff PDF"); "data-sources table" → "a table listing all data sources". Self-check item #21 names the pattern too.
+
 ## [2026-08] - 2026-08-26
 
 - **Added:** a LaTeX-layer punctuation rule, **Em dashes are unspaced.** Write `word---word` in LaTeX source with no surrounding spaces — the American typographic convention, matching the general layer's American English rule. The rule governs spacing only: whether a dash is the right mark at all stays with the general layer's **Em-dashes** judgment, and the literal `—` glyph with **Literal em-dash glyphs in source**; verbatim quotes keep their source's spacing. Self-check item #8 wires it into the LaTeX pass.
