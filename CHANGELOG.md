@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev3] - 2026-09-01
+
+- **Changed:** the **Cut padding at the paragraph level** rule (general layer) now defines windup as a sentence that announces what its own paragraph then does, and names the section-opening paragraph as legitimate when it states the section's claim or purpose or orients the reader across the subsections with something the headings do not carry. Only a paragraph that merely lists the subsection headings or repeats content stated elsewhere is windup.
+- **Added:** to the same rule, a density signal for generic-truth sentences (true of any document on the subject) and evaluative sentences (which grade the preceding claim without adding to it). One of either can open a section or mark that a result matters. More than one per paragraph, or more than two or three per page-equivalent, is filler. Self-check item #19 carries both changes, and `rules-rationale.md` records why this is a density signal and not a ban.
+- **Changed:** the **Reference** and **Clause Boundaries** rules, self-check item #24, and the rationale section added in 2026-09 through 2026-09_rev2 now use periods where a colon or semicolon joined clauses ("Test: do X; if Y, do Z" is now "To test it, do X. If Y, do Z."). No rule content changes.
+
 ## [2026-09_rev2] - 2026-09-01
 
 - **Added:** a fourth **Reference** rule (general layer), **Name the thing instead of pointing at it**: a stand-in word for a noun or clause the sentence could state directly (*ones*, *those*, *the former / the latter*, *the same*, *respectively*, *do so*) costs the reader a lookup; put the noun back and restructure the clause if it then repeats ("detect flaky tests among the generated ones" → "detect which of the generated tests are flaky"). Self-check item #24 covers it, and `rules-rationale.md` explains why a left-to-right generator produces a stand-in instead of restructuring the clause.
