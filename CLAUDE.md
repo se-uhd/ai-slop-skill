@@ -48,9 +48,12 @@ have been broken before:
 - First-party Python helpers are stdlib-only. The only vendored code is
   PyMarkdown (plus its pure-Python deps) under `scripts/_vendor/`. Only
   `lint_markdown.py` and `check_baseline.py` may import from the vendored
-  tree. Both are synced from the upstream pymarkdown-skill repo (with
-  `refresh_vendor.py`), so do not edit them here. Fix them upstream and
-  re-sync. Do not add pip-installed runtime deps.
+  tree. Five paths are owned by the upstream pymarkdown-skill repo and
+  copied in by its `sync/sync_to_skill.sh`, which stamps the upstream
+  version in `scripts/.pymarkdown-skill-version`: `lint_markdown.py`,
+  `check_baseline.py`, `refresh_vendor.py`, `_vendor/`, and
+  `bundled_licenses/`. Do not edit any of them here. Fix them upstream,
+  release there, and re-sync. Do not add pip-installed runtime deps.
 - All first-party Markdown must lint clean:
   `python3 plugins/ai-slop/scripts/lint_markdown.py <file>`.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
