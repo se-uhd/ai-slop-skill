@@ -1922,6 +1922,20 @@ def test_scan_reference_partial_read_exits_0():
         assert 'scanned 1 file(s)' in err, f"partial: file count wrong: {err!r}"
 
 
+def test_scan_reference_lists_stand_ins():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'It detects flaky tests among the generated ones. The former is faster; the latter is smaller.\n'
+                 'Precision and recall were 0.81 and 0.64, respectively. Those with experience did so. One test ran.\n'
+                 'Phones and one\'s own tests do something else.\n')
+        rc, out, err = run('scan_reference.py', str(p))
+        assert rc == 0, f"stand-in: rc={rc} err={err!r}"
+        rows = [l for l in out.split('\n') if '\tstand-in\t' in l]
+        assert len(rows) == 6, f"stand-in: expected 6 rows, got {len(rows)}: {rows!r}"
+        assert not any(l.startswith(f"{p}:3:") for l in rows), f"stand-in: false positive on line 3: {rows!r}"
+        assert 'stand-in=6' in err, f"stand-in: summary wrong: {err!r}"
+
+
 # ---------- runner ----------
 
 TESTS = [
@@ -1937,6 +1951,7 @@ TESTS = [
     test_scan_reference_clean_file,
     test_scan_reference_all_unreadable_exits_2,
     test_scan_reference_partial_read_exits_0,
+    test_scan_reference_lists_stand_ins,
     test_find_latex_root_empty,
     test_find_latex_root_single,
     test_find_latex_root_prefer_main,
