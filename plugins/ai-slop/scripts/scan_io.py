@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""scan_io.py — shared command-line I/O helpers for the ai-slop scanners.
+"""scan_io.py: shared command-line I/O helpers for the ai-slop scanners.
 
 `report_unreadable` is the stderr warning emitted when a path passed on the
 command line cannot be read. It was copy-pasted, byte-identical, into the
 citation, BibTeX-field, reference, and grounding scanners; it lives here once so
 the scanners share one implementation. The "several paths joined into one" hint
 guards the classic unquoted-variable-in-zsh mistake that collapses a whole file
-list into a single over-long, unreadable argument — which would otherwise look
+list into a single over-long, unreadable argument, which would otherwise look
 like a clean "nothing to do" run.
 """
 import errno

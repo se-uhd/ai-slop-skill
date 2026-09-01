@@ -2,7 +2,7 @@
 """fetch_tropes.py <bundled-fallback>
 
 Fetch the AI-trope catalog with a three-step fallback chain and emit it on
-stdout. On success (exit 0) the body is non-empty — a 200 response with an
+stdout. On success (exit 0) the body is non-empty: a 200 response with an
 empty body is rejected, and the bundled fallback guarantees content even when
 offline. Exits 2 without emitting a body on a usage error or when the bundled
 fallback itself is missing, unreadable, or empty (an intact install never hits

@@ -4,7 +4,7 @@
 Extract the natural-language text from a whole code repository so the ai-slop
 review can scan prose that lives outside a single document or a diff: Markdown and
 plain-text files in full, the comments and doc-comments of source and config
-files, and the repository's commit messages. This drives `/ai-slop:review-repo`,
+files, and the repository's commit messages. This script drives `/ai-slop:review-repo`,
 the repo-wide counterpart to `/ai-slop:review` (one document) and
 `/ai-slop:review-diff` (changed lines only).
 
