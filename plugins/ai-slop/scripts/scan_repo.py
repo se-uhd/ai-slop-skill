@@ -45,7 +45,9 @@ What is scanned:
     .asciidoc .org .tex. Every non-blank line is emitted, so a LaTeX file's `%`
     comments are reviewed alongside its body (just as comments are in source
     files). Fenced code blocks inside Markdown are skipped (they are code, not
-    prose); blank lines are skipped.
+    prose); blank lines are skipped. In Markdown, fenced code is skipped,
+    except fences labeled with a prose format (markdown, md, mdx, text, txt,
+    plain), whose contents are reviewed as prose.
 
     Comment-bearing files (only the comments are reviewed): source and config
     files whose extension or name maps to a comment syntax (see COMMENT_SPECS /
@@ -280,22 +282,38 @@ def extract_comments(text, spec):
             pos = idx + len(marker)
 
 
-FENCE_RE = re.compile(r'^\s*(```|~~~)')
+FENCE_RE = re.compile(r'^\s*(?P<fence>`{3,}|~{3,})\s*(?P<info>[^`]*)$')
+
+# Fence info strings whose contents are prose, not code: a template quoted in
+# such a fence is content and is reviewed.
+PROSE_FENCE_INFOS = {'markdown', 'md', 'mdx', 'text', 'txt', 'plain'}
 
 
 def extract_prose(text, is_markdown):
-    """Yield (lineno, line) for the non-blank lines of a prose file, skipping
-    fenced code blocks in Markdown."""
-    in_fence = False
-    for lineno, raw in enumerate(text.split('\n'), 1):
-        line = raw.rstrip('\r')
-        if is_markdown and FENCE_RE.match(line):
-            in_fence = not in_fence
+    """Yield (lineno, line) for the non-blank lines of a prose file. In
+    Markdown, fenced code blocks are skipped, except that a fence whose info
+    string names a prose format (see PROSE_FENCE_INFOS) has its contents
+    reviewed as prose. Fences nest: a bare code fence inside a prose fence is
+    skipped, and a fence closes only on a bare marker of its character with at
+    least its length, per CommonMark."""
+    stack = []  # (fence_marker, contents_are_prose) per open fence
+    for i, line in enumerate(text.splitlines(), start=1):
+        if is_markdown:
+            m = FENCE_RE.match(line)
+            if m:
+                fence, info = m.group('fence'), m.group('info').strip()
+                if (stack and not info and fence[0] == stack[-1][0][0]
+                        and len(fence) >= len(stack[-1][0])):
+                    stack.pop()
+                else:
+                    lang = info.split()[0].lower() if info else ''
+                    stack.append((fence, lang in PROSE_FENCE_INFOS))
+                continue
+            if any(not prose for _, prose in stack):
+                continue
+        if not line.strip():
             continue
-        if in_fence:
-            continue
-        if line.strip():
-            yield lineno, line.rstrip()
+        yield i, line
 
 
 def read_text(abspath):
