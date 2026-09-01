@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev1] - 2026-09-01
+
+- **Changed:** two sentences in `rules-rationale.md` (**Reference and clause boundaries**) restated in plain language. The first-mention *the* explanation no longer relies on "frame" and "definite-heavy register", and the cost of a dropped *that* is described as what the reader does ("first takes 'the effect' as the object of 'show' and has to re-read once 'persists' arrives") instead of the term for it. No rule or skill behavior changes; no skill loads the rationale file.
+
 ## [2026-09] - 2026-09-01
 
 - **Added:** a general-layer **Reference** section with three rules that share one test ("the [noun] just mentioned" / "which one?"): anchor every sentence-initial *This / These / That / It* to a noun ("This causes silent data loss" → "This leniency causes silent data loss"); a summarizing noun must name something the text has listed ("such tools" after a list of tasks → "tools for these tasks"); and use *the* only for a referent the reader can already identify ("the rerun infrastructure" at first mention → "infrastructure to rerun ..."). Self-check item #24 wires them in.
