@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev5] - 2026-09-01
+
+- **Changed:** synced the pymarkdown-skill helpers at upstream release 0.2.4 (`.pymarkdown-skill-version` now reads `0.2.4`). The upstream 0.2.3 and 0.2.4 releases carry the em-dash and wording fixes that the 2026-09_rev4 sweep had applied to `lint_markdown.py` and `refresh_vendor.py` here, so the synced copies and upstream are identical again. No behavior change.
+
 ## [2026-09_rev4] - 2026-09-01
 
 - **Changed:** every rule in the three layers now carries a stable key after its name (`G.semicolons`, `S.significant`, `L.grounding-comments`). Cross-references in the layers, the rationale entries, and the self-check items cite keys instead of names alone or list positions, so a rename or an insertion no longer breaks a reference. The report's `Rule:` field carries the name followed by the key, as in `Semicolons (G.semicolons)`. A new smoke test checks that keys are unique, that every rule bullet defines one, that every self-check item cites one, and that every cited key exists.
