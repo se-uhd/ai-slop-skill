@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev6] - 2026-09-01
+
+- **Fixed:** `CLAUDE.md` and the README named only `lint_markdown.py` and `check_baseline.py` as upstream-owned. The sync set is five paths (`lint_markdown.py`, `check_baseline.py`, `refresh_vendor.py`, `_vendor/`, `bundled_licenses/`), copied in by pymarkdown-skill's `sync/sync_to_skill.sh` and stamped in `scripts/.pymarkdown-skill-version`. The gap cost an extra upstream release (0.2.4) when a re-sync reverted a local edit to `refresh_vendor.py`.
+
 ## [2026-09_rev5] - 2026-09-01
 
 - **Changed:** synced the pymarkdown-skill helpers at upstream release 0.2.4 (`.pymarkdown-skill-version` now reads `0.2.4`). The upstream 0.2.3 and 0.2.4 releases carry the em-dash and wording fixes that the 2026-09_rev4 sweep had applied to `lint_markdown.py` and `refresh_vendor.py` here, so the synced copies and upstream are identical again. No behavior change.
