@@ -8,18 +8,18 @@ one tab-separated line per finding to stdout:
 
 Issues:
   - cluster:           a single \\cite-style call with three or more keys.
-                       The rule asks for a per-work explanation. This only
-                       flags the existence of the cluster. Judging whether
+                       The rule asks for a per-work explanation. This check
+                       only flags the existence of the cluster. Judging whether
                        the surrounding prose explains each work is left to
                        the caller.
-  - missing-grounding: a \\cite-style call with no grounding comment attached —
+  - missing-grounding: a \\cite-style call with no grounding comment attached,
                        on the same line or in the contiguous run of blank and
                        `%`-comment lines directly below it. A grounding comment
                        leads with the GROUNDING marker in any key-placement form
                        (`% GROUNDING: "..."`, `% GROUNDING: <key> -- "..."`, or
                        `% GROUNDING <key>: "..."`); see cite_scan.py. A quote-less
                        `TODO verify` stub also counts as attached (the cite is
-                       marked, not missing) — filling stubs is insert_grounding's
+                       marked, not missing). Filling stubs is insert_grounding's
                        job, not a finding here.
 
 Recognized commands (cluster + grounding checks apply):
@@ -46,9 +46,9 @@ not count.
 Exits 0 when at least one input file was read, whether or not findings were
 emitted. Exits 2 on a usage error: no arguments, or none of the given paths
 could be read (nothing was scanned). The exit-2 case guards against a shell
-mishap that collapses the whole file list into one unreadable argument — in
-zsh, an unquoted variable is not word-split — which would otherwise look like
-a clean "no findings" run. Non-empty stdout signals that findings were
+mishap that collapses the whole file list into one unreadable argument, which
+would otherwise look like a clean "no findings" run. (In zsh, an unquoted
+variable is not word-split.) Non-empty stdout signals that findings were
 emitted; an empty stdout means no findings. A one-line summary is always
 printed to stderr (e.g. `considered 41 cite call(s) across 1 file(s);
 1 cluster(s), 41 missing-grounding`). "Considered" counts cite calls in

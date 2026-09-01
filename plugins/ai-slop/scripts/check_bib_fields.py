@@ -12,8 +12,8 @@ issue(s)`) so callers can confirm the run completed without parsing stdout.
 Files that cannot be opened or entries that cannot be parsed are reported on
 stderr but do not abort the run, as long as at least one file is read. The
 script exits 2 on a usage error: no arguments, or none of the given paths
-could be read (so nothing was checked) — this keeps a shell mishap that
-collapses the file list into one unreadable argument from masquerading as a
+could be read (so nothing was checked). The exit-2 case keeps a shell mishap
+that collapses the file list into one unreadable argument from passing as a
 clean run. Otherwise it exits 0.
 
 Required-fields table is taken from Patashnik's btxdoc, the canonical BibTeX
@@ -26,7 +26,7 @@ Notes:
   - @inbook requires 'chapter' and/or 'pages' (at least one).
   - @conference is treated as an alias of @inproceedings (Scribe-compat
     entry per btxdoc).
-  - Unknown entry types are silently skipped — this avoids false positives
+  - Unknown entry types are silently skipped. Skipping them avoids false positives
     on BibLaTeX-style entries (@online, @dataset, @software, @thesis,
     @report) whose required-field rules are not modeled here.
   - 'crossref' inheritance is NOT honored; an @inproceedings that
@@ -104,7 +104,7 @@ def check_file(path, stats):
             continue
         missing = missing_fields(etype, fields)
         if missing is None:
-            continue  # unknown entry type — silently skip
+            continue  # unknown entry type: silently skip
         stats['checked'] += 1
         if missing:
             stats['flagged'] += 1

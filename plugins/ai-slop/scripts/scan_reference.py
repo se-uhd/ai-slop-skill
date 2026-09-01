@@ -2,10 +2,11 @@
 """scan_reference.py <file> [<file> ...]
 
 Recall aid for the general layer's **Reference** rules. The per-section review
-pass is an LLM reading prose, and it walks past unanchored references the same
-way it undercounts Unicode glyphs: a sentence-initial "This shows that ..." reads
-fluently, so the eye does not stop. This scan lists every candidate so the
-reviewer applies the rule's test ("the [noun] just mentioned") to each one. It
+pass is an LLM reading prose, and it misses unanchored references the same way
+it undercounts Unicode glyphs: a sentence-initial "This shows that ..." reads
+fluently, so the reviewer does not stop on it. This scan lists every candidate
+so the reviewer applies the rule's test ("the [noun] just mentioned") to each
+one. It
 prints one tab-separated line per candidate to stdout:
 
     <file>:<line>:<col>\\t<kind>\\t<context>
@@ -34,7 +35,7 @@ Kinds:
                         not scanned: the numeral and the generic "one" would
                         swamp the list.
 
-This is a CANDIDATE finder, not a verdict, exactly like scan_glyphs.py. The
+This scan is a CANDIDATE finder, not a verdict, exactly like scan_glyphs.py. The
 caller applies the rule's test and exceptions before reporting. Skipped up
 front, because they are never findings: LaTeX comment lines and trailing `%`
 comments in `.tex` files, fenced code blocks, LaTeX verbatim / lstlisting /

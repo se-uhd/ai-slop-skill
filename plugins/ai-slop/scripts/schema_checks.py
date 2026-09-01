@@ -1,4 +1,4 @@
-"""schema_checks.py — ai-slop schema rules consumed by lint_markdown.py.
+"""schema_checks.py: ai-slop schema rules consumed by lint_markdown.py.
 
 Two checks against `ai-slop-report.md` and `WRITING.md`:
 
