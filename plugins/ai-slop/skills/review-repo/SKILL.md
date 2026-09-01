@@ -3,7 +3,7 @@ name: review-repo
 description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default; `--scientific` adds the research-article layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev7"
+  version: "2026-09_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -28,7 +28,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
 **Repo root.** A positional path argument overrides the default (`/ai-slop:review-repo path/to/repo`). The path must be a directory.
 
-**Scope of the text scanned** is decided by `scripts/scan_repo.py` (see Workflow). In a git repository it scans the tracked files, so `.gitignore`d build output and dependencies are excluded automatically. Outside a git repository it walks the tree minus a denylist of build and dependency directories. Markdown, plain-text, and LaTeX files are read in full (a `.tex` file's `%` comments are reviewed alongside its body). Source and config files contribute only their comments and doc-comments. The repository's commit messages are scanned too (their subject and body, with merge commits and the standard trailer lines such as `Co-authored-by` and `Signed-off-by` dropped). Generated files, lockfiles, and binaries are skipped.
+**Scope of the text scanned** is decided by `scripts/scan_repo.py` (see Workflow). In a git repository it scans the tracked files, so `.gitignore`d build output and dependencies are excluded automatically. Outside a git repository it walks the tree minus a denylist of build and dependency directories. Markdown, plain-text, and LaTeX files are read in full (a `.tex` file's `%` comments are reviewed alongside its body). Source and config files contribute only their comments and doc-comments. The repository's commit messages are scanned too (their subject and body, with merge commits and the standard trailer lines such as `Co-authored-by` and `Signed-off-by` dropped). Generated files, lockfiles, and binaries are skipped. In Markdown, a fenced block whose info string names a prose format (`markdown`, `text`) is read as prose, so a quoted template is content; other fenced code is skipped.
 
 **Commit-message scope.** By default the scan covers the most recent 200 commits. Pass `--commits=<N>` for a different count, `--commits=all` for the full history, `--commits=<range>` for a git revision range (for example `--commits=main..HEAD` to review just a branch's commits before they are pushed), or `--no-commits` to skip commit messages entirely. Published commit history is immutable, so commit-message findings are mostly advisory: a guide for future messages, or for rewording a branch's not-yet-pushed commits with an interactive rebase. `/ai-slop:revise` does not touch commit messages.
 
