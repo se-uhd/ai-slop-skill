@@ -1831,6 +1831,97 @@ def test_scan_glyphs_partial_read_exits_0():
         assert 'scanned 1 file(s)' in err, f"partial: file count wrong: {err!r}"
 
 
+# ---------- scan_reference.py ----------
+
+REFERENCE_FIXTURE = (
+    'The parser accepts unterminated strings. This causes silent data loss.\n'   # bare This
+    'The compiler warns when the cache is stale. It is disabled by default.\n'   # bare It
+    'These tests were flaky. These results show the effect. This also shows more.\n'  # anchored x2, bare x1
+    'It is possible that the cache is stale. It turns out it was. It follows that X.\n'  # dummy it x3
+    'That is, the cache is stale. That said, we proceed. That works well.\n'     # connectives x2, bare x1
+    'LLMs can triage bug reports. Such tools are in use, such as X, such that Y.\n'  # such-noun x1
+)
+
+
+def test_scan_reference_lists_bare_demonstratives_only():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, REFERENCE_FIXTURE)
+        rc, out, err = run('scan_reference.py', str(p))
+        assert rc == 0, f"reference: rc={rc} err={err!r}"
+        rows = [l for l in out.split('\n') if '\tbare-demonstrative\t' in l]
+        assert len(rows) == 4, f"reference: expected 4 bare rows, got {len(rows)}: {rows!r}"
+        lines = sorted(int(r.split('\t')[0].split(':')[-2]) for r in rows)
+        assert lines == [1, 2, 3, 5], f"reference: rows on wrong lines: {lines!r}"
+        # anchored demonstratives ("These tests", "These results") are not listed
+        assert not any(':3:1\t' in r or ':3:25\t' in r for r in rows), f"reference: anchored listed: {rows!r}"
+        such = [l for l in out.split('\n') if '\tsuch-noun\t' in l]
+        assert len(such) == 1, f"reference: expected 1 such-noun row, got {such!r}"
+        for token in ('bare-demonstrative=4', 'such-noun=1', '5 reference candidate(s)'):
+            assert token in err, f"reference: summary missing {token!r}: {err!r}"
+
+
+def test_scan_reference_skips_dummy_it_and_connectives():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'It is unclear whether X holds. It is also worth noting Y. It remains to be seen.\n'
+                 'That is to say, X. That said, Y.\n')
+        rc, out, err = run('scan_reference.py', str(p))
+        assert rc == 0, f"dummy: rc={rc} err={err!r}"
+        assert out == '', f"dummy: expected empty stdout, got {out!r}"
+
+
+def test_scan_reference_two_on_one_line_distinct_columns():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'This shows X. This, in turn, makes Y. Such cases are rare.\n')
+        rc, out, err = run('scan_reference.py', str(p))
+        assert rc == 0, f"cols: rc={rc} err={err!r}"
+        locs = [l.split('\t')[0] for l in out.split('\n') if l]
+        assert len(locs) == 3 and len(set(locs)) == 3, f"cols: not three distinct rows: {locs!r}"
+        assert all(loc.count(':') >= 2 for loc in locs), f"cols: no line:col in {locs!r}"
+
+
+def test_scan_reference_skips_latex_comments_and_verbatim():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.tex'
+        write(p, '% This shows a comment line.\n'
+                 'Prose. This shows prose. % This shows a trailing comment\n'
+                 '\\begin{verbatim}\nThis shows code.\n\\end{verbatim}\n'
+                 '\\item This holds for all cases.\n')
+        rc, out, err = run('scan_reference.py', str(p))
+        assert rc == 0, f"tex: rc={rc} err={err!r}"
+        rows = [l for l in out.split('\n') if l]
+        assert len(rows) == 2, f"tex: expected 2 rows, got {rows!r}"
+        assert rows[0].startswith(f"{p}:2:") and rows[1].startswith(f"{p}:6:"), f"tex: wrong rows: {rows!r}"
+
+
+def test_scan_reference_clean_file():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'clean.md'
+        write(p, 'The warning is disabled by default. These tests were flaky.\n')
+        rc, out, err = run('scan_reference.py', str(p))
+        assert rc == 0, f"clean: rc={rc} err={err!r}"
+        assert out == '', f"clean: expected empty stdout, got {out!r}"
+        assert '0 reference candidate(s)' in err, f"clean: summary wrong: {err!r}"
+
+
+def test_scan_reference_all_unreadable_exits_2():
+    with tempfile.TemporaryDirectory() as d:
+        rc, out, err = run('scan_reference.py', str(Path(d) / 'missing.md'))
+        assert rc == 2, f"unreadable: rc={rc} err={err!r}"
+        assert 'none of the 1 path(s)' in err, f"unreadable: no error line: {err!r}"
+
+
+def test_scan_reference_partial_read_exits_0():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'This shows X.\n')
+        rc, out, err = run('scan_reference.py', str(p), str(Path(d) / 'gone.md'))
+        assert rc == 0, f"partial: rc={rc} err={err!r}"
+        assert 'scanned 1 file(s)' in err, f"partial: file count wrong: {err!r}"
+
+
 # ---------- runner ----------
 
 TESTS = [
@@ -1839,6 +1930,13 @@ TESTS = [
     test_scan_glyphs_clean_ascii_file,
     test_scan_glyphs_all_unreadable_exits_2,
     test_scan_glyphs_partial_read_exits_0,
+    test_scan_reference_lists_bare_demonstratives_only,
+    test_scan_reference_skips_dummy_it_and_connectives,
+    test_scan_reference_two_on_one_line_distinct_columns,
+    test_scan_reference_skips_latex_comments_and_verbatim,
+    test_scan_reference_clean_file,
+    test_scan_reference_all_unreadable_exits_2,
+    test_scan_reference_partial_read_exits_0,
     test_find_latex_root_empty,
     test_find_latex_root_single,
     test_find_latex_root_prefer_main,

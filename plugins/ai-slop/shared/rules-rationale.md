@@ -72,6 +72,33 @@ technical writing: a reader who sees "code review," "code inspection," and
 "review process" cannot tell whether these name one concept or three. One term
 per concept removes the doubt.
 
+## Reference and clause boundaries
+
+Both rule sections target one asymmetry. A model resolves a pronoun, a
+summarizing noun, a definite article, or a dropped *that* against its whole
+context, where every candidate antecedent and the intended category are equally
+present; a reader has the surface text and a window of one or two sentences.
+Function words and head nouns are redundancy for the reader's benefit, and a
+generator tuned for fluency and concision strips redundancy.
+
+- **Reference.** Bare *This* is the glue of the claim-then-comment move ("This
+  highlights..."); the head noun requires an editorial choice the bare form
+  defers. *It* over the repeated noun follows general anti-repetition advice the
+  terminology rule already rejects. Distance costs attention nothing, so an
+  antecedent three sentences back is as available to the model as the previous
+  clause. The mismatched summarizing noun ("such tools" after a list of tasks) is
+  the same mechanism one level up: the noun names the category the writer had in
+  mind, not the one the text instantiated. The first-mention definite is the same
+  again for articles: English definiteness is defined on the reader's side (can
+  the reader identify it?), and the generator marks as given whatever is fixed in
+  its own plan, helped by the frequency of the "the X to do Y" frame and by the
+  definite-heavy register of academic prose.
+- **Explicit *that*.** The zero form is standard in conversation and fiction and
+  rare in academic prose (Biber et al., *Longman Grammar of Spoken and Written
+  English*); its appearance in formal text is a conversational default imported
+  by the model, reinforced by the copyediting advice to cut *that*. The reader's
+  cost is a garden path ("the results show the effect" until "persists" arrives).
+
 ## Voice and verb tense
 
 The tense table follows APA conventions and standard SE practice. The
