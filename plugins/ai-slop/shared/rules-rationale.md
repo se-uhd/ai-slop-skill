@@ -86,18 +86,20 @@ generator tuned for fluency and concision strips redundancy.
   defers. *It* over the repeated noun follows general anti-repetition advice the
   terminology rule already rejects. Distance costs attention nothing, so an
   antecedent three sentences back is as available to the model as the previous
-  clause. The mismatched summarizing noun ("such tools" after a list of tasks) is
-  the same mechanism one level up: the noun names the category the writer had in
-  mind, not the one the text instantiated. The first-mention definite is the same
-  again for articles: English definiteness is defined on the reader's side (can
-  the reader identify it?), and the generator marks as given whatever is fixed in
-  its own plan, helped by the frequency of the "the X to do Y" frame and by the
-  definite-heavy register of academic prose.
+  clause. The mismatched summarizing noun ("such tools" after a list of tasks)
+  is the same mechanism one level up: the noun names the category the writer had
+  in mind, not the one the text instantiated. The first-mention *the* is the
+  same again for articles. *The* claims the reader can already identify the
+  thing, and the generator treats as already known whatever is fixed in its own
+  plan. Two habits from the training data add to it: "the" before any noun
+  followed by a purpose phrase ("the tools needed to ..."), and the high rate of
+  "the" in academic prose generally.
 - **Explicit *that*.** The zero form is standard in conversation and fiction and
   rare in academic prose (Biber et al., *Longman Grammar of Spoken and Written
   English*); its appearance in formal text is a conversational default imported
-  by the model, reinforced by the copyediting advice to cut *that*. The reader's
-  cost is a garden path ("the results show the effect" until "persists" arrives).
+  by the model, reinforced by the copyediting advice to cut *that*. The reader
+  first takes "the effect" as the object of "show" and has to re-read once
+  "persists" arrives.
 
 ## Voice and verb tense
 
