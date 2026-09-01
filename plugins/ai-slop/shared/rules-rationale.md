@@ -76,23 +76,23 @@ per concept removes the doubt.
 
 Both rule sections target one asymmetry. A model resolves a pronoun, a
 summarizing noun, a definite article, a stand-in word, or a dropped *that*
-against its whole context, where every candidate antecedent and the intended category are equally
-present; a reader has the surface text and a window of one or two sentences.
-Function words and head nouns are redundancy for the reader's benefit, and a
-generator tuned for fluency and concision strips redundancy.
+against its whole context, where every candidate antecedent and the intended
+category are equally present. A reader has the surface text and a window of one
+or two sentences. Function words and head nouns are redundancy for the reader's
+benefit, and a generator tuned for fluency and concision strips redundancy.
 
-- **Reference.** Bare *This* is the glue of the claim-then-comment move ("This
-  highlights..."); the head noun requires an editorial choice the bare form
+- **Reference.** Bare *This* is what joins a claim to the comment on it ("This
+  highlights..."). The head noun requires an editorial choice the bare form
   defers. *It* over the repeated noun follows general anti-repetition advice the
   terminology rule already rejects. Distance costs attention nothing, so an
   antecedent three sentences back is as available to the model as the previous
   clause. The mismatched summarizing noun ("such tools" after a list of tasks)
-  is the same mechanism one level up: the noun names the category the writer had
+  is the same mechanism one level up. The noun names the category the writer had
   in mind, not the one the text instantiated. The first-mention *the* is the
   same again for articles. *The* claims the reader can already identify the
   thing, and the generator treats as already known whatever is fixed in its own
-  plan. Two habits from the training data add to it: "the" before any noun
-  followed by a purpose phrase ("the tools needed to ..."), and the high rate of
+  plan. Two habits from the training data add to it, "the" before any noun
+  followed by a purpose phrase ("the tools needed to ...") and the high rate of
   "the" in academic prose generally.
 - **Stand-in words.** By the time the model reaches "among the ___" in "detect
   flaky tests among the generated ones", it has already committed to "detect
@@ -100,11 +100,11 @@ generator tuned for fluency and concision strips redundancy.
   left to avoid repeating *tests* is a stand-in at the current position. The
   advice not to repeat a word is enforced one token at a time, and "among the
   [adjective] ones" is itself a frequent chunk. A human editor rewrites the
-  clause instead; the reader of the unedited version has to fetch the noun and
+  clause instead. The reader of the unedited version has to fetch the noun and
   work out the relation.
 - **Explicit *that*.** The zero form is standard in conversation and fiction and
   rare in academic prose (Biber et al., *Longman Grammar of Spoken and Written
-  English*); its appearance in formal text is a conversational default imported
+  English*). Its appearance in formal text is a conversational default imported
   by the model, reinforced by the copyediting advice to cut *that*. The reader
   first takes "the effect" as the object of "show" and has to re-read once
   "persists" arrives.
@@ -197,6 +197,16 @@ cannot tell a well-placed dash from a lazy one.
   concrete, plainly worded, and unique to its location yet still spend more words
   than its content needs. The subtractive test (delete anything whose removal
   costs no meaning, emphasis, or precision) is the shared diagnostic.
+- **Section openers, generic truths, and evaluative sentences.** The windup rule
+  targets a sentence that announces what its own paragraph then does. Read at
+  section level it would remove every orienting paragraph, and style guides
+  treat a heading followed directly by a subheading as poor form, so the rule
+  names the section-opening paragraph as legitimate when it states the section's
+  claim ("The two analyses for RQ2 disagree. This section explains why.") or
+  carries what the headings do not. Generic-truth and evaluative sentences get
+  the same density treatment as restricted words, hedges, and one-sentence
+  paragraphs, a signal rather than a ban. One can open a section or mark that a
+  result matters. Accumulation is the filler.
 - **Reformulate, do not delete.** The concision and hedging rules license
   deletion, which a model can over-apply by resolving any flagged statement
   through removal. This rule bounds that: deletion is for content that says
