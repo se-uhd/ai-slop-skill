@@ -75,8 +75,8 @@ per concept removes the doubt.
 ## Reference and clause boundaries
 
 Both rule sections target one asymmetry. A model resolves a pronoun, a
-summarizing noun, a definite article, or a dropped *that* against its whole
-context, where every candidate antecedent and the intended category are equally
+summarizing noun, a definite article, a stand-in word, or a dropped *that*
+against its whole context, where every candidate antecedent and the intended category are equally
 present; a reader has the surface text and a window of one or two sentences.
 Function words and head nouns are redundancy for the reader's benefit, and a
 generator tuned for fluency and concision strips redundancy.
@@ -94,6 +94,14 @@ generator tuned for fluency and concision strips redundancy.
   plan. Two habits from the training data add to it: "the" before any noun
   followed by a purpose phrase ("the tools needed to ..."), and the high rate of
   "the" in academic prose generally.
+- **Stand-in words.** By the time the model reaches "among the ___" in "detect
+  flaky tests among the generated ones", it has already committed to "detect
+  flaky tests" and cannot go back to restructure the clause, so the only way
+  left to avoid repeating *tests* is a stand-in at the current position. The
+  advice not to repeat a word is enforced one token at a time, and "among the
+  [adjective] ones" is itself a frequent chunk. A human editor rewrites the
+  clause instead; the reader of the unedited version has to fetch the noun and
+  work out the relation.
 - **Explicit *that*.** The zero form is standard in conversation and fiction and
   rare in academic prose (Biber et al., *Longman Grammar of Spoken and Written
   English*); its appearance in formal text is a conversational default imported
