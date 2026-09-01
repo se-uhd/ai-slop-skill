@@ -2,17 +2,17 @@
 """refresh_tropes.py [output-path]
 
 Refresh the bundled AI-trope snapshot from upstream, overwriting
-`../shared/tropes-snapshot.md` (resolved relative to this script) — or the
+`../shared/tropes-snapshot.md` (resolved relative to this script), or the
 path given as argv[1].
 
 The snapshot is the offline fallback `fetch_tropes.py` serves when the
 upstream Gist and the tropes.fyi viewer are both unreachable. This script
 keeps it bit-identical to upstream. Maintainer-only: run it as part of every
 release rev (see CLAUDE.md "Release protocol") so the fallback never drifts
-from the live catalog. End users never run it — `fetch_tropes.py` fetches
+from the live catalog. End users never run it, because `fetch_tropes.py` fetches
 live at review time and only falls back to the bundled copy.
 
-Sources, in order — the same upstream chain as `fetch_tropes.py`, minus the
+Sources, in order, are the same upstream chain as `fetch_tropes.py` minus the
 bundled fallback (refreshing the snapshot from the very copy we are about to
 overwrite would be a meaningless no-op):
   1. Upstream Gist (raw markdown)

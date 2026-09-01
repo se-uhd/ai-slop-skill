@@ -7,18 +7,19 @@ for each cited key. PATH is a `.tex` file or a directory (default: cwd); a
 directory is resolved to its LaTeX root the same way find_latex_root.py does.
 The root and every file it pulls in with `\input` / `\include` are scanned.
 
-This opens the loop that find_citation_issues.py reports: that script lists the
+This script opens the loop that find_citation_issues.py reports: that script lists the
 `\cite` calls missing a grounding comment; this script collects what each
 of them needs grounded (the enclosing claim) and the source identity needed to
 find a supporting quote (title / author / year / DOI / URL / eprint). A
 grounding workflow then fetches each source once and returns a verbatim quote
 (or a `TODO verify -- <reason>`); insert_grounding.py writes the result back.
 
-It fabricates nothing: it only extracts text already in the `.tex` and `.bib`
-files. The anti-fabrication rule — a quote only when the source was actually
-retrieved — is enforced downstream, by the workflow that fills the quotes.
+This script fabricates nothing: it only extracts text already in the `.tex`
+and `.bib` files. The anti-fabrication rule, which allows a quote only when
+the source was actually retrieved, is enforced downstream by the workflow that
+fills the quotes.
 
-Output: one JSON object on stdout —
+Output is one JSON object on stdout:
 
     {
       "root":  "<resolved root path>",

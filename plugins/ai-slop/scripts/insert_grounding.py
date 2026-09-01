@@ -16,9 +16,9 @@ when it was not (reasons such as paywalled, abstract-only, book, not-found, or
 source-does-not-support). The TODO form is the anti-fabrication guarantee: a
 quote appears ONLY when the workflow actually retrieved the source text;
 otherwise the comment records why it could not, for a human to resolve. This
-script never invents a quote — it writes exactly what the quotes JSON carries.
+script never invents a quote. It writes exactly what the quotes JSON carries.
 
-quotes JSON schema — one entry per cited key, each with EITHER a quote OR a todo:
+The quotes JSON holds one entry per cited key, each with EITHER a quote OR a todo:
 
     {
       "smith2020": {"quote": "the exact sentence retrieved from the source"},
@@ -33,8 +33,8 @@ Behavior:
     annotated; style-only \citeauthor / \citeyear sites are skipped.
   - Idempotent: a (line, key) that already has a quote-backed `% GROUNDING:`
     comment naming that key is left alone, so re-running is safe.
-  - A quote-less `TODO verify` stub naming the key — planted by revise mode
-    (`% GROUNDING: TODO verify <key>`) or by an earlier run of this script —
+  - A quote-less `TODO verify` stub naming the key, planted by revise mode
+    (`% GROUNDING: TODO verify <key>`) or by an earlier run of this script,
     does NOT count as grounded: it is replaced in place with the new comment,
     so a later grounding run can fill what a stub only marks. Replacing a stub
     with identical content is a no-op. A stub on the cite's own line is never
@@ -49,7 +49,7 @@ Behavior:
   - --dry-run prints what would change without writing.
 
 A one-line summary is printed to stderr, with a per-reason breakdown of the
-TODOs (source-does-not-support is called out — it flags a likely miscitation,
+TODOs (source-does-not-support is called out because it flags a likely miscitation,
 not merely an ungrounded claim). Exits 0 on success; 2 if an input JSON cannot
 be read or parsed.
 """
@@ -104,7 +104,7 @@ def grounds_key(text, key):
     one sentence cites several keys, each grounded on its own line). Only the
     header (before the quote, the ` -- ` TODO separator, and a trailing
     key/quote-delimiter colon) is examined, so a key appearing inside a quote
-    body does not count as already grounding that key — preserving resumability
+    body does not count as already grounding that key, which preserves resumability
     over still-ungrounded keys."""
     if not is_grounding_comment(text):
         return False
@@ -126,8 +126,8 @@ def already_grounded(lines, idx, key):
 def find_todo_stub(lines, idx, key):
     """Return the index of the first quote-less GROUNDING comment line for
     `key` attached to the cite on line `idx`, or None. The cite's own line is
-    excluded — an inline stub is never edited; the replacement logic only
-    rewrites whole comment lines."""
+    excluded, since an inline stub is never edited and the replacement logic
+    only rewrites whole comment lines."""
     _, same_comment = split_code_and_comment(lines[idx])
     for j, text in iter_comment_block(lines, idx, same_comment):
         if j == idx:
@@ -151,9 +151,9 @@ def leading_ws(line):
 
 
 def plan_file(lines, sites, quotes, stats):
-    """Return (inserts, replacements) for one file — {line_index: [comment
-    lines]} of new comments to insert after a cite line, and {line_index: new
-    line} of TODO-stub lines to rewrite in place — updating `stats` in place.
+    """Return (inserts, replacements) for one file, updating `stats` in place:
+    {line_index: [comment lines]} of new comments to insert after a cite line,
+    and {line_index: new line} of TODO-stub lines to rewrite in place.
     Each site is a dict with line/keys/groundable."""
     inserts = {}
     replacements = {}

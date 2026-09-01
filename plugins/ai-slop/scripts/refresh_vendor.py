@@ -143,7 +143,7 @@ def collect_notice(
     """Build a NOTICE body from each vendored package's dist-info metadata.
 
     Returns (body, missing) where `missing` is the list of "name version"
-    entries for which no license text could be located — neither in the
+    entries for which no license text could be located, neither in the
     package's dist-info nor in `bundled_dir`. The caller is expected to
     abort if `missing` is non-empty so the bundle is never published
     without attribution.
@@ -252,9 +252,9 @@ def collect_notice(
         else:
             missing.append(f"{name} {version}")
         # Apache-2.0 §4(d) requires reproducing any upstream NOTICE file.
-        # We do this unconditionally — it's a no-op for packages that don't
-        # ship one — so future Apache-licensed additions don't silently
-        # miss the obligation.
+        # We do this unconditionally so future Apache-licensed additions don't
+        # silently miss the obligation. It is a no-op for packages that don't
+        # ship one.
         for candidate in ("NOTICE", "NOTICE.txt", "NOTICE.md"):
             nf = di / candidate
             if nf.is_file():

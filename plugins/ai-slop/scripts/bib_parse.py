@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""bib_parse.py — shared BibTeX parsing primitives.
+"""bib_parse.py: shared BibTeX parsing primitives.
 
 check_bib_fields.py (required-field presence), verify_references.py (database
 lookups), and extract_cites.py (per-key metadata for grounding) all split a
 .bib file into entries and read their fields. The brace-counting entry splitter
-and the two field parsers — one returning field *names* (for the presence check)
-and one returning field *values* — live here so the three tools share one parser
+and the two field parsers, one returning field *names* (for the presence check)
+and one returning field *values*, live here so the three tools share one parser
 instead of re-implementing brace handling.
 
   - find_entry_blocks(text)   -> yields (etype, body) per @TYPE{...} entry

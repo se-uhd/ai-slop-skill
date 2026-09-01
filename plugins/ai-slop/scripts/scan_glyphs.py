@@ -2,7 +2,7 @@
 """scan_glyphs.py <file> [<file> ...]
 
 Deterministic recheck for the Unicode "tells" the writing rules flag
-mechanically. The per-section review pass is an LLM eyeballing prose, and it
+mechanically. The per-section review pass is an LLM reading prose, and it
 undercounts these glyphs: it will report "twelve em-dashes" when there are
 fifteen, or miss one in a code comment. This scan is the ground truth. It reads
 each file byte for byte and prints one tab-separated line per offending glyph to
@@ -30,7 +30,7 @@ Glyph categories (the codepoint -> name map in GLYPHS is the authoritative list)
   - nbsp:        U+00A0, a non-breaking space. Typed as a normal space (or `~` in
                  LaTeX); a literal one is a paste artifact.
 
-This is a CANDIDATE finder, not a verdict, exactly like find_citation_issues.py.
+This scan is a CANDIDATE finder, not a verdict, exactly like find_citation_issues.py.
 It flags every occurrence; the caller applies the documented exceptions before
 reporting: an en-dash inside a range, any glyph inside quoted source material or
 a code string/identifier, and the fact that an ASCII hyphen, `--`, or minus sign
@@ -45,14 +45,14 @@ curly-quote=0 ellipsis=0 nbsp=0]
 Exits 0 when at least one input file was read, whether or not glyphs were found.
 Exits 2 on a usage error: no arguments, or none of the given paths could be read
 (nothing was scanned). The exit-2 case guards the same shell-quoting mishap as
-the citation scanner — a whole file list collapsed into one unreadable argument,
+the citation scanner, namely a whole file list collapsed into one unreadable argument,
 which would otherwise look like a clean "no tells" run. Non-empty stdout signals
 findings; empty stdout means none.
 
 Known limitations:
   - No format awareness. The scan does not parse Markdown fences, LaTeX verbatim,
     or string literals, so a glyph inside fenced code or a quoted string is still
-    emitted; the `<context>` line lets the caller judge. (This is deliberate: a
+    emitted; the `<context>` line lets the caller judge. (The omission is deliberate: a
     literal em-dash in a code *comment* must be caught, and distinguishing a
     comment from a string per language is the extractor's job, not this scan's.)
   - splitlines() consumes the Unicode line separators U+2028/U+2029 and U+0085, so

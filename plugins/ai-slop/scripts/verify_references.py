@@ -26,7 +26,7 @@ printed to stderr. The run exits 0 when at least one bib file is read (network
 reachable or not), and exits 2 only when none of the given paths could be read,
 so nothing was checked.
 
-This is advisory. It confirms, or fails to confirm; it never asserts a reference
+This check is advisory. It confirms, or fails to confirm. It never asserts a reference
 is fabricated except where a DOI provably does not resolve. For an exhaustive,
 non-LLM audit of someone else's submission, use the `hallucite` skill instead.
 
@@ -94,7 +94,7 @@ def _venue_match(a, b):
     ta = {t for t in _tokens(a) if len(t) >= 4}
     tb = {t for t in _tokens(b) if len(t) >= 4}
     if not ta or not tb:
-        return True  # cannot tell (e.g., an abbreviation) — do not flag
+        return True  # cannot tell (e.g., an abbreviation), so do not flag
     return bool(ta & tb)
 
 
