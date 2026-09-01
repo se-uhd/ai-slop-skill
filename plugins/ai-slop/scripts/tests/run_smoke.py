@@ -5,6 +5,7 @@ Runs each script against fixtures and asserts exit codes + stdout/stderr.
 Exits 0 if all pass; non-zero on the first failure (with a summary at the end).
 """
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -105,7 +106,7 @@ def test_find_latex_root_root_with_includes():
 # ---------- fetch_tropes.py ----------
 
 def test_fetch_tropes_emits_body_and_source():
-    """Verifies the script runs end-to-end and surfaces a source attribution.
+    """Verifies the script runs end-to-end and reports a source attribution.
     Network reachability is not required: even fully offline the bundled
     fallback path produces output."""
     with tempfile.TemporaryDirectory() as d:
@@ -123,8 +124,8 @@ def _run_refresh(out_path, fetch_results):
     """Call refresh_tropes.main with try_fetch stubbed and stderr captured.
 
     fetch_results maps a source URL to the body try_fetch should return for it
-    (a URL absent from the map, or mapped to None, models a failed fetch). This
-    keeps the test fully offline — no real network call is made. Returns
+    (a URL absent from the map, or mapped to None, models a failed fetch). The
+    stub keeps the test fully offline: no real network call is made. Returns
     (rc, stderr_text).
     """
     import contextlib
@@ -400,7 +401,7 @@ def test_find_citation_issues_no_findings():
 def test_find_citation_issues_per_key_grounding_not_flagged():
     """The per-key `% GROUNDING <key>: "..."` convention (key before the colon,
     incl. DBLP keys with internal colons) must count as grounded, on the same
-    line and the next line — not reported as missing-grounding."""
+    line and the next line, not reported as missing-grounding."""
     fixture = (
         'Same-line per-key~\\cite{alpha}. % GROUNDING alpha: "alpha says yes"\n'
         '\n'
@@ -458,7 +459,7 @@ def test_find_citation_issues_truncate_respects_120_chars():
 
 
 def test_find_citation_issues_all_unreadable_exits_2():
-    # The original footgun: a whole file list collapsed into one over-long,
+    # The original failure mode: a whole file list collapsed into one over-long,
     # unreadable argument. Nothing gets scanned, so the run must exit 2 (with a
     # shell-quoting hint), not exit 0 with a misleading "0 findings" summary.
     joined = ' '.join(f'file{i}.tex' for i in range(60))
@@ -549,7 +550,7 @@ def test_check_baseline_passes_on_bundled_yaml():
 
 
 def test_lint_markdown_blanks_around_headings():
-    # MD022 — the rule that flags headings without blank lines around them.
+    # MD022 is the rule that flags headings without blank lines around them.
     with tempfile.TemporaryDirectory() as d:
         p = _write_md(d, 'doc.md', b"# Title\nimmediately after H1\n")
         rc, out, err = run('lint_markdown.py', str(p))
@@ -613,7 +614,7 @@ def test_lint_markdown_fix_mode_normalizes():
     # Run of 4 blank lines, missing trailing newline. PyMarkdown's `fix`
     # collapses md012 (multiple blanks) and inserts the trailing newline
     # for md047. Lines with trailing whitespace under MD009's 2-space
-    # hard-break allowance are normalised to 0 or 2.
+    # hard-break allowance are normalized to 0 or 2.
     content = b"# Title\n\n\n\n\nbody   \nmore"
     with tempfile.TemporaryDirectory() as d:
         p = _write_md(d, 'doc.md', content)
@@ -650,12 +651,13 @@ def test_lint_markdown_unreadable_exits_2():
 # ---------- version-string consistency ----------
 
 def test_version_strings_in_sync():
-    """All version references — both manifests, every SKILL.md frontmatter, the
-    report-template `**Skill version:**` line in review/SKILL.md, and the
-    `skill version <X>` reference in the WRITING.md header in init/SKILL.md —
-    must equal the canonical version in plugins/ai-slop/.claude-plugin/plugin.json.
+    """All version references must equal the canonical version in
+    plugins/ai-slop/.claude-plugin/plugin.json: both manifests, every SKILL.md
+    frontmatter, the report-template `**Skill version:**` line in
+    review/SKILL.md, and the `skill version <X>` reference in the WRITING.md
+    header in init/SKILL.md.
 
-    Guards against the rev7-style drift where SKILL.md files got bumped but the
+    Guards against the drift seen at rev7, where SKILL.md files got bumped but the
     two manifests were left behind. See README "Maintainer notes" for the list
     of files this enforces.
     """
@@ -980,8 +982,8 @@ def test_scan_repo_js_ts_block_and_line():
 
 
 def test_scan_repo_latex_body_and_comments():
-    # repo mode reviews .tex as prose: the document body AND its % comments (the
-    # latter are content too, just as comments are in source files).
+    # repo mode reviews .tex as prose: the document body AND its % comments
+    # (comments are content too, just as in source files).
     src = ('\\documentclass{article}\n'
            '\\begin{document}\n'
            'The results are seamless and robust.  % TODO fix this wording\n'
@@ -1009,8 +1011,8 @@ def _git_repo_with_commit(d, subject, body):
 
 
 def test_scan_repo_commit_messages_scanned():
-    # A commit's subject and body are reviewed under a `commit <sha>` pseudo-path;
-    # the trailer line is metadata and must be dropped.
+    # A commit's subject and body are reviewed under a `commit <sha>` pseudo-
+    # path. The trailer line is metadata and must be dropped.
     body = ('This delivers a comprehensive solution.\n\n'
             'Co-authored-by: Someone <s@e.x>')
     with tempfile.TemporaryDirectory() as d:
@@ -1129,7 +1131,7 @@ def test_verify_references_all_unreadable_exits_2():
 
 def test_verify_references_partial_read_exits_0():
     # One readable bib (no DOI/title -> no network needed) plus one missing file
-    # is partial success: exit 0. Guards against counting given paths vs reads.
+    # is partial success: exit 0. Guards against counting the paths given instead of the files read.
     with tempfile.TemporaryDirectory() as d:
         bib = Path(d) / 'refs.bib'
         write(bib, '@misc{nodata,\n  note = {placeholder}\n}\n')
@@ -1379,8 +1381,9 @@ def test_extract_cites_claim_stops_at_paragraph_break():
 
 
 def test_extract_cites_multiline_cite():
-    # A \cite whose keys span lines is caught by the joined-text scan (unlike the
-    # line-based find_citation_issues); the line maps to the macro's line.
+    # A \cite whose keys span lines is caught by the joined-text scan (unlike
+    # the line-based find_citation_issues). The reported line maps to the
+    # macro's line.
     import json
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'main.tex',
@@ -1491,7 +1494,7 @@ def test_insert_grounding_dry_run_does_not_write():
         assert tex.read_text(encoding='utf-8') == before, "dry-run must not modify the file"
         assert 'would insert 2 grounding comment(s)' in err, f"dry: summary: {err!r}"
         assert 'GROUNDING: alpha' in out, f"dry: stdout preview missing: {out!r}"
-        # source-does-not-support is surfaced as a likely miscitation.
+        # source-does-not-support is reported as a likely miscitation.
         assert 'source-does-not-support' in err, f"dry: reason breakdown missing: {err!r}"
 
 
@@ -1608,7 +1611,7 @@ def test_insert_grounding_cluster_one_comment_per_key_preserves_indent():
 
 def test_insert_grounding_resumable_over_absent_keys():
     # A key absent from quotes is left untouched (counted as 'no result'), so a
-    # later run fills it — the documented resumability over still-ungrounded sites.
+    # later run fills it, i.e., the documented resumability over still-ungrounded sites.
     import json
     with tempfile.TemporaryDirectory() as d:
         tex = Path(d) / 'main.tex'
@@ -1674,8 +1677,9 @@ def test_insert_grounding_non_string_quote_becomes_todo():
 
 
 def test_insert_grounding_replaces_todo_stubs():
-    # A quote-less TODO stub — the revise-mode form (`% GROUNDING: TODO verify
-    # <key>`) or the reasoned form an earlier run wrote — must not block the
+    # A quote-less TODO stub, whether the revise-mode form (`% GROUNDING: TODO
+    # verify <key>`) or the reasoned form an earlier run wrote, must not block
+    # the
     # fill: extract_cites reports the site ungrounded, and insert_grounding
     # replaces the stub line in place with the retrieved quote. Re-running
     # with the same quotes is then a no-op.
@@ -1718,9 +1722,9 @@ def test_insert_grounding_replaces_todo_stubs():
 def test_grounding_comment_block_read_write_agree():
     # The read side (find_citation_issues / extract_cites) and the write side
     # (insert_grounding) share one definition of the cite's attached comment
-    # block: an unrelated % comment between the cite and its grounding comment
-    # does not hide the grounding, a TODO stub marks the cite as not-missing
-    # but still fillable, and a comment beyond intervening code is not credited.
+    # block. An unrelated % comment between the cite and its grounding comment
+    # does not hide the grounding. A TODO stub marks the cite as not-missing
+    # but still fillable. A comment beyond intervening code is not credited.
     import json
     fixture = (
         'Stubbed~\\cite{sk}.\n'
@@ -1777,7 +1781,7 @@ GLYPH_FIXTURE = (
 
 
 def test_scan_glyphs_counts_every_occurrence():
-    # The exact-count recheck the LLM eyeball undercounts: three em-dashes
+    # The exact-count recheck that the LLM review pass undercounts: three em-dashes
     # (two on a prose line, one in a code comment) must all be reported.
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / 'doc.md'
@@ -1936,6 +1940,44 @@ def test_scan_reference_lists_stand_ins():
         assert 'stand-in=6' in err, f"stand-in: summary wrong: {err!r}"
 
 
+# ---------- rule keys ----------
+
+LAYERS = ('rules-general.md', 'rules-scientific.md', 'rules-latex.md')
+LAYER_PREFIX = {'rules-general.md': 'G', 'rules-scientific.md': 'S', 'rules-latex.md': 'L'}
+KEY_DEF_RE = re.compile(r'^[ \t]*(?:- |\d+\. )?\*\*(?P<name>(?:[^*\n]|\*(?!\*))+?)\*\* \(`(?P<key>[GSL]\.[a-z0-9-]+)`\)', re.M)
+KEY_REF_RE = re.compile(r'`([GSL]\.[a-z0-9-]+)`')
+RULE_BULLET_RE = re.compile(r'^[ \t]*- \*\*(?P<bold>[^"*](?:[^*\n]|\*(?!\*))*)\*\*', re.M)
+SELF_CHECK_HEADING = '## Self-Check'
+
+
+def test_rule_keys_unique_and_resolvable():
+    """Every rule bullet in the three layers defines one key with its layer's
+    prefix, keys are unique across the layers, every self-check item cites a
+    key, and every key cited in the layers, the rationale, or a SKILL.md is
+    defined. Keys are the stable handle that survives renames and insertions."""
+    shared = SCRIPTS.parent / 'shared'
+    defined = {}
+    for name in LAYERS:
+        text = (shared / name).read_text(encoding='utf-8')
+        rules, _, checks = text.partition(SELF_CHECK_HEADING)
+        assert checks, f"keys: {name} has no self-check section"
+        for m in KEY_DEF_RE.finditer(rules):
+            key = m.group('key')
+            assert key.startswith(LAYER_PREFIX[name] + '.'), f"keys: {key} in {name} has the wrong prefix"
+            assert key not in defined, f"keys: {key} defined twice ({defined[key]}, {name})"
+            defined[key] = name
+        for m in RULE_BULLET_RE.finditer(rules):
+            line = rules[m.start():rules.find('\n', m.start())]
+            assert KEY_DEF_RE.match(line), f"keys: rule without a key in {name}: {line.strip()[:70]!r}"
+        for item in re.finditer(r'^\d+\. \*\*.*$', checks, re.M):
+            assert KEY_REF_RE.search(item.group(0)), f"keys: self-check item without a key in {name}: {item.group(0)[:70]!r}"
+    assert len(defined) > 80, f"keys: only {len(defined)} keys defined"
+    referencing = [shared / n for n in LAYERS] + [shared / 'rules-rationale.md'] + sorted((SCRIPTS.parent / 'skills').glob('*/SKILL.md'))
+    for path in referencing:
+        for key in KEY_REF_RE.findall(path.read_text(encoding='utf-8')):
+            assert key in defined, f"keys: {key} cited in {path.name} is not defined in any layer"
+
+
 # ---------- runner ----------
 
 TESTS = [
@@ -1952,6 +1994,7 @@ TESTS = [
     test_scan_reference_all_unreadable_exits_2,
     test_scan_reference_partial_read_exits_0,
     test_scan_reference_lists_stand_ins,
+    test_rule_keys_unique_and_resolvable,
     test_find_latex_root_empty,
     test_find_latex_root_single,
     test_find_latex_root_prefer_main,

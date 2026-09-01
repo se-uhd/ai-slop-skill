@@ -5,7 +5,7 @@ Detect whether the input is LaTeX source. PATH is a file or directory and
 defaults to the current working directory. Prints `latex` or `general` to
 stdout and exits 0. `general` is the safe default.
 
-This drives which rule layers a skill loads:
+The printed value drives which rule layers a skill loads:
     latex   -> rules-general.md + rules-scientific.md + rules-latex.md
                (a LaTeX paper is always a research article, so the scientific
                 layer is included automatically)

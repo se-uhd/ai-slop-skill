@@ -1,5 +1,5 @@
 ---
-description: Apply the findings of an `/ai-slop:review` report to the source — replace each flagged quote with its suggested revision and insert `% GROUNDING` to-do stubs for ungrounded citations.
+description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` to-do stubs for ungrounded citations.
 ---
 
 Use the `ai-slop:revise` skill.
