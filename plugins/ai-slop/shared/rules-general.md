@@ -9,11 +9,11 @@ mechanics for LaTeX source. A skill loads the layers its scope calls for
 These rules target AI slop and the habits that make machine-written prose
 recognizable, plus universal points of clean writing. The general AI-trope list
 (banned words, formulaic openings, formatting tics, anaphora and tricolon abuse)
-is fetched separately from the upstream catalog; this layer carries the
-restricted-words table with alternatives and a self-check. The rationale behind the
-contested rules, the rules that a reader might push back on, lives in
-`rules-rationale.md`, which the skills do not load; mechanical rules carry
-their own short justification or none.
+is fetched separately from the upstream catalog. This layer carries the
+restricted-words table with alternatives and a self-check. The rationale behind
+the rules that a reader might push back on lives in `rules-rationale.md`, which
+the skills do not load. Mechanical rules carry their own short justification or
+none.
 
 ## Language
 

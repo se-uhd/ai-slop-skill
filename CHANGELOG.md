@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev8] - 2026-09-01
+
+- **Changed:** `scan_repo.py` now reviews the contents of Markdown fences whose info string names a prose format (`markdown`, `md`, `mdx`, `text`, `txt`, `plain`), so the templates quoted in the skill files are content instead of skipped code. Fences nest: a bare code fence inside a prose fence stays skipped, and a fence closes only on a bare marker of its character with at least its length. A smoke test covers the nesting; the README and `review-repo/SKILL.md` document the behavior.
+- **Fixed:** restored the full language list in the README's review-repo section, which the 2026-09_rev4 sweep had reduced to a pointer at the `COMMENT_SPECS`/`NAME_SPECS` tables.
+- **Fixed:** the general layer's intro no longer stacks "the contested rules, the rules that a reader might push back on" and no longer joins its clauses with semicolons.
+
 ## [2026-09_rev7] - 2026-09-01
 
 - **Fixed:** prose inside the fenced templates, which the repository scan skips as code. The report disclaimer no longer joins two clauses with a semicolon, the Summary placeholder no longer asks for "headline metrics" (a phrase the general layer bans), and the `WRITING.md` header and the two maintainer comments read the same way. The report-template change reaches every generated report.
