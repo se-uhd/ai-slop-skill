@@ -800,6 +800,21 @@ def test_scan_repo_prose_markdown_skips_code_fences():
         assert 'code_in_fence' not in text, f"md fenced code not skipped: {out!r}"
 
 
+def test_scan_repo_markdown_prose_fences_are_scanned():
+    # A ````markdown fence quotes a template: its prose is content, a bare
+    # code fence nested inside it is still skipped, and a ```python fence
+    # stays skipped entirely.
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'doc.md',
+              'Intro prose.\n\n````markdown\nTemplate prose line.\n\n```\nnested_code();\n```\n\nTemplate tail.\n````\n\n```python\npy_code()\n```\n\nOutro.\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"prose-fence: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'Template prose line.' in text and 'Template tail.' in text, f"prose-fence: template missing: {out!r}"
+        assert 'nested_code' not in text and 'py_code' not in text, f"prose-fence: code not skipped: {out!r}"
+        assert 'Intro prose.' in text and 'Outro.' in text, f"prose-fence: outer prose missing: {out!r}"
+
+
 def test_scan_repo_extracts_only_comments_from_source():
     src = ('package x\n'
            '/** A KDoc comment about coffee. */\n'
@@ -2045,6 +2060,7 @@ TESTS = [
     test_detect_scope_dir_empty_defaults_general,
     test_detect_scope_commented_tex_is_not_latex,
     test_scan_repo_prose_markdown_skips_code_fences,
+    test_scan_repo_markdown_prose_fences_are_scanned,
     test_scan_repo_extracts_only_comments_from_source,
     test_scan_repo_hash_comments_not_values,
     test_scan_repo_skips_generated_file,
