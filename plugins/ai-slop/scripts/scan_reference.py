@@ -28,6 +28,11 @@ Kinds:
                         the category is the reviewer's judgment; the scan only
                         guarantees recall. "such as" and "such that" are not
                         matched.
+  - stand-in:           a word standing in for a noun the sentence could name
+                        (ones, the former, the latter, respectively, do / did so, and
+                        "those" followed by of / that / which / with). "one" is
+                        not scanned: the numeral and the generic "one" would
+                        swamp the list.
 
 This is a CANDIDATE finder, not a verdict, exactly like scan_glyphs.py. The
 caller applies the rule's test and exceptions before reporting. Skipped up
@@ -40,7 +45,7 @@ connectives, not references, and are skipped too.
 
 A one-line summary is always printed to stderr:
 
-    scanned 1 file(s); 4 reference candidate(s) [bare-demonstrative=3 such-noun=1]
+    scanned 1 file(s); 5 reference candidate(s) [bare-demonstrative=3 such-noun=1 stand-in=1]
 
 Exits 0 when at least one input file was read, whether or not candidates were
 found. Exits 2 on a usage error: no arguments, or none of the given paths could
@@ -54,7 +59,8 @@ Known limitations:
   - A dummy "it" outside the cue list ("It remains an open question whether")
     is listed; the reviewer skips it.
   - A past participle used as an adjective after a demonstrative ("This limited
-    scope") can be listed as a verb; the reviewer clears it.
+    scope") can be listed as a verb, and "the latter" as an adjective ("the
+    latter half") is listed like the stand-in; the reviewer clears both.
   - First-mention definite articles (the third Reference rule) are not scanned:
     telling a first mention from an anaphoric "the" needs discourse tracking, and
     "the + noun + to/that" alone is too noisy to list.
@@ -66,7 +72,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from scan_io import report_unreadable  # noqa: E402
 
-KINDS = ('bare-demonstrative', 'such-noun')
+KINDS = ('bare-demonstrative', 'such-noun', 'stand-in')
 
 # Verbs that follow a bare demonstrative, by form. Third-person singular forms
 # follow This / That / It; base forms follow These; past forms follow any.
@@ -142,6 +148,10 @@ DEMONSTRATIVE_RE = re.compile(
     + r'\s+(?P<verb>[A-Za-z]+)\b'
 )
 SUCH_RE = re.compile(r'\b(?P<such>[Ss]uch)\s+(?:an?\s+)?(?!as\b|that\b)[A-Za-z][\w-]*')
+STAND_IN_RE = re.compile(
+    r'\b(?P<standin>[Oo]nes|[Tt]he former|[Tt]he latter|[Rr]espectively|(?:[Dd]o|[Dd]oes|[Dd]id|[Dd]oing|[Dd]one) so'
+    r'|[Tt]hose (?:of|that|which|with))\b'
+)
 
 LATEX_SKIP_ENVS = ('verbatim', 'lstlisting', 'minted', 'comment')
 LATEX_BEGIN_RE = re.compile(r'\\begin\{(' + '|'.join(LATEX_SKIP_ENVS) + r')\*?\}')
@@ -231,6 +241,8 @@ def scan_file(path, stats):
             rows.append((m.start('pron'), 'bare-demonstrative'))
         for m in SUCH_RE.finditer(prose):
             rows.append((m.start('such'), 'such-noun'))
+        for m in STAND_IN_RE.finditer(prose):
+            rows.append((m.start('standin'), 'stand-in'))
         if not rows:
             continue
         context = truncate(line)

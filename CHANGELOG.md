@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev2] - 2026-09-01
+
+- **Added:** a fourth **Reference** rule (general layer), **Name the thing instead of pointing at it**: a stand-in word for a noun or clause the sentence could state directly (*ones*, *those*, *the former / the latter*, *the same*, *respectively*, *do so*) costs the reader a lookup; put the noun back and restructure the clause if it then repeats ("detect flaky tests among the generated ones" → "detect which of the generated tests are flaky"). Self-check item #24 covers it, and `rules-rationale.md` explains why a left-to-right generator produces a stand-in instead of restructuring the clause.
+- **Changed:** `scan_reference.py` lists a third kind, `stand-in` (*ones*, *the former*, *the latter*, *respectively*, *do / did so*, *those of / that / which / with*), with a smoke test; the review skill's metrics step names it.
+
 ## [2026-09_rev1] - 2026-09-01
 
 - **Changed:** two sentences in `rules-rationale.md` (**Reference and clause boundaries**) restated in plain language. The first-mention *the* explanation no longer relies on "frame" and "definite-heavy register", and the cost of a dropped *that* is described as what the reader does ("first takes 'the effect' as the object of 'show' and has to re-read once 'persists' arrives") instead of the term for it. No rule or skill behavior changes; no skill loads the rationale file.
