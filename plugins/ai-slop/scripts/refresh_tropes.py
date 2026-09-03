@@ -20,7 +20,7 @@ overwrite would be a meaningless no-op):
 
 So if BOTH network sources are unreachable the script exits 1 and leaves the
 snapshot untouched, rather than rewriting it with stale or empty content. A
-fetch whose body is byte-identical to the current snapshot is reported as
+fetched body byte-identical to the current snapshot is reported as
 already up to date and the file is not rewritten (no spurious diff).
 
 One line is printed to stderr identifying the source and the outcome (e.g.

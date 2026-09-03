@@ -108,6 +108,19 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   by the model, reinforced by the copyediting advice to cut *that*. The reader
   first takes "the effect" as the object of "show" and has to re-read once
   "persists" arrives.
+- **Relative *whose* on things** (`G.whose-on-things`). *Whose* is the only relative pronoun that attaches
+  a property of the head noun in one word. *With* needs a noun phrase for the
+  property, a participle needs a verb that the head can take, and a conditional
+  needs the sentence restructured from its start. Once the model has written
+  "report only entries", the condition has to follow *entries*, and *whose* is
+  the one form in that position that fits any property and any predicate, so
+  it is selected for the same reason as a stand-in word above.
+  Specifications, standards, and legal prose, all dense in the training data,
+  use it the same way. Usage guides have accepted *whose* for things since
+  Fowler, and the Longman Grammar's corpus counts (Biber et al.) show it as rare
+  in every register, academic prose included, so the rule is a test per instance and a
+  density signal rather than a ban. A human editor plans the sentence whole and
+  makes the property the subject or uses a verb.
 
 ## Voice and verb tense
 
@@ -162,7 +175,7 @@ cannot tell a well-placed dash from a lazy one.
   `i.e.`/`that is`/`namely` are comparatively under-produced even though they are
   routine in academic prose. Recommending them where the mark introduces an example or
   a restatement therefore has two effects. It removes an over-used pause and restores
-  a construction whose relative absence is itself a tell. The rule is deliberately
+  a construction that AI text under-uses, and the under-use is itself a tell. The rule is deliberately
   dependent on meaning (illustrates vs. renames vs. sets up a payoff clause) so it does not
   become a mechanical dash-to-`e.g.` swap that merely shifts the load onto a new formula.
 - **Sentence length** (`G.sentence-length`). AI text is detectable by its uniformity (roughly 15 to 25
@@ -195,8 +208,8 @@ cannot tell a well-placed dash from a lazy one.
 - **Concision** (`G.sentence-padding`, `G.paragraph-padding`). Sentence- and paragraph-level padding is a distinct failure from
   vagueness, inflated vocabulary, and cross-section redundancy. A phrase can be
   concrete, plainly worded, and unique to its location yet still spend more words
-  than its content needs. The subtractive test (delete anything whose removal
-  costs no meaning, emphasis, or precision) is the shared diagnostic.
+  than its content needs. The subtractive test (delete anything that can be
+  removed at no cost to meaning, emphasis, or precision) is the shared diagnostic.
 - **Section openers, generic truths, and evaluative sentences** (`G.paragraph-padding`). The windup rule
   targets a sentence that announces what its own paragraph then does. Read at
   section level it would remove every orienting paragraph, and style guides

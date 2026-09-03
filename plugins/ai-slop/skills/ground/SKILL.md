@@ -3,7 +3,7 @@ name: ground
 description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify -- <reason>` stub when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev8"
+  version: "2026-09_rev9"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -53,7 +53,7 @@ The skill operates on the LaTeX paper in the current working directory. No argum
 
    Run the agents in **slices of about 8 at a time** so a burst does not trip server-side rate limits. The run is resumable. Any source that errored or was skipped simply stays without a quote, so its site keeps the missing comment or the `TODO verify` stub and a later `/ai-slop:ground` picks it up and fills it.
 
-5. **Assemble the quotes file.** Collect the agents' results into `grounding-quotes.json`, mapping each key to either `{"quote": "<verbatim text>"}` or `{"todo": "<reason>"}`. Write nothing for a key whose agent failed entirely. Leaving it absent keeps it for a future run.
+5. **Assemble the quotes file.** Collect the agents' results into `grounding-quotes.json`, mapping each key to either `{"quote": "<verbatim text>"}` or `{"todo": "<reason>"}`. Write nothing for a key if its agent failed entirely. Leaving it absent keeps it for a future run.
 
 6. **Insert the comments.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/insert_grounding.py grounding-cites.json grounding-quotes.json`. It writes `% GROUNDING: <key> -- "<quote>"` (or the `TODO verify -- <reason>` form) after each groundable, ungrounded cite line, matching the line's indentation. An existing quote-less `TODO verify` stub for the key is replaced in place. A site with a quote-backed comment for the key is left alone (idempotent), and each line is re-checked against the file before editing, so any site that moved is skipped. Use `--dry-run` first if the user wants to preview the edits.
 
