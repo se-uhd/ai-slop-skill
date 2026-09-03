@@ -39,8 +39,8 @@ Recognized and ignored entirely: \\nocite (BibTeX-only marker, not textual).
 
 Other commands are not flagged. The recognized list is an allowlist.
 
-Comment handling: lines whose code portion (before the first unescaped `%`)
-contains no recognized cite call are skipped. Cite calls inside comments do
+Comment handling: a line is skipped when its code portion (before the first
+unescaped `%`) contains no recognized cite call. Cite calls inside comments do
 not count.
 
 Exits 0 when at least one input file was read, whether or not findings were

@@ -98,7 +98,7 @@ def comment_for(key, result):
 
 
 def grounds_key(text, key):
-    """True if `text` is a GROUNDING comment whose key field names `key`.
+    """True if `text` is a GROUNDING comment with `key` as its key field.
     Recognizes both `% GROUNDING: <key> -- "<quote>"` (the form this script
     writes) and `% GROUNDING <key>: "<quote>"` (the per-key form authors use when
     one sentence cites several keys, each grounded on its own line). Only the
