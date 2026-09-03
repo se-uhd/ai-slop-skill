@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev8"
+  version: "2026-09_rev9"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -65,17 +65,17 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so revise mode does not insert a guessed noun.
 
-5. **Cross-cutting metrics.** Compute and record the metrics whose layer is in scope (skip the scientific metrics, verb-tense compliance and the "significant" audit, when only the general layer is loaded). Run the deterministic glyph recheck first, because the per-section reading pass reliably undercounts these:
+5. **Cross-cutting metrics.** Compute and record the metrics for the layers in scope (skip the scientific metrics, verb-tense compliance and the "significant" audit, when only the general layer is loaded). Run the deterministic glyph recheck first, because the per-section reading pass reliably undercounts these:
    - **Unicode glyph tells (run `scan_glyphs.py`; do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py <paper-file> [<input.tex> ...]` over the paper file(s). Each stdout line is `<file>:<line>:<col>\t<glyph-name>\t<context>` for one literal Unicode tell, with `em-dash`, `en-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` as the categories, and the stderr summary gives the per-category totals (e.g. `15 Unicode tell(s) [em-dash=15 ...]`). Take the em-dash-density count below from this output, not an eyeball. Report every `em-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` row as a per-section finding with its ASCII replacement. For `en-dash`, keep the dashes in numeric or page ranges (`pp. 12–18`). For any glyph, skip the occurrences inside quoted source material or a code string. A glyph inside a code *comment* is still a finding (the comment is prose). The script exits 0 once it read a file (with or without findings) and 2 on a usage error.
    - **Reference candidates (run `scan_reference.py`; do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_reference.py <paper-file> [<input.tex> ...]`. Each stdout line is `<file>:<line>:<col>\t<kind>\t<context>` for one candidate: `bare-demonstrative` (a sentence-initial *This*, *These*, *That*, or *It* followed directly by a verb) `such-noun` (*such* + noun), or `stand-in` (*ones*, *the former / the latter*, *respectively*, *do so*, *those of / that / which / with*); the stderr summary gives the per-kind totals. The rows are candidates, not findings. Apply the **Reference** rules' tests to each ("[noun] just mentioned" for the first two kinds; put the noun back for `stand-in`), report the confirmed rows as per-section findings under that rule (or under author judgment when the referent cannot be determined, per step 4), and clear a dummy *it* the script did not filter. First-mention definites are not scanned. Check them in the per-section pass. The script exits 0 once it read a file and 2 on a usage error.
    - Em-dash density (target: ≤ 2 to 3 per page-equivalent of ~350 words, matching the general layer's em-dash ceiling; take the count from `scan_glyphs.py`).
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
-   - Capitalization after a colon in running prose (flag colons whose post-colon clause is a complete sentence beginning lowercase, except the first item of an enumerated series of independent clauses, which the capitalization rule treats as a list and keeps lowercase, and flag colons whose post-colon text is a fragment or list beginning uppercase).
+   - Capitalization after a colon in running prose (flag a colon when the clause after it is a complete sentence beginning lowercase, except the first item of an enumerated series of independent clauses, which the capitalization rule treats as a list and keeps lowercase, and flag a colon when the text after it is a fragment or list beginning uppercase).
    - Semicolon density in running prose (target: ≤ 1 to 2 per page-equivalent).
    - Combined pause-punctuation signal (combined em-dash + colon + semicolon count per page-equivalent; a page near all three caps at once is over-punctuated).
    - Restricted-word density per paragraph (flag paragraphs with more than 2 to 3 occurrences).
    - Sentence-length variance (flag stretches of three or more consecutive sentences within 5 words of each other in length).
-   - Verb-tense compliance, checked per clause, not per section (only when the scientific layer is in scope). Do not certify a section from its dominant tense. A present-tense prior-work clause can hide inside an otherwise-correct section. Inspect every sentence whose subject is a citation or author name (`\citeauthor{...}`, "X et al.", "the authors"). An empirical action that the cited study performed takes past or present perfect (compare against the table in the scientific layer).
+   - Verb-tense compliance, checked per clause, not per section (only when the scientific layer is in scope). Do not certify a section from its dominant tense. A present-tense prior-work clause can hide inside an otherwise-correct section. Inspect every sentence with a citation or author name as its subject (`\citeauthor{...}`, "X et al.", "the authors"). An empirical action that the cited study performed takes past or present perfect (compare against the table in the scientific layer).
    - American-vs-British spelling (flag British variants).
    - "Significant" audit (flag non-statistical uses).
 
@@ -109,7 +109,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-09_rev8 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
+**Skill version:** 2026-09_rev9 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
