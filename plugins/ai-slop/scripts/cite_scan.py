@@ -13,8 +13,8 @@ Grounding-comment forms recognized by has_grounding / is_grounding_comment:
   - `% GROUNDING <key>: "<quote>"`      the key named before the colon, common
                                         when one sentence cites several keys and
                                         each is grounded on its own comment line
-A grounding comment is any `%` comment whose first word is the GROUNDING marker;
-the key placement and the colon position do not matter.
+A grounding comment is any `%` comment with the GROUNDING marker as its first
+word. The key placement and the colon position do not matter.
 
 Quote-less grounding comments are TODO stubs: `% GROUNDING: TODO verify <key>`
 (planted by revise mode) or `% GROUNDING: <key> -- TODO verify -- <reason>`
@@ -171,8 +171,8 @@ def iter_cite_calls(lines):
 
     Comments are stripped before scanning, so a cite inside a `%` comment does
     not count. Style-only helpers (SKIPPED_COMMANDS), the \\nocite marker
-    (IGNORED_COMMANDS), commands outside the allowlist, and calls whose `{}`
-    parses to zero keys are all filtered out, so the yielded set is exactly
+    (IGNORED_COMMANDS), commands outside the allowlist, and calls with a `{}`
+    parsing to zero keys are all filtered out, so the yielded set is exactly
     find_citation_issues' "considered" set (GROUNDED_COMMANDS resolving to at
     least one key)."""
     for idx, raw_line in enumerate(lines):

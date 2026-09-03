@@ -28,7 +28,7 @@ Notes:
     entry per btxdoc).
   - Unknown entry types are silently skipped. Skipping them avoids false positives
     on BibLaTeX-style entries (@online, @dataset, @software, @thesis,
-    @report) whose required-field rules are not modeled here.
+    @report), since their required-field rules are not modeled here.
   - 'crossref' inheritance is NOT honored; an @inproceedings that
     legitimately inherits 'booktitle' from a referenced @proceedings will be
     flagged. Sanity-check flagged entries.

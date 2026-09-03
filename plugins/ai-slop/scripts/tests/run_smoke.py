@@ -765,8 +765,8 @@ def test_detect_scope_dir_empty_defaults_general():
 
 
 def test_detect_scope_commented_tex_is_not_latex():
-    # find_latex_root ignores commented-out \documentclass, so a dir whose only
-    # .tex is fully commented out is not LaTeX and resolves to general.
+    # find_latex_root ignores commented-out \documentclass, so a dir with a
+    # single, fully commented-out .tex is not LaTeX and resolves to general.
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'stub.tex', COMMENTED)
         rc, out, err = run('detect_scope.py', d)
@@ -1396,7 +1396,7 @@ def test_extract_cites_claim_stops_at_paragraph_break():
 
 
 def test_extract_cites_multiline_cite():
-    # A \cite whose keys span lines is caught by the joined-text scan (unlike
+    # A \cite with keys spanning lines is caught by the joined-text scan (unlike
     # the line-based find_citation_issues). The reported line maps to the
     # macro's line.
     import json
