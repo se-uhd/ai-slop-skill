@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev10] - 2026-09-05
+
+- **Added:** a **Phrases to Avoid** entry (general layer) banning **"arm"** for a condition, group, variant, or split, in favor of the plain noun ("condition" or "treatment" for an experimental manipulation, "group" for a set of subjects, "variant" or "configuration" for a version of a prompt, model, or pipeline, and "split" for a data partition). An arm is a group of subjects randomly assigned to one intervention in a trial, or one option in a bandit. The word is kept for those two designs only.
+
 ## [2026-09_rev9] - 2026-09-03
 
 - **Added:** **Rewrite *whose* clauses on things** (`G.whose-on-things`) in the general layer's Clause Boundaries section. AI text states a condition on a property of a thing as a restrictive *whose* clause ("entries whose keys appear in the new citations"). The rule gives three restatements (*with*, a participle or verb on the head, the property as the subject of its own clause), keeps *whose* for a person or group and where every restatement is longer or repeats the head noun, and treats more than one per page-equivalent as a secondary signal. Self-check item #25 covers it alongside `G.keep-that`, and `rules-rationale.md` records why a left-to-right generator selects the construction and why the rule is a per-instance test rather than a ban.
