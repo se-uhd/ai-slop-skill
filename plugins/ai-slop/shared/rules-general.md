@@ -56,6 +56,7 @@ none.
 - **"worked example(s)"** -> "example(s)". The qualifier "worked" rarely adds information and reads as padded pedagogical register. Keep it only in the narrow technical sense of a fully solved problem walked through step by step (a textbook "worked solution"), where the contrast with an unsolved exercise is the point.
 - **"earn its keep" / "earn its place" / "pull its weight"** -> state what the element contributes (e.g., "the opener introduces the list that follows"). The idiom states a plain judgment as figurative filler.
 - **"headline numbers" / "headline figures"** -> name the figures plainly (e.g., "the largest claims", "the most-cited figures", or just "the figures"). "Headline" imports a journalistic, attention-grabbing register that editorializes the numbers instead of stating them.
+- **"arm" for a condition, group, variant, or split** -> "condition" or "treatment" for an experimental manipulation, "group" for a set of subjects, "variant" or "configuration" for a version of a prompt, model, or pipeline, and "split" for a data partition. An arm is a group of subjects randomly assigned to one intervention in a trial, or one option in a bandit. Keep the word for those two designs only.
 
 ## Terminology Consistency
 
