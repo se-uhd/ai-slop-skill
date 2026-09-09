@@ -36,7 +36,9 @@ have been broken before:
 6. **Refresh the bundled tropes snapshot with every rev.** Before bumping, run
    `python3 plugins/ai-slop/scripts/refresh_tropes.py` to re-pull
    `plugins/ai-slop/shared/tropes-snapshot.md` from upstream so the offline
-   fallback never drifts from the live catalog. The snapshot is kept
+   fallback never drifts from the live catalog. The script reads the same
+   chain `fetch_tropes.py` uses, the tropes.fyi page first and the gist
+   mirror second, and prints the source it took to stderr. The snapshot is kept
    bit-identical to upstream. When upstream is unchanged, the script reports
    "already up to date" and leaves the file untouched, so the rev carries no
    snapshot change. When it has changed, commit the refreshed catalog as part
@@ -56,6 +58,22 @@ have been broken before:
   release there, and re-sync. Do not add pip-installed runtime deps.
 - All first-party Markdown must lint clean:
   `python3 plugins/ai-slop/scripts/lint_markdown.py <file>`.
+- **Changing the rules is a three-file edit.** A new or reworded rule in
+  `shared/rules-general.md`, `shared/rules-scientific.md`, or
+  `shared/rules-latex.md` also needs its numbered item in that layer's
+  self-check section, and an entry in `shared/rules-rationale.md` whenever a
+  reader could push back on it. Every rule carries a stable key
+  (`G.`/`S.`/`L.` plus a slug) that reports and cross-references cite.
+  `test_rule_keys_unique_and_resolvable` in the smoke suite enforces the key
+  invariants: one key per rule bullet, unique across the layers, a key in
+  every self-check item, and no dangling key in the layers, the rationale, or
+  a `SKILL.md`.
+- **The bundle follows its own rules.** When a rule is added or tightened,
+  sweep the repository's own prose for the pattern in the same rev: the
+  Markdown files, the skill and command files, and the Python docstrings and
+  comments. Released `CHANGELOG.md` entries are edited only to correct or
+  complete the record, never to restate it. Upstream-owned files are left to
+  their own repo.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
   `grounding-quotes.json`) are never committed. The skills add them to the
   target repo's `.gitignore`.
