@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev11"
+  version: "2026-09_rev12"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -35,7 +35,7 @@ Both inputs default to the current working directory. No arguments are required.
 
 1. **Read the report.** Parse the `Findings by section` blocks. Each block has `Rule`, `Location`, `Quote`, and `Suggested revision`. Skip blocks under "Items requiring author judgment". Those blocks need human input.
 
-2. **Read the paper.** Open the LaTeX source root and follow `\input{}` / `\include{}` to gather the full text. Note the file each section lives in if the paper is multi-file.
+2. **Read the paper.** Open the LaTeX source root and follow `\input{}` / `\include{}` to gather the full text. Note the file each section is in if the paper is multi-file.
 
 3. **Apply each finding.** For each finding, in document order:
    - Locate the `Quote` text in the paper. Use the `Location` hint (`file:line`) to disambiguate if the same text appears multiple times.

@@ -63,7 +63,7 @@ REQUIRED = {
 }
 
 # Entry splitting (find_entry_blocks), the field-name parser (parse_entry), and
-# SKIP_TYPES live in bib_parse.py, shared with verify_references.py and
+# SKIP_TYPES are in bib_parse.py, shared with verify_references.py and
 # extract_cites.py.
 
 

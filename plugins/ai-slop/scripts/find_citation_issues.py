@@ -90,7 +90,7 @@ from cite_scan import has_grounding, iter_cite_calls  # noqa: E402
 from scan_io import report_unreadable  # noqa: E402
 
 # The cite regex, command-classification sets, and the comment/key/grounding
-# helpers live in cite_scan.py, shared with extract_cites.py.
+# helpers are in cite_scan.py, shared with extract_cites.py.
 
 CLUSTER_THRESHOLD = 3
 
