@@ -85,12 +85,11 @@ have been broken before:
 - **The bundle follows its own rules.** When a rule is added or tightened,
   sweep the repository's own prose for the pattern in the same rev: the
   Markdown files, the skill and command files, and the Python docstrings and
-  comments. Two smoke tests hold the line between sweeps.
-  `test_first_party_prose_semicolons_are_list_separators` counts the prose
-  semicolons in the first-party Markdown and fails above the known number of
-  list separators, and `test_first_party_prose_avoids_the_plain_words_seeds`
-  runs `scan_repo.py` over the repository and fails on "lives in" outside a
-  quoted example. Released `CHANGELOG.md` entries are edited only to correct
+  comments. One smoke test holds a line between sweeps:
+  `test_first_party_prose_avoids_the_plain_words_seeds` runs `scan_repo.py`
+  over the repository and fails on "lives in" outside a quoted example.
+  Clause-joining semicolons are what `/ai-slop:review-repo` finds on the next
+  sweep, since a count cannot tell them from list separators. Released `CHANGELOG.md` entries are edited only to correct
   or complete the record, never to restate it. Upstream-owned files are left
   to their own repo.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
