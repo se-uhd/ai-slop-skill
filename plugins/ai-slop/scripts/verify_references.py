@@ -46,7 +46,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-# Shared BibTeX parsing + the unreadable-path warning live in sibling modules.
+# Shared BibTeX parsing + the unreadable-path warning are in sibling modules.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bib_parse import iter_entries  # noqa: E402
 from scan_io import report_unreadable  # noqa: E402
@@ -65,7 +65,7 @@ class NetworkError(Exception):
 
 def bib_entries(text):
     """Yield a normalized dict per entry: key, type, doi, title, year, venue.
-    The brace-counting splitter and field-value parser live in bib_parse.py."""
+    The brace-counting splitter and field-value parser are in bib_parse.py."""
     for key, etype, f in iter_entries(text):
         yield {
             'key': key,

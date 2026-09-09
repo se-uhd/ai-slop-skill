@@ -4,7 +4,7 @@ This layer adds conventions for empirical research articles on top of
 `rules-general.md`. Load it together with the general layer when reviewing or
 writing a paper; add `rules-latex.md` on top when the source is LaTeX. The
 rules here draw on APA style (7th ed.) and IEEE/ACM conventions for SE
-publications. The rationale behind the contested rules lives in
+publications. The rationale behind the contested rules is in
 `rules-rationale.md`, which the skills do not load.
 
 ## Research-coded phrases to avoid
@@ -75,7 +75,7 @@ Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / C
 ## Citations
 
 - **No vague citation clusters** (`S.citation-clusters`). Never write "several studies have shown [1,2,3,4,5]" or "prior work has found [X to Z]." If citing more than two works together, state what each contributes. A citation that does not tell the reader why it is there adds nothing.
-- **Cite specific works** (`S.cite-specific-works`). Replace "a growing body of work" with the actual works. Replace "recent studies suggest" with who found what.
+- **Cite specific works** (`S.cite-specific-works`). Replace "a growing body of work" with the actual works. Replace "recent studies suggest" with who found what. A quantity word has to match the citations that carry it: "several studies" in front of two references, or "widely reported" in front of one, inflates the evidence. Count the references and pick the word that fits, or name the works.
 - **Ground every claim you attribute to a citation** (`S.ground-claims`). Verify the cited work actually says what you claim. Read the whole paper when its full text is available, not just the abstract. The abstract compresses away the caveats, scope conditions, and negative results that decide whether a claim holds. Fall back to the relevant section only when the full text cannot be obtained.
 - **Avoid citations in the abstract** (`S.no-abstract-citations`). ACM, EMSE, and many IEEE-journal author guidelines prohibit references in abstracts. The abstract is intended to stand alone without bibliographic dependencies. When a proposed rewrite would put a reference into the abstract, rephrase to drop it. The underlying claim can move to the introduction. Check the venue's author guidelines before adding any reference to an abstract. The safe default is to keep abstracts citation-free.
 

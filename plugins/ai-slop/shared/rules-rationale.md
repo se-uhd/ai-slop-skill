@@ -10,12 +10,12 @@ ground reads the LaTeX layer's grounding convention). None of them read this
 file. Keeping the
 justification here lets the layers carry only the operative directive, example,
 and exception for each rule, while the explanatory background that does not
-change how a rule is applied lives in one place a maintainer can consult.
+change how a rule is applied is kept in one place a maintainer can consult.
 
 Not every rule has an entry. The mechanical rules carry their own short
 justification in the layer or need none. When a rule with an entry here
 changes, update both: the directive in the relevant layer and the
-justification here. The sections below are grouped by topic. Each topic lives in
+justification here. The sections below are grouped by topic. Each topic belongs to
 the general layer (any prose), the scientific layer (research articles), or the
 LaTeX layer (markup mechanics), and several cross-cutting topics state a
 principle in a lower layer and its mechanics in the LaTeX layer.
@@ -147,7 +147,11 @@ cannot tell a well-placed dash from a lazy one.
 - **Literal em-dash glyphs in source** (`G.em-dash-glyphs`). Word processors autocorrect `--` into `—`;
   code editors don't. So a literal `—` in Markdown, source, or `.tex` (where the
   em-dash is `---`) rarely comes from a human and usually marks pasted or
-  generated text.
+  generated text. The rule says explicitly that swapping the glyph is not a fix
+  for the dash, because a reviewer can otherwise close the finding by rewriting
+  `—` as `--` while the sentence keeps the same mid-sentence break. Upstream
+  now tracks `--` as the substitute AI text reaches for, so the density signal
+  counts the dash rather than the character.
 - **Colons** (`G.colons`). AI text defaults to colons for a generic mid-sentence pause and
   uses the colon-then-list shape reflexively, which is why both are flagged
   even when each individual colon is defensible.
@@ -193,6 +197,22 @@ cannot tell a well-placed dash from a lazy one.
   only where they do genuine consolidating work.
 - **Rule-of-three defaults** (`G.no-rule-of-three`). AI text groups items in threes by habit. The rule
   forces the count to match the actual number of items.
+- **Announced counts** (`G.no-announced-counts`). Models open with the number of
+  items they are about to produce ("Two constraints shape the design.", "for
+  three reasons"), a signpost that reads as planning made visible rather than as
+  content. The count is useful only where the reader checks items against
+  it, which is why the rule keeps it for specifications, checklists, study
+  designs, and contribution lists, and removes it from running prose. The
+  back-reference test ("the third of these") is the mechanical form of that
+  distinction, so the reviewer does not have to judge the writer's intent.
+- **Prose listicles** (`G.no-prose-listicle`). The ordinal-opened paragraph chain
+  ("The first wall is... The second wall is...") is what a model produces when it
+  is told to stop emitting bullet lists, so banning lists alone displaces the
+  shape instead of removing it. The rule has to name the scale, because the
+  list-cramming rule prescribes `First, ... Second, ...` as the fix for a
+  clause pile-up inside one sentence. A short ordinal sequence the reader holds
+  in view is structure. The same markers opening consecutive paragraphs are an
+  unmarked list.
 - **No list-cramming in a single sentence** (`G.no-list-cramming`). AI text maximizes information per
   sentence, flattening what should be several sentences into one colon- or
   dash-led chain of semicolon-joined clauses. The pile-up reads as machine prose
