@@ -18,7 +18,7 @@ The writing rules ship as three layers. Which layers load depends on whether the
 
 ## Versioning
 
-The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string lives in ten callsites, kept in sync by the smoke suite: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `version` field of each of the six `SKILL.md` files, the `**Skill version:**` line in `review/SKILL.md`'s report template, and the `skill version` reference in `init/SKILL.md`'s WRITING.md header. Git tags follow the same scheme.
+The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string appears in ten callsites, kept in sync by the smoke suite: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `version` field of each of the six `SKILL.md` files, the `**Skill version:**` line in `review/SKILL.md`'s report template, and the `skill version` reference in `init/SKILL.md`'s WRITING.md header. Git tags follow the same scheme.
 
 ## Dependencies
 
@@ -26,7 +26,7 @@ The skills call small Python 3 helpers under `plugins/ai-slop/scripts/` for dete
 
 - `python3` (latest stable; CI pins to 3.14). The first-party helpers are stdlib-only. The Markdown linter is [PyMarkdown](https://github.com/jackdewinter/pymarkdown), vendored pure-Python with its dependencies under `plugins/ai-slop/scripts/_vendor/`; `lint_markdown.py` and the maintainer-side `check_baseline.py` run against that vendored tree. Both, together with `refresh_vendor.py`, the vendored tree, and `bundled_licenses/`, are synced from the upstream [pymarkdown-skill](https://github.com/se-uhd/pymarkdown-skill) repo and are not edited here. Users do not need to `pip install` anything.
 
-No other runtime dependencies. Two helpers reach the network: the reference check (`verify_references.py`, CrossRef and DBLP) and the trope-catalog fetch (`fetch_tropes.py`, tropes.fyi and the upstream Gist). Both degrade cleanly offline, so the review still completes. References are reported as `unchecked-offline`, and the catalog falls back to the bundled snapshot. Smoke tests for the helpers live at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
+No other runtime dependencies. Two helpers reach the network: the reference check (`verify_references.py`, CrossRef and DBLP) and the trope-catalog fetch (`fetch_tropes.py`, tropes.fyi and the upstream Gist). Both degrade cleanly offline, so the review still completes. References are reported as `unchecked-offline`, and the catalog falls back to the bundled snapshot. Smoke tests for the helpers are at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
 
 ## Install as a Claude Code plugin
 

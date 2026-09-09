@@ -4,7 +4,7 @@ This layer adds mechanics for LaTeX source on top of `rules-general.md` and
 `rules-scientific.md`. Load all three when reviewing or editing a `.tex`
 manuscript. The rules here cover markup that only exists in LaTeX, and several
 of them are the LaTeX expression of a principle stated more generally in a lower
-layer. The rationale behind the contested rules lives in
+layer. The rationale behind the contested rules is in
 `rules-rationale.md`, which the skills do not load.
 
 ## Quotation marks

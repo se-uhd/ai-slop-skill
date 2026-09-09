@@ -10,6 +10,6 @@ WRITING.md is meant to be edited freely after generation. It is a project-local 
 
 If `WRITING.md` already exists, the skill asks before overwriting. CLAUDE.md is updated idempotently. If it already references `WRITING.md`, nothing is appended.
 
-The skill's workflow lives in `skills/init/SKILL.md`. By default the skill writes into the current working directory. A target directory can be passed as an argument to override the default.
+The skill's workflow is in `skills/init/SKILL.md`. By default the skill writes into the current working directory. A target directory can be passed as an argument to override the default.
 
 Run this once per project repository. Re-run it only to refresh `WRITING.md` from a newer skill release.
