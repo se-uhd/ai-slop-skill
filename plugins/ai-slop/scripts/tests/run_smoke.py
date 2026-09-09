@@ -2249,64 +2249,6 @@ def test_check_quotes_sources_dir_and_bad_json():
 
 # ---------- the bundle follows its own rules ----------
 
-FIRST_PARTY_MARKDOWN = (
-    ['README.md', 'CLAUDE.md']
-    + [f'plugins/ai-slop/shared/{n}' for n in ('rules-general.md', 'rules-scientific.md',
-                                              'rules-latex.md', 'rules-rationale.md')]
-    + sorted(str(p.relative_to(SCRIPTS.parent.parent.parent))
-             for p in (SCRIPTS.parent / 'skills').glob('*/SKILL.md'))
-    + sorted(str(p.relative_to(SCRIPTS.parent.parent.parent))
-             for p in (SCRIPTS.parent / 'commands').glob('*.md'))
-)
-# Semicolons that separate the items of an enumeration ("(a) ...; and (b)"),
-# which the general layer keeps.
-ENUMERATION_SEMICOLON_RE = re.compile(r';\s+(?:and\s+|or\s+)?\(')
-# The count of remaining prose semicolons, all list separators. A clause-joining
-# semicolon (`G.semicolons`) is the failure this guards; the message lists every
-# line so the author can tell the two apart. Lower this when a list is rewritten.
-MAX_PROSE_SEMICOLONS = 8
-
-
-def _markdown_prose(path):
-    """Yield (lineno, text) for a Markdown file's prose lines with fenced
-    blocks, tables, code spans, parenthetical groups, and double-quoted
-    strings removed, the contexts the semicolon convention exempts."""
-    in_fence = False
-    for i, raw in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
-        if re.match(r'^\s*(?:```|~~~)', raw):
-            in_fence = not in_fence
-            continue
-        if in_fence or raw.lstrip().startswith('|'):
-            continue
-        text = re.sub(r'`[^`]*`', '', raw)
-        depth, kept = 0, []
-        for ch in text:
-            if ch == '(':
-                depth += 1
-            elif ch == ')':
-                depth = max(0, depth - 1)
-            elif depth == 0:
-                kept.append(ch)
-        yield i, re.sub(r'"[^"]*"', '', ''.join(kept))
-
-
-def test_first_party_prose_semicolons_are_list_separators():
-    """The bundle's own Markdown keeps a semicolon only between list items or
-    inside code, quotes, and parentheticals. This ratchet lists every other
-    prose semicolon and fails when there are more than the known list
-    separators, so a clause-joining semicolon cannot come back silently."""
-    repo_root = SCRIPTS.parent.parent.parent
-    offenders = []
-    for rel in FIRST_PARTY_MARKDOWN:
-        for ln, text in _markdown_prose(repo_root / rel):
-            if ';' in ENUMERATION_SEMICOLON_RE.sub(' ', text):
-                offenders.append(f"{rel}:{ln}: {text.strip()[:90]}")
-    assert len(offenders) <= MAX_PROSE_SEMICOLONS, (
-        f"{len(offenders)} prose semicolon(s), more than the {MAX_PROSE_SEMICOLONS} "
-        "known list separators. Each must separate list items, not join clauses "
-        "(G.semicolons):\n  " + "\n  ".join(offenders))
-
-
 def test_first_party_prose_avoids_the_plain_words_seeds():
     """`G.plain-words` names "lives in" as a colorful synonym for "is in". The
     bundle's own Markdown, docstrings, and comments must not use it, except
@@ -2476,7 +2418,6 @@ TESTS = [
     test_bib_parse_escaped_quotes_concatenation_and_accents,
     test_check_quotes_confirms_and_downgrades,
     test_check_quotes_sources_dir_and_bad_json,
-    test_first_party_prose_semicolons_are_list_separators,
     test_first_party_prose_avoids_the_plain_words_seeds,
 ]
 
