@@ -1,36 +1,28 @@
 #!/usr/bin/env python3
-"""fetch_tropes.py <bundled-fallback>
+"""fetch_tropes.py
 
-Fetch the AI-trope catalog with a three-step fallback chain and emit it on
-stdout. On success (exit 0) the body is non-empty: a 200 response with an
-empty body is rejected, and the bundled fallback guarantees content even when
-offline. Exits 2 without emitting a body on a usage error or when the bundled
-fallback itself is missing, unreadable, or empty (an intact install never hits
-this; it means the bundle is broken).
+Fetch the AI-trope catalog from tropes.fyi and emit it on stdout.
 
-Sources, in order:
-  1. tropes.fyi viewer (the maintained catalog, currently v2):
-     https://tropes.fyi/tropes-md
-  2. Upstream Gist (a mirror the author last updated in March 2026, so it
-     still carries the v1 catalog):
-     https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/
-  3. The bundled fallback file passed as argv[1].
+One source, no fallback: <https://tropes.fyi/tropes-md>. When the fetch fails
+the script says so and exits non-zero, and the caller stops rather than
+reviewing against a catalog that is missing or out of date. To review without
+the network, pass an explicit catalog file to the skill with `--tropes=<path>`.
 
-The viewer serves the catalog inside a rendered HTML page rather than as raw
-markdown, so `extract_markdown` pulls the body out of the page: first from the
-download link's `data:text/markdown` URI, then from the `<pre>` block that
-renders the same text. Both come from the site's own generator and carry the
-same bytes. A page that yields neither is rejected, so a redesign of the site
-or an error page falls through to the next source instead of passing HTML off
-as a catalog.
+The site serves the catalog inside a rendered HTML page rather than as raw
+markdown, so `extract_markdown` unwraps it: first from the download link's
+`data:text/markdown` URI, then from the `<pre>` block that renders the same
+text. Both come from the site's own generator and carry the same bytes. A page
+that yields neither is rejected, so a redesign or an error page fails loudly
+instead of passing HTML off as a catalog.
 
 The site answers the default urllib user agent with 403, so requests carry
 USER_AGENT (this skill and its repository URL).
 
-Source attribution: one line is printed to stderr (e.g. `source: tropes.fyi`,
-`source: gist`, `source: bundled`) so callers can record which source was used
-without having to parse the catalog body. stdout stays a clean markdown
-catalog.
+Exit codes
+----------
+  0  catalog written to stdout.
+  1  the site was unreachable, or the page carried no catalog.
+  2  usage error (this script takes no arguments).
 """
 import html
 import re
@@ -39,11 +31,8 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from pathlib import Path
 
-GIST_URL = "https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/"
 VIEWER_URL = "https://tropes.fyi/tropes-md"
-SOURCES = (("tropes.fyi", VIEWER_URL), ("gist", GIST_URL))
 USER_AGENT = "ai-slop-skill (+https://github.com/se-uhd/ai-slop-skill)"
 TIMEOUT = 10
 
@@ -88,26 +77,14 @@ def extract_markdown(body):
 
 
 def main(argv):
-    if len(argv) < 2:
-        print("usage: fetch_tropes.py <bundled-fallback>", file=sys.stderr)
+    if len(argv) > 1:
+        print("usage: fetch_tropes.py", file=sys.stderr)
         return 2
-    fallback = Path(argv[1])
-    for name, url in SOURCES:
-        body = extract_markdown(try_fetch(url))
-        if body:
-            print(f"source: {name}", file=sys.stderr)
-            sys.stdout.write(body)
-            return 0
-    try:
-        body = fallback.read_text(encoding='utf-8', errors='replace')
-    except OSError as e:
-        print(f"error: cannot read bundled fallback {fallback}: {e.strerror or e}",
-              file=sys.stderr)
-        return 2
-    if not body.strip():
-        print(f"error: bundled fallback {fallback} is empty", file=sys.stderr)
-        return 2
-    print("source: bundled", file=sys.stderr)
+    body = extract_markdown(try_fetch(VIEWER_URL))
+    if not body:
+        print(f"error: no catalog from {VIEWER_URL}; pass --tropes=<path> to "
+              "review against a local copy", file=sys.stderr)
+        return 1
     sys.stdout.write(body)
     return 0
 

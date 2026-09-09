@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """scan_glyphs.py <file> [<file> ...]
 
-Deterministic recheck for the Unicode "tells" the writing rules flag
+Deterministic recheck for the Unicode and ASCII dash "tells" the writing rules flag
 mechanically. The per-section review pass is an LLM reading prose, and it
 undercounts these glyphs: it will report "twelve em-dashes" when there are
 fifteen, or miss one in a code comment. This scan is the ground truth. It reads
@@ -14,7 +14,8 @@ stdout:
 distinct rows and the count is exact. `<context>` is the whole line, whitespace
 collapsed and capped at 120 characters.
 
-Glyph categories (the codepoint -> name map in GLYPHS is the authoritative list):
+Categories (the codepoint -> name map in GLYPHS and the ASCII_DASH patterns are
+the authoritative lists):
 
   - em-dash:     U+2014 (—). An editor never autocorrects `-`/`--` into `—`, so a
                  literal one in code-edited Markdown, plain text, a comment, or
@@ -29,17 +30,24 @@ Glyph categories (the codepoint -> name map in GLYPHS is the authoritative list)
   - ellipsis:    U+2026 (…). Typed as `...`.
   - nbsp:        U+00A0, a non-breaking space. Typed as a normal space (or `~` in
                  LaTeX); a literal one is a paste artifact.
+  - ascii-dash:  `--` and `---` doing a dash's work: spaced (` -- `), unspaced
+                 between letters (`word--word`), or LaTeX's `---`. The general
+                 layer counts the dash, not the character, so rewriting `—` as
+                 `--` is not a fix and these count toward the same density
+                 signal. Not matched: a command-line flag (`--fix`), a numeric
+                 range (`12--18`), a table separator or thematic break, a fenced
+                 block, and the contents of an inline code span.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like find_citation_issues.py.
 It flags every occurrence; the caller applies the documented exceptions before
 reporting: an en-dash inside a range, any glyph inside quoted source material or
-a code string/identifier, and the fact that an ASCII hyphen, `--`, or minus sign
-is never matched (only the non-ASCII glyphs above are). The glyph in a *code
-comment* is still a tell and is meant to be reported (the comment is prose).
+a code string/identifier, and a lone ASCII hyphen or minus sign, which is never
+matched. The glyph in a *code comment* is still a tell and is meant to be
+reported (the comment is prose).
 
 A one-line summary is always printed to stderr, with a per-category breakdown:
 
-    scanned 1 file(s); 15 Unicode tell(s) [em-dash=15 en-dash=0 arrow=0 \
+    scanned 1 file(s); 15 tell(s) [em-dash=15 ascii-dash=0 en-dash=0 arrow=0 \
 curly-quote=0 ellipsis=0 nbsp=0]
 
 Exits 0 when at least one input file was read, whether or not glyphs were found.
@@ -50,14 +58,18 @@ which would otherwise look like a clean "no tells" run. Non-empty stdout signals
 findings; empty stdout means none.
 
 Known limitations:
-  - No format awareness. The scan does not parse Markdown fences, LaTeX verbatim,
-    or string literals, so a glyph inside fenced code or a quoted string is still
-    emitted; the `<context>` line lets the caller judge. (The omission is deliberate: a
-    literal em-dash in a code *comment* must be caught, and distinguishing a
-    comment from a string per language is the extractor's job, not this scan's.)
+  - No format awareness for the Unicode glyphs. The scan does not parse Markdown
+    fences, LaTeX verbatim, or string literals, so a glyph inside fenced code or a
+    quoted string is still emitted; the `<context>` line lets the caller judge.
+    (The omission is deliberate: a literal em-dash in a code *comment* must be
+    caught, and distinguishing a comment from a string per language is the
+    extractor's job, not this scan's.) The ASCII dash pass is the exception: it
+    skips fenced blocks and inline code spans, because `--` is ordinary syntax
+    there and the false-positive rate would swamp the signal.
   - splitlines() consumes the Unicode line separators U+2028/U+2029 and U+0085, so
     a glyph that is itself a line separator is not reported as content.
 """
+import re
 import sys
 from pathlib import Path
 
@@ -78,8 +90,21 @@ GLYPHS = {
     ' ': 'nbsp',
 }
 
-# Display order for the stderr breakdown; every category in GLYPHS appears once.
-CATEGORIES = ('em-dash', 'en-dash', 'arrow', 'curly-quote', 'ellipsis', 'nbsp')
+# ASCII sequences doing a dash's work. A command-line flag (`--fix`) fails both
+# the spaced and the letter-letter test, and a numeric range (`12--18`) fails the
+# letter-letter test, so neither is matched.
+ASCII_DASH = (
+    re.compile(r'-{3,}'),
+    re.compile(r'(?<=\s)--(?=\s)'),
+    re.compile(r'(?<=[A-Za-z])--(?=[A-Za-z])'),
+)
+FENCE = re.compile(r'^\s*(?:```|~~~)')
+SEPARATOR_LINE = re.compile(r'^[\s|:+-]+$')
+CODE_SPAN = re.compile(r'`[^`]*`')
+
+# Display order for the stderr breakdown; every category appears once.
+CATEGORIES = ('em-dash', 'ascii-dash', 'en-dash', 'arrow', 'curly-quote',
+              'ellipsis', 'nbsp')
 
 
 def truncate(text, limit=120):
@@ -98,6 +123,7 @@ def scan_file(path, stats):
         report_unreadable(path, e)
         return
     stats['files'] += 1
+    in_fence = False
     for line_idx, line in enumerate(text.splitlines()):
         context = None
         for col_idx, ch in enumerate(line):
@@ -108,6 +134,18 @@ def scan_file(path, stats):
                 context = truncate(line)
             stats['counts'][name] += 1
             print(f"{path}:{line_idx + 1}:{col_idx + 1}\t{name}\t{context}")
+        if FENCE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence or SEPARATOR_LINE.match(line):
+            continue
+        masked = CODE_SPAN.sub(lambda m: ' ' * len(m.group(0)), line)
+        cols = sorted({m.start() for pat in ASCII_DASH for m in pat.finditer(masked)})
+        for col_idx in cols:
+            if context is None:
+                context = truncate(line)
+            stats['counts']['ascii-dash'] += 1
+            print(f"{path}:{line_idx + 1}:{col_idx + 1}\tascii-dash\t{context}")
 
 
 def main(argv):
@@ -121,7 +159,7 @@ def main(argv):
     total = sum(stats['counts'].values())
     breakdown = ' '.join(f"{c}={stats['counts'][c]}" for c in CATEGORIES)
     print(
-        f"scanned {stats['files']} file(s); {total} Unicode tell(s) [{breakdown}]",
+        f"scanned {stats['files']} file(s); {total} tell(s) [{breakdown}]",
         file=sys.stderr,
     )
     if stats['files'] == 0:
