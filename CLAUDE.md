@@ -68,6 +68,18 @@ have been broken before:
   invariants: one key per rule bullet, unique across the layers, a key in
   every self-check item, and no dangling key in the layers, the rationale, or
   a `SKILL.md`.
+- **Commit messages follow the general layer.** They are prose, and
+  `/ai-slop:review-repo` scans them with every other file. A pushed message
+  cannot be corrected afterwards, because rule 2 of the release protocol rules
+  out rewriting a released commit, so the check happens before `git commit`.
+  A scan of this repository's 76 commits found the recurring failures: a
+  semicolon joining two independent clauses in 50 of them (100 uses, among them
+  the boilerplate "Version bumped to X at all ten callsites; the tropes snapshot
+  was already up to date", which is two sentences), a literal em-dash glyph
+  (U+2014) in 8, and a count announced in front of continuous prose ("Eight
+  existing rules take ..."). Write the subject line as an imperative ending in
+  `; release YYYY-MM_revN` on a release commit. That suffix is the one semicolon
+  the convention keeps, and the rest of the subject takes commas.
 - **The bundle follows its own rules.** When a rule is added or tightened,
   sweep the repository's own prose for the pattern in the same rev: the
   Markdown files, the skill and command files, and the Python docstrings and
