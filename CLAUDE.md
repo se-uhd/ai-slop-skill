@@ -17,11 +17,18 @@ have been broken before:
    `git tag -l "$(date +%Y-%m)*"`; the next rev is the highest current rev + 1
    (the bare `YYYY-MM` tag is rev0, so the release after it is `_rev1`).
 2. **Never amend, rebase, or rewrite a commit that is already tagged, released,
-   or pushed.** If more work is needed after a release, it is a NEW rev with a
-   NEW commit and tag, never a re-cut of the released commit. Amending a released
-   commit orphans its tag and breaks the linear release history. (Amending a released commit is the
-   mistake that produced the dangling-tag situation at the release now
-   numbered `2026-05_rev15`.)
+   or pushed as part of ordinary work.** If more work is needed after a release,
+   it is a NEW rev with a NEW commit and tag, never a re-cut of the released
+   commit. Amending a released commit orphans its tag and breaks the linear
+   release history. (Amending a released commit is the mistake that produced the
+   dangling-tag situation at the release now numbered `2026-05_rev15`.) A
+   history repair the maintainer asks for is the one exception, and it carries
+   three obligations. Rewrite with `git filter-branch --tag-name-filter cat --
+   --branches --tags` so every tag moves with its commit. Verify against
+   `refs/original` that the trees are unchanged and that no tag is left off
+   `main`. Force-push `main` and `--tags` together, because a forced branch
+   push alone strands every tag on a commit the branch no longer reaches. The
+   September 2026 commit-message cleanup is the precedent.
 3. **Keep the 10 version callsites in sync.** The version string is in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
    `.claude-plugin/marketplace.json`, the `version:` frontmatter of each
@@ -69,15 +76,16 @@ have been broken before:
   every self-check item, and no dangling key in the layers, the rationale, or
   a `SKILL.md`.
 - **Commit messages follow the general layer.** They are prose, and
-  `/ai-slop:review-repo` scans them with every other file. A pushed message
-  cannot be corrected afterwards, because rule 2 of the release protocol rules
-  out rewriting a released commit, so the check happens before `git commit`.
-  A scan of this repository's 76 commits found the recurring failures: a
-  semicolon joining two independent clauses in 50 of them (100 uses, among them
-  the boilerplate "Version bumped to X at all ten callsites; the tropes snapshot
-  was already up to date", which is two sentences), a literal em-dash glyph
-  (U+2014) in 8, and a count announced in front of continuous prose ("Eight
-  existing rules take ..."). Write the subject line as an imperative ending in
+  `/ai-slop:review-repo` scans them with every other file. Correcting a pushed
+  message means rewriting history, which rule 2 above allows only as a
+  deliberate repair, so the check happens before `git commit`. The September
+  2026 cleanup rewrote the whole history and fixed the recurring failures: a
+  semicolon joining two independent clauses (100 uses across 50 of the 76
+  messages, among them the boilerplate "Version bumped to X at all ten
+  callsites; the tropes snapshot was already up to date", which is two
+  sentences), a literal em-dash glyph (U+2014) in 8 messages, one British
+  spelling, and one comma splice. A semicolon separating items in a
+  parenthetical list, or sitting inside quoted output or a code span, stays. Write the subject line as an imperative ending in
   `; release YYYY-MM_revN` on a release commit. That suffix is the one semicolon
   the convention keeps, and the rest of the subject takes commas.
 - **The bundle follows its own rules.** When a rule is added or tightened,

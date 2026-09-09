@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev15] - 2026-09-09
+
+- **Changed:** every commit message in the history was rewritten to follow the general layer, and all 59 release tags moved with their commits. The trees are byte-identical to what they were. Of the 99 semicolons, the ones joining two independent clauses became periods, while those separating items in a parenthetical list or sitting inside quoted output or a code span stay. Nine em-dash glyphs became periods or commas, and the two that quote the glyph as an example stay. The pass also fixed one British spelling, one comma splice, one inhabitance framing, and the mid-subject semicolons that joined two actions, which became commas.
+- **Changed:** the release protocol names a maintainer-requested history repair as the exception to its rule against rewriting a released commit, with the obligations that come with it. Every tag moves with `--tag-name-filter`, the trees are verified against `refs/original`, and `main` and the tags are force-pushed together. The commit-message convention no longer claims a pushed message cannot be corrected.
+
 ## [2026-09_rev14] - 2026-09-09
 
 - **Added:** a commit-message convention in `CLAUDE.md`. Commit messages are prose that `/ai-slop:review-repo` scans with every other file, and a pushed one cannot be corrected, so the check belongs before `git commit`. A scan of this repository's 76 commits found the recurring failures the convention now names: a semicolon joining two independent clauses in 50 of them, a literal em-dash glyph in 8, and counts announced in front of continuous prose. The release suffix in the subject line stays as the one semicolon the convention keeps.
