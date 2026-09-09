@@ -3,9 +3,17 @@ r"""cite_scan.py: shared LaTeX citation-scanning primitives.
 
 find_citation_issues.py (flags clusters and missing grounding comments) and
 extract_cites.py (gathers per-source claims for grounding) scan the same
-\cite-family macros. The regex, the command-classification sets, and the
-comment/key/grounding helpers live here so the two tools agree on what counts as
-a citation and neither re-implements the parsing.
+\cite-family macros. The regex, the command-classification sets, the
+comment/key/grounding helpers, the cite-call scanner, and the \input /
+\include walker are defined here so the two tools agree on what counts as a
+citation, see the same set of files and calls, and neither re-implements the
+parsing.
+
+The scanner (`scan_cite_calls` / `iter_cite_calls`) works on the
+comment-stripped lines joined with newlines, so a call whose key list spans
+lines (`\cite{a,` / `  b}`) is found and reported with the line it starts on
+and the line it ends on. Grounding comments attach to the last line of the
+call, since that is where a comment below the cite sits.
 
 Grounding-comment forms recognized by has_grounding / is_grounding_comment:
   - `% GROUNDING: "<quote>"`            marker then quote
@@ -49,7 +57,22 @@ Limitations inherited by both callers:
   - Cite calls inside \verb, listings, or other non-`%`-comment constructs are
     still scanned (only `%` comments are stripped).
 """
+import bisect
 import re
+import sys
+from collections import namedtuple
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from scan_io import report_unreadable  # noqa: E402
+
+INPUT_PATTERN = re.compile(r'\\(?:input|include)\s*\{([^}]+)\}')
+
+# One recognized cite call. `start` and `end` are the 0-based indices of the
+# first and last line the call spans (equal for the usual one-line call), `pos`
+# is the offset of the call in the joined code text (see joined_code), and
+# `command` is lowercased.
+CiteCall = namedtuple('CiteCall', 'start end pos command keys')
 
 CITE_PATTERN = re.compile(
     r'\\([Cc]ite[a-zA-Z]*|[Pp]arencites?|[Tt]extcites?|[Aa]utocites?'
@@ -165,25 +188,91 @@ def has_grounding(lines, idx, same_line_comment):
     return grounding_quality(lines, idx, same_line_comment) != 'none'
 
 
-def iter_cite_calls(lines):
-    """Yield (line_index, command, keys, comment, raw_line) for every grounded
-    textual cite call across `lines`.
+def joined_code(lines):
+    """Return (joined, line_starts): the comment-stripped lines joined with
+    newlines, and the offset at which each line begins in that text, so a match
+    offset maps back to a line index with bisect."""
+    code_lines = [split_code_and_comment(line)[0] for line in lines]
+    line_starts = []
+    pos = 0
+    for code in code_lines:
+        line_starts.append(pos)
+        pos += len(code) + 1  # +1 for the newline the join inserts
+    return '\n'.join(code_lines), line_starts
 
-    Comments are stripped before scanning, so a cite inside a `%` comment does
-    not count. Style-only helpers (SKIPPED_COMMANDS), the \\nocite marker
-    (IGNORED_COMMANDS), commands outside the allowlist, and calls with a `{}`
-    parsing to zero keys are all filtered out, so the yielded set is exactly
-    find_citation_issues' "considered" set (GROUNDED_COMMANDS resolving to at
-    least one key)."""
-    for idx, raw_line in enumerate(lines):
-        code, comment = split_code_and_comment(raw_line)
-        for match in CITE_PATTERN.finditer(code):
-            command = match.group(1).lower()
-            if command in IGNORED_COMMANDS or command in SKIPPED_COMMANDS:
-                continue
-            if command not in GROUNDED_COMMANDS:
-                continue
-            keys = parse_keys(match.group(2))
-            if not keys:
-                continue
-            yield idx, command, keys, comment, raw_line
+
+def scan_cite_calls(lines, commands=GROUNDED_COMMANDS):
+    """Return (joined, calls): the joined code text (for sentence splitting) and
+    a CiteCall per recognized cite call whose command is in `commands` and that
+    resolves to at least one key. The scan runs over the comment-stripped,
+    line-joined text, so a cite inside a `%` comment does not count and a call
+    whose braces span lines is found. With the default `commands`, the calls
+    are exactly find_citation_issues' "considered" set: GROUNDED_COMMANDS
+    resolving to at least one key, with the style-only helpers
+    (SKIPPED_COMMANDS) and \\nocite (IGNORED_COMMANDS) left out."""
+    joined, starts = joined_code(lines)
+    calls = []
+    for match in CITE_PATTERN.finditer(joined):
+        command = match.group(1).lower()
+        if command in IGNORED_COMMANDS or command not in commands:
+            continue
+        keys = parse_keys(match.group(2))
+        if not keys:
+            continue
+        start = bisect.bisect_right(starts, match.start()) - 1
+        end = bisect.bisect_right(starts, match.end() - 1) - 1
+        calls.append(CiteCall(start, end, match.start(), command, keys))
+    return joined, calls
+
+
+def iter_cite_calls(lines):
+    """Yield a CiteCall for every grounded textual cite call in `lines` (see
+    scan_cite_calls for what is included)."""
+    return iter(scan_cite_calls(lines)[1])
+
+
+def resolve_ref(ref, including_dir, base, suffix):
+    """Resolve an \\input / \\bibliography reference to an existing file, trying
+    the main-file directory then the including file's directory, with and
+    without the given suffix (LaTeX adds it when absent)."""
+    names = [ref] if ref.lower().endswith(suffix) else [ref + suffix, ref]
+    for d in (base, including_dir):
+        for name in names:
+            cand = d / name
+            if cand.is_file():
+                return cand
+    return None
+
+
+def gather_files(root, seen=None):
+    """Return [(path, text)] for `root` plus every file it transitively pulls
+    in with \\input / \\include, depth-first and de-duplicated. Include
+    directives inside `%` comments are ignored. `seen` is an optional set of
+    resolved paths already gathered (shared across several roots), which is
+    updated in place so a file reached twice is read once."""
+    root = Path(root)
+    base = root.resolve().parent
+    if seen is None:
+        seen = set()
+    order = []
+
+    def visit(path):
+        rp = path.resolve()
+        if rp in seen:
+            return
+        seen.add(rp)
+        try:
+            text = rp.read_text(encoding='utf-8', errors='replace')
+        except OSError as e:
+            report_unreadable(path, e)
+            return
+        order.append((rp, text))
+        for raw_line in text.splitlines():
+            code, _ = split_code_and_comment(raw_line)
+            for m in INPUT_PATTERN.finditer(code):
+                child = resolve_ref(m.group(1).strip(), rp.parent, base, '.tex')
+                if child:
+                    visit(child)
+
+    visit(root)
+    return order

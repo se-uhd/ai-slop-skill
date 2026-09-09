@@ -35,8 +35,11 @@ the authoritative lists):
                  layer counts the dash, not the character, so rewriting `—` as
                  `--` is not a fix and these count toward the same density
                  signal. Not matched: a command-line flag (`--fix`), a numeric
-                 range (`12--18`), a table separator or thematic break, a fenced
-                 block, and the contents of an inline code span.
+                 range (`12--18`), a table separator or thematic break, a run of
+                 four or more dashes (a comment banner or rule), a fenced
+                 block, the contents of an inline code span, and, in a `.tex`
+                 file, anything after an unescaped `%`, so the ` -- ` separator
+                 in the bundle's own `% GROUNDING:` comments never counts.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like find_citation_issues.py.
 It flags every occurrence; the caller applies the documented exceptions before
@@ -64,8 +67,9 @@ Known limitations:
     (The omission is deliberate: a literal em-dash in a code *comment* must be
     caught, and distinguishing a comment from a string per language is the
     extractor's job, not this scan's.) The ASCII dash pass is the exception: it
-    skips fenced blocks and inline code spans, because `--` is ordinary syntax
-    there and the false-positive rate would swamp the signal.
+    skips fenced blocks (nesting honored), inline code spans, and LaTeX
+    comments, because `--` is ordinary syntax there and the false-positive rate
+    would swamp the signal.
   - splitlines() consumes the Unicode line separators U+2028/U+2029 and U+0085, so
     a glyph that is itself a line separator is not reported as content.
 """
@@ -74,7 +78,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scan_io import report_unreadable  # noqa: E402
+from scan_io import FenceTracker, report_unreadable  # noqa: E402
 
 # Codepoint -> category name. Adding a glyph is a one-line edit here; the stderr
 # breakdown and the smoke tests read the category names from CATEGORIES below.
@@ -91,16 +95,17 @@ GLYPHS = {
 }
 
 # ASCII sequences doing a dash's work. A command-line flag (`--fix`) fails both
-# the spaced and the letter-letter test, and a numeric range (`12--18`) fails the
-# letter-letter test, so neither is matched.
+# the spaced and the letter-letter test, a numeric range (`12--18`) fails the
+# letter-letter test, and a run of four or more dashes is a banner or rule, so
+# none of those is matched.
 ASCII_DASH = (
-    re.compile(r'-{3,}'),
+    re.compile(r'(?<!-)-{3}(?!-)'),
     re.compile(r'(?<=\s)--(?=\s)'),
     re.compile(r'(?<=[A-Za-z])--(?=[A-Za-z])'),
 )
-FENCE = re.compile(r'^\s*(?:```|~~~)')
 SEPARATOR_LINE = re.compile(r'^[\s|:+-]+$')
 CODE_SPAN = re.compile(r'`[^`]*`')
+TEX_COMMENT = re.compile(r'(?<!\\)%.*$')
 
 # Display order for the stderr breakdown; every category appears once.
 CATEGORIES = ('em-dash', 'ascii-dash', 'en-dash', 'arrow', 'curly-quote',
@@ -123,7 +128,8 @@ def scan_file(path, stats):
         report_unreadable(path, e)
         return
     stats['files'] += 1
-    in_fence = False
+    is_tex = Path(path).suffix.lower() == '.tex'
+    fences = FenceTracker()
     for line_idx, line in enumerate(text.splitlines()):
         context = None
         for col_idx, ch in enumerate(line):
@@ -134,12 +140,10 @@ def scan_file(path, stats):
                 context = truncate(line)
             stats['counts'][name] += 1
             print(f"{path}:{line_idx + 1}:{col_idx + 1}\t{name}\t{context}")
-        if FENCE.match(line):
-            in_fence = not in_fence
+        if fences.feed(line) or SEPARATOR_LINE.match(line):
             continue
-        if in_fence or SEPARATOR_LINE.match(line):
-            continue
-        masked = CODE_SPAN.sub(lambda m: ' ' * len(m.group(0)), line)
+        prose = TEX_COMMENT.sub('', line) if is_tex else line
+        masked = CODE_SPAN.sub(lambda m: ' ' * len(m.group(0)), prose)
         cols = sorted({m.start() for pat in ASCII_DASH for m in pat.finditer(masked)})
         for col_idx in cols:
             if context is None:

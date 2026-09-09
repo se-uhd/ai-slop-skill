@@ -38,7 +38,7 @@ Kinds:
 This scan is a CANDIDATE finder, not a verdict, exactly like scan_glyphs.py. The
 caller applies the rule's test and exceptions before reporting. Skipped up
 front, because they are never findings: LaTeX comment lines and trailing `%`
-comments in `.tex` files, fenced code blocks, LaTeX verbatim / lstlisting /
+comments in `.tex` files, fenced code blocks (nesting honored), LaTeX verbatim / lstlisting /
 minted / comment environments, and the common dummy-it frames ("It is possible
 that", "It is unclear whether", "It follows that", "It turns out", "It remains to
 be seen"; the cue list is DUMMY_IT_CUES). "That is," and "That said," are
@@ -71,7 +71,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scan_io import report_unreadable  # noqa: E402
+from scan_io import FenceTracker, report_unreadable  # noqa: E402
 
 KINDS = ('bare-demonstrative', 'such-noun', 'stand-in')
 
@@ -197,14 +197,10 @@ def prose_lines(path, text):
     line with any LaTeX comment removed. Skips fenced code and skip-listed LaTeX
     environments; `line` is the original for context and column numbers."""
     is_tex = Path(path).suffix.lower() == '.tex'
-    in_fence = False
+    fences = FenceTracker()
     in_env = False
     for idx, line in enumerate(text.splitlines()):
-        stripped = line.strip()
-        if stripped.startswith('```') or stripped.startswith('~~~'):
-            in_fence = not in_fence
-            continue
-        if in_fence:
+        if fences.feed(line):
             continue
         if is_tex:
             if in_env:

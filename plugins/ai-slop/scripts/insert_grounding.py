@@ -12,8 +12,9 @@ when a quote was retrieved, or
 
     % GROUNDING: <key> -- TODO verify -- <reason>
 
-when it was not (reasons such as paywalled, abstract-only, book, not-found, or
-source-does-not-support). The TODO form is the anti-fabrication guarantee: a
+when it was not (reasons such as paywalled, abstract-only, book, not-found,
+source-does-not-support, or unverified, the last written by check_quotes.py
+when a returned quote could not be found in its source). The TODO form is the anti-fabrication guarantee: a
 quote appears ONLY when the workflow actually retrieved the source text;
 otherwise the comment records why it could not, for a human to resolve. This
 script never invents a quote. It writes exactly what the quotes JSON carries.
@@ -41,11 +42,13 @@ Behavior:
     edited (mid-line edits risk the code); the new comment is inserted below
     and the inline stub is left for the author to drop.
   - Each comment matches the cite line's indentation and is inserted on its own
-    line directly after it (a `%` comment's trailing newline is consumed by
-    LaTeX, so the surrounding markup still renders unchanged).
-  - The cite line is re-checked against the file before editing; if the source
-    moved since extraction (the line no longer holds that key) the site is
-    skipped with a warning rather than edited blindly.
+    line directly after the line the call ends on (`end_line` in the extract,
+    the same line as `line` unless the key list spans lines). A `%` comment's
+    trailing newline is consumed by LaTeX, so the surrounding markup still
+    renders unchanged.
+  - The cite lines are re-checked against the file before editing; if the
+    source moved since extraction (the lines no longer hold a call with that
+    key) the site is skipped with a warning rather than edited blindly.
   - --dry-run prints what would change without writing.
 
 A one-line summary is printed to stderr, with a per-reason breakdown of the
@@ -137,9 +140,10 @@ def find_todo_stub(lines, idx, key):
     return None
 
 
-def line_has_key(line, key):
-    """True if a cite call on `line` (code portion) lists `key`."""
-    code, _ = split_code_and_comment(line)
+def lines_have_key(window, key):
+    """True if a cite call within the lines of `window` (code portions, joined
+    so a call spanning lines is seen whole) lists `key`."""
+    code = '\n'.join(split_code_and_comment(line)[0] for line in window)
     for m in CITE_PATTERN.finditer(code):
         if key in parse_keys(m.group(2)):
             return True
@@ -161,12 +165,13 @@ def plan_file(lines, sites, quotes, stats):
         if not site.get('groundable'):
             continue
         line_no = site.get('line')
+        end_no = site.get('end_line', line_no)
         fpath = site.get('file', '?')
-        if not isinstance(line_no, int):
+        if not isinstance(line_no, int) or not isinstance(end_no, int) or end_no < line_no:
             stats['skipped_moved'] += 1
             continue
-        idx = line_no - 1
-        if not (0 <= idx < len(lines)):
+        idx, end = line_no - 1, end_no - 1
+        if not (0 <= idx <= end < len(lines)):
             stats['skipped_moved'] += 1
             print(f"warning: {fpath}:{line_no} is past end of file; skipped",
                   file=sys.stderr)
@@ -177,17 +182,17 @@ def plan_file(lines, sites, quotes, stats):
             if not isinstance(result, dict):
                 stats['no_quote'] += 1  # absent key or malformed (non-object) value
                 continue
-            if not line_has_key(lines[idx], key):
+            if not lines_have_key(lines[idx:end + 1], key):
                 stats['skipped_moved'] += 1
                 print(f"warning: {fpath}:{line_no} no longer cites "
                       f"{key!r}; skipped (source changed since extraction)",
                       file=sys.stderr)
                 continue
-            if already_grounded(lines, idx, key):
+            if already_grounded(lines, end, key):
                 stats['skipped_existing'] += 1
                 continue
             body, kind = comment_for(key, result)
-            stub_idx = find_todo_stub(lines, idx, key)
+            stub_idx = find_todo_stub(lines, end, key)
             if stub_idx is not None:
                 new_line = leading_ws(lines[stub_idx]) + body
                 if lines[stub_idx] == new_line:
@@ -196,7 +201,7 @@ def plan_file(lines, sites, quotes, stats):
                 replacements[stub_idx] = new_line
                 stats['replaced'] += 1
             else:
-                inserts.setdefault(idx, []).append(indent + body)
+                inserts.setdefault(end, []).append(indent + body)
             stats['inserted'] += 1
             if kind == 'quote':
                 stats['quotes'] += 1
