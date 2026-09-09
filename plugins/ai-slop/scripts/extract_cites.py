@@ -23,12 +23,17 @@ Output is one JSON object on stdout:
 
     {
       "root":  "<resolved root path>",
-      "sites": [ {"file","line","command","keys","claim","groundable","grounded"} ],
-      "by_key": { "<key>": {"claims": [...], "sites": [{"file","line","command",
-                            "groundable","grounded"}]} },
+      "sites": [ {"file","line","end_line","command","keys","claim",
+                  "groundable","grounded"} ],
+      "by_key": { "<key>": {"claims": [...], "sites": [{"file","line","end_line",
+                            "command","groundable","grounded"}]} },
       "meta":  { "<key>": {"type","title","author","year","doi","url",
                            "eprint","howpublished"} }
     }
+
+`line` is the line the cite call starts on and `end_line` the line it ends on
+(the same line except for a key list that spans lines). insert_grounding.py
+places the comment after `end_line`.
 
 `groundable` is True for the cite macros that require a grounding comment
 (\cite, \citep, \citet, \parencite, ...); style-only helpers (\citeauthor,
@@ -44,11 +49,13 @@ Exit codes:
   2  no LaTeX root could be resolved, multiple ambiguous roots were found, or
      the resolved root could not be read (nothing was scanned).
 
-Recognized cite macros, the comment-stripping, and the key parsing are shared
-with find_citation_issues.py via cite_scan.py; the `.bib` parsing is shared with
-check_bib_fields.py / verify_references.py via bib_parse.py. Limitations of the
-cite scan (only the first {key} group of multi-cite biblatex forms is read;
-constructs other than `%` comments are not stripped) are inherited from there.
+Recognized cite macros, the comment-stripping, the key parsing, the cite-call
+scanner, and the \input / \include walker are shared with
+find_citation_issues.py via cite_scan.py, so both tools see the same files and
+calls. The `.bib` parsing is shared with check_bib_fields.py /
+verify_references.py via bib_parse.py. Limitations of the cite scan (only the
+first {key} group of multi-cite biblatex forms is read; constructs other than
+`%` comments are not stripped) are inherited from there.
 """
 import bisect
 import json
@@ -58,14 +65,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cite_scan import (  # noqa: E402
-    CITATION_COMMANDS, CITE_PATTERN, GROUNDED_COMMANDS, IGNORED_COMMANDS,
-    grounding_quality, parse_keys, split_code_and_comment,
+    CITATION_COMMANDS, CITE_PATTERN, GROUNDED_COMMANDS, gather_files,
+    grounding_quality, resolve_ref, scan_cite_calls, split_code_and_comment,
 )
 from bib_parse import iter_entries  # noqa: E402
 from find_latex_root import find_roots  # noqa: E402
 from scan_io import report_unreadable  # noqa: E402
 
-INPUT_PATTERN = re.compile(r'\\(?:input|include)\s*\{([^}]+)\}')
 BIB_DIRECTIVE = re.compile(r'\\(?:bibliography|addbibresource)\s*\{([^}]+)\}')
 
 # Bibliographic fields carried through to `meta` for each used key, enough for a
@@ -138,50 +144,6 @@ def resolve_root(target):
     raise RootError(f"{target}: not a .tex file or directory")
 
 
-def _resolve_ref(ref, including_dir, base, suffix):
-    """Resolve an \\input / \\bibliography reference to an existing file, trying
-    the main-file directory then the including file's directory, with and
-    without the given suffix (LaTeX adds it when absent)."""
-    names = [ref] if ref.lower().endswith(suffix) else [ref + suffix, ref]
-    for d in (base, including_dir):
-        for name in names:
-            cand = d / name
-            if cand.is_file():
-                return cand
-    return None
-
-
-def gather_files(root):
-    """Return [(path, text)] for the root plus every file it transitively pulls
-    in with \\input / \\include, depth-first and de-duplicated. Include
-    directives inside `%` comments are ignored."""
-    root = Path(root).resolve()
-    base = root.parent
-    seen = set()
-    order = []
-
-    def visit(path):
-        rp = path.resolve()
-        if rp in seen:
-            return
-        seen.add(rp)
-        try:
-            text = rp.read_text(encoding='utf-8', errors='replace')
-        except OSError as e:
-            report_unreadable(rp, e)
-            return
-        order.append((rp, text))
-        for raw_line in text.splitlines():
-            code, _ = split_code_and_comment(raw_line)
-            for m in INPUT_PATTERN.finditer(code):
-                child = _resolve_ref(m.group(1).strip(), rp.parent, base, '.tex')
-                if child:
-                    visit(child)
-
-    visit(root)
-    return order
-
-
 def sentence_boundaries(text):
     """Return a sorted list of offsets at which a new claim begins: after a
     sentence-ending `.`/`!`/`?` (abbreviation- and decimal-aware), after a
@@ -245,41 +207,27 @@ def enclosing_sentence(text, pos, bounds):
 
 def scan_text(path, text):
     """Yield a site dict per citation in one file's text. Cites are matched on
-    the comment-stripped, line-joined body (so multi-line calls are caught), and
-    each site's line number maps back to the original file."""
+    the comment-stripped, line-joined body (so multi-line calls are caught) by
+    the scanner shared with find_citation_issues.py, and each site carries the
+    line the call starts on and the line it ends on."""
     raw_lines = text.splitlines()
-    code_lines = [split_code_and_comment(line)[0] for line in raw_lines]
-    line_starts = []
-    pos = 0
-    for cl in code_lines:
-        line_starts.append(pos)
-        pos += len(cl) + 1  # +1 for the '\n' the join inserts
-    joined = '\n'.join(code_lines)
+    joined, calls = scan_cite_calls(raw_lines, CITATION_COMMANDS)
     bounds = sentence_boundaries(joined)
 
-    for m in CITE_PATTERN.finditer(joined):
-        command = m.group(1).lower()
-        if command in IGNORED_COMMANDS or command not in CITATION_COMMANDS:
-            continue
-        keys = parse_keys(m.group(2))
-        if not keys:
-            continue
-        line_no = bisect.bisect_right(line_starts, m.start())  # 1-based
-        idx = line_no - 1
-        if 0 <= idx < len(raw_lines):
-            _, same_comment = split_code_and_comment(raw_lines[idx])
-            # A quote-less TODO stub classifies as 'todo', not 'quote', so the
-            # site stays an insertion target until a retrieved quote lands.
-            grounded = grounding_quality(raw_lines, idx, same_comment) == 'quote'
-        else:
-            grounded = False
+    for call in calls:
+        _, same_comment = split_code_and_comment(raw_lines[call.end])
+        # A quote-less TODO stub classifies as 'todo', not 'quote', so the
+        # site stays an insertion target until a retrieved quote lands. The
+        # comment block is looked up below the line the call ends on.
+        grounded = grounding_quality(raw_lines, call.end, same_comment) == 'quote'
         yield {
             'file': str(path),
-            'line': line_no,
-            'command': command,
-            'keys': keys,
-            'claim': enclosing_sentence(joined, m.start(), bounds),
-            'groundable': command in GROUNDED_COMMANDS,
+            'line': call.start + 1,
+            'end_line': call.end + 1,
+            'command': call.command,
+            'keys': call.keys,
+            'claim': enclosing_sentence(joined, call.pos, bounds),
+            'groundable': call.command in GROUNDED_COMMANDS,
             'grounded': grounded,
         }
 
@@ -297,7 +245,7 @@ def resolve_bib_files(files, base):
                     ref = ref.strip()
                     if not ref:
                         continue
-                    cand = _resolve_ref(ref, path.parent, base, '.bib')
+                    cand = resolve_ref(ref, path.parent, base, '.bib')
                     if cand:
                         rp = cand.resolve()
                         if rp not in seen:
@@ -335,8 +283,8 @@ def build_by_key(sites):
             d = by_key.setdefault(key, {'claims': [], 'sites': []})
             d['sites'].append({
                 'file': site['file'], 'line': site['line'],
-                'command': site['command'], 'groundable': site['groundable'],
-                'grounded': site['grounded'],
+                'end_line': site['end_line'], 'command': site['command'],
+                'groundable': site['groundable'], 'grounded': site['grounded'],
             })
             if site['claim'] and site['claim'] not in d['claims']:
                 d['claims'].append(site['claim'])

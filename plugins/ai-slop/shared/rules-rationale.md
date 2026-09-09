@@ -2,8 +2,8 @@
 
 This file records the *why* behind the rules in the three rule layers
 (`rules-general.md`, `rules-scientific.md`, `rules-latex.md`). It is
-documentation only. The `ai-slop:review`, `ai-slop:review-diff`, and
-`ai-slop:init` skills load the layers that their scope calls for plus the trope
+documentation only. The `ai-slop:review`, `ai-slop:review-diff`,
+`ai-slop:review-repo`, and `ai-slop:init` skills load the layers that their scope calls for plus the trope
 catalog by explicit path. `ai-slop:revise` and `ai-slop:ground` reference only
 the layers (revise applies a finished report, so it needs no trope source, and
 ground reads the LaTeX layer's grounding convention). None of them read this
@@ -33,9 +33,9 @@ The rules draw on three bodies of evidence:
   precedence over APA wherever the two diverge (most visibly on leading zeros
   before decimals).
 
-The general AI-trope catalog (banned words, formulaic openings, formatting
-tics, anaphora and tricolon abuse) is fetched at runtime from the upstream
-sources. The rule layers carry only the additions beyond that catalog.
+The general AI-trope catalog (named patterns such as negative parallelism and
+em-dash addiction, each tagged with a status) is fetched at runtime from
+tropes.fyi. The rule layers carry only the additions beyond that catalog.
 
 ## Language
 
@@ -63,7 +63,7 @@ statistical results.
 
 "Navigate" is restricted only in its metaphorical sense (navigating complexity, challenges, or a landscape), the pattern that reads as AI prose. Its literal sense, moving through a UI, website, menu, or file tree, is precise and not flagged. "Worked example" sits in the phrases-to-avoid list because the "worked" qualifier is usually empty padding that "example" already carries, with the lone exception of a fully solved problem presented step by step.
 
-The **Plain, literal language** (`G.plain-language`) rules (`G.plain-language`) extend the same logic from single listed words to three classes the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision the plain form loses) and carry a short seed list for recall. The seed list also guards against the reviewer sharing the writer's blind spot. A literal match flags a known word even when the prose reads fine to a model with the same habit.
+The **Plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to three classes the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision the plain form loses) and carry a short seed list for recall. The seed list also guards against the reviewer sharing the writer's blind spot. A literal match flags a known word even when the prose reads fine to a model with the same habit.
 
 ## Terminology consistency
 
@@ -129,6 +129,9 @@ paper-versus-study distinction (present tense for what the paper *is* and does,
 past tense for empirical actions performed during the study) is what lets a
 contributions list mix "we document" and "we analyzed" without inconsistency.
 The paper exists in the reader's hands now, while the study happened in the past.
+A single-author paper takes "I" (`S.we`) because "we" with one author
+misstates who did the work, and a venue that wants "we" regardless says so in
+its guidelines, which then take precedence.
 
 ## Punctuation
 
@@ -144,8 +147,8 @@ cannot tell a well-placed dash from a lazy one.
   fix. The exceptions (comma-bearing appositives, nested-parenthesis avoidance,
   quoted material) are cases where the dash does structural work the commas or
   parentheses cannot, so they do not count as over-reliance.
-- **Literal em-dash glyphs in source** (`G.em-dash-glyphs`). Word processors autocorrect `--` into `—`;
-  code editors don't. So a literal `—` in Markdown, source, or `.tex` (where the
+- **Literal em-dash glyphs in source** (`G.em-dash-glyphs`). Word processors autocorrect `--` into `—`.
+  Code editors don't. So a literal `—` in Markdown, source, or `.tex` (where the
   em-dash is `---`) rarely comes from a human and usually marks pasted or
   generated text. The rule says explicitly that swapping the glyph is not a fix
   for the dash, because a reviewer can otherwise close the finding by rewriting
@@ -156,9 +159,9 @@ cannot tell a well-placed dash from a lazy one.
   uses the colon-then-list shape reflexively, which is why both are flagged
   even when each individual colon is defensible.
 - **Colon before a list or continuation** (`G.introducer-colon`). AI text systematically ends a list- or
-  continuation-introducing clause with a period for three reinforcing reasons.
+  continuation-introducing clause with a period, for reinforcing reasons.
   Periods vastly outnumber colons after clause-final tokens in the training data.
-  the visual break of a blank line or list markers lets a period feel complete on
+  The visual break of a blank line or list markers lets a period feel complete on
   its own and substitutes for the colon's syntactic job. A period
   commits to nothing about what follows, which RLHF tends to reward. The mechanical
   test in the introducer-punctuation rule resolves each case without relying on
