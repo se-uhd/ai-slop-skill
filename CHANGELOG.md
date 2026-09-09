@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev14] - 2026-09-09
+
+- **Added:** a commit-message convention in `CLAUDE.md`. Commit messages are prose that `/ai-slop:review-repo` scans with every other file, and a pushed one cannot be corrected, so the check belongs before `git commit`. A scan of this repository's 76 commits found the recurring failures the convention now names: a semicolon joining two independent clauses in 50 of them, a literal em-dash glyph in 8, and counts announced in front of continuous prose. The release suffix in the subject line stays as the one semicolon the convention keeps.
+- **Unchanged:** the messages already pushed. Rewriting a released commit is ruled out by rule 2 of the release protocol, and `/ai-slop:review-repo` already reports commit findings as advisory for that reason.
+
 ## [2026-09_rev13] - 2026-09-09
 
 - **Fixed:** the `2026-09_rev11` and `2026-09_rev12` entries below record what those releases actually changed. The rev11 entry was missing the four new smoke tests, the attribution sidecar, and the documentation of the new source order. The rev12 entry was missing the `rules-rationale.md` entries.
