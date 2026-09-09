@@ -9,14 +9,22 @@ future refresh of the snapshot from upstream.
 
 - Author: Ossama Chaib (<https://ossama.is>)
 - Project: <https://tropes.fyi>
-- Upstream raw markdown:
-  <https://gist.github.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1>
+- Upstream catalog: <https://tropes.fyi/tropes-md>
+- Earlier mirror: <https://gist.github.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1>
   (raw: <https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/>)
 
-The bundled snapshot is kept bit-identical to the upstream gist body so
-that diffs between bundled and online sources are minimal and a refresh
-is a straightforward copy. Do not edit `tropes-snapshot.md` in place;
-edits made here will be overwritten on the next refresh from upstream.
+The site publishes the maintained catalog, and it is the snapshot's
+source. The gist was the source until the author released the v2 catalog
+in August 2026 without updating it, so the gist still carries the v1
+text and now serves only as a fallback.
+
+The bundled snapshot is kept bit-identical to the upstream body so that
+diffs between bundled and online sources are minimal and a refresh is a
+straightforward copy. The site serves the catalog inside a rendered HTML
+page, so the refresh script unwraps the markdown from it, taking the
+download link's `data:text/markdown` URI or the `<pre>` block that
+renders the same bytes. Do not edit `tropes-snapshot.md` in place. Edits
+made here are overwritten on the next refresh from upstream.
 
 ## License status
 
@@ -38,7 +46,7 @@ first-party content only. It does **not** apply to `tropes-snapshot.md`.
 ## Runtime behavior
 
 At runtime, `plugins/ai-slop/scripts/fetch_tropes.py` prefers the live
-upstream gist, then the tropes.fyi viewer, and falls back to this
+tropes.fyi catalog, then the upstream gist, and falls back to this
 bundled snapshot only when both are unreachable. The fetcher prints
 one line to stderr identifying which source was used.
 

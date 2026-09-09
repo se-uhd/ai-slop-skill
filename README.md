@@ -26,7 +26,7 @@ The skills call small Python 3 helpers under `plugins/ai-slop/scripts/` for dete
 
 - `python3` (latest stable; CI pins to 3.14). The first-party helpers are stdlib-only. The Markdown linter is [PyMarkdown](https://github.com/jackdewinter/pymarkdown), vendored pure-Python with its dependencies under `plugins/ai-slop/scripts/_vendor/`; `lint_markdown.py` and the maintainer-side `check_baseline.py` run against that vendored tree. Both, together with `refresh_vendor.py`, the vendored tree, and `bundled_licenses/`, are synced from the upstream [pymarkdown-skill](https://github.com/se-uhd/pymarkdown-skill) repo and are not edited here. Users do not need to `pip install` anything.
 
-No other runtime dependencies. Two helpers reach the network: the reference check (`verify_references.py`, CrossRef and DBLP) and the trope-catalog fetch (`fetch_tropes.py`, the upstream Gist and tropes.fyi). Both degrade cleanly offline, so the review still completes. References are reported as `unchecked-offline`, and the catalog falls back to the bundled snapshot. Smoke tests for the helpers live at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
+No other runtime dependencies. Two helpers reach the network: the reference check (`verify_references.py`, CrossRef and DBLP) and the trope-catalog fetch (`fetch_tropes.py`, tropes.fyi and the upstream Gist). Both degrade cleanly offline, so the review still completes. References are reported as `unchecked-offline`, and the catalog falls back to the bundled snapshot. Smoke tests for the helpers live at `plugins/ai-slop/scripts/tests/run_smoke.py` and can be run with `python3 plugins/ai-slop/scripts/tests/run_smoke.py`.
 
 ## Install as a Claude Code plugin
 
@@ -67,7 +67,7 @@ The skills are laid out per the [Agent Skills specification](https://agentskills
 
 ## Use as a system prompt
 
-For chat UIs or LLM APIs without Agent Skills support, paste the contents of the rule layers (`rules-general.md`, plus `rules-scientific.md` and `rules-latex.md` as your text calls for) and `tropes-snapshot.md` (or fetch the live Gist) into the system prompt. The bundled `tropes-snapshot.md` is plain markdown formatted for system-prompt use.
+For chat UIs or LLM APIs without Agent Skills support, paste the contents of the rule layers (`rules-general.md`, plus `rules-scientific.md` and `rules-latex.md` as your text calls for) and `tropes-snapshot.md` (or fetch the live catalog from [tropes.fyi](https://tropes.fyi/tropes-md)) into the system prompt. The bundled `tropes-snapshot.md` is plain markdown formatted for system-prompt use.
 
 ## What the skills do
 
@@ -78,7 +78,7 @@ Conventions specific to one project, such as a venue's structural requirements (
 Given a document (LaTeX, PDF, or plain text), the review skill:
 
 1. **Loads the rule layers** that the scope calls for, each carrying its own self-check: `shared/rules-general.md` (language, restricted vocabulary, terminology, active voice, punctuation, structure, tone), `shared/rules-scientific.md` (the "significant" caveat, verb tense by section, citation style, statistical reporting per APA/IEEE/ACM, figures and tables, threats to validity), and `shared/rules-latex.md` (LaTeX quotes, caption punctuation, cross-reference and `\citeauthor` macros, `% GROUNDING`, BibTeX). `scripts/detect_scope.py` detects LaTeX source and loads all three layers for it; any other input loads the general layer, plus the scientific layer when `--scientific` is passed.
-2. **Loads the AI-trope catalog** via `scripts/fetch_tropes.py`, which tries the upstream Gist (`https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/`), then the rendered viewer at `https://tropes.fyi/tropes-md`, then the bundled `shared/tropes-snapshot.md`. To override for a single run, pass `--tropes=<path>` (repeatable for multiple files); the named files replace the live fetch and are concatenated in the order given.
+2. **Loads the AI-trope catalog** via `scripts/fetch_tropes.py`, which tries the rendered viewer at `https://tropes.fyi/tropes-md` (the maintained catalog, unwrapped from the page), then the upstream Gist (`https://gist.githubusercontent.com/ossa-ma/f3baa9d25154c33095e22272c631f5a1/raw/`), then the bundled `shared/tropes-snapshot.md`. To override for a single run, pass `--tropes=<path>` (repeatable for multiple files); the named files replace the live fetch and are concatenated in the order given.
 3. **Walks the document section by section**, recording each violation as a finding with `Rule`, `Location` (`file:line` for text source, `Section: <name>` for PDF), `Quote` (verbatim, unique within the document), and `Suggested revision` (concrete replacement text).
 4. **Computes cross-cutting metrics** (em-dash density, colon density, restricted-word density per paragraph, sentence-length variance, verb-tense compliance, American-vs-British spelling, the "significant" audit, citation grounding) and, for LaTeX, a grounding to-do list of ungrounded `\cite{}` calls plus a CrossRef/DBLP reference check for hallucinated or mismatched citations.
 5. **Writes `ai-slop-report.md`** in the working directory with a stable schema so revise mode can act on it.
@@ -123,7 +123,7 @@ The anti-fabrication rule is mandatory: a quote is written only when the source 
 
 ### `/ai-slop:init`
 
-The init skill is a one-shot setup command for new (or existing) project repositories. It builds a project-local `WRITING.md` by concatenating the bundled writing rules (the layers selected automatically: all three for a LaTeX project, the general layer otherwise, or general + scientific with `--scientific`) with the AI-trope catalog (fetched live from the upstream Gist, with the tropes.fyi viewer and the bundled `shared/tropes-snapshot.md` as fallbacks), then either creates a `CLAUDE.md` that references the file or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions and the trope catalog through the standard mechanism, even when this plugin is not installed and even offline.
+The init skill is a one-shot setup command for new (or existing) project repositories. It builds a project-local `WRITING.md` by concatenating the bundled writing rules (the layers selected automatically: all three for a LaTeX project, the general layer otherwise, or general + scientific with `--scientific`) with the AI-trope catalog (fetched live from the tropes.fyi viewer, with the upstream Gist and the bundled `shared/tropes-snapshot.md` as fallbacks), then either creates a `CLAUDE.md` that references the file or appends a reference to an existing one. Once both files are in place, every Agent Skills client that loads `CLAUDE.md` (Claude Code, Cursor, Copilot, Codex, Gemini CLI, JetBrains Junie) sees the writing conventions and the trope catalog through the standard mechanism, even when this plugin is not installed and even offline.
 
 `WRITING.md` is meant to be edited freely after generation. It is a starting point, not a synced replica. The skill confirms before overwriting an existing `WRITING.md`, and the `CLAUDE.md` update is idempotent. If `CLAUDE.md` already references `WRITING.md`, nothing is appended on a re-run. The init skill does not modify your content and does not commit.
 
@@ -135,14 +135,14 @@ The plugin lives under `plugins/ai-slop/`: `commands/` holds the six slash comma
 
 ### Refreshing the tropes.fyi snapshot
 
-The bundled snapshot is a copy of the upstream Gist. Refresh it with:
+The bundled snapshot is a copy of the catalog published at tropes.fyi. Refresh it with:
 
 ```bash
 python3 plugins/ai-slop/scripts/refresh_tropes.py
 ```
 
 The script re-pulls the catalog from the same upstream chain `fetch_tropes.py`
-uses (the Gist, then the tropes.fyi viewer) and overwrites
+uses (the tropes.fyi viewer, then the Gist) and overwrites
 `plugins/ai-slop/shared/tropes-snapshot.md`, keeping it bit-identical to
 upstream. If the fetched catalog already matches the bundled copy it reports
 "already up to date" and leaves the file untouched; if both sources are
@@ -150,6 +150,13 @@ unreachable it exits non-zero and leaves the snapshot unchanged rather than
 clobbering it. Run it as part of every release rev (see the release protocol
 in [`CLAUDE.md`](CLAUDE.md)) so the offline fallback never drifts from the
 live catalog.
+
+The viewer serves the catalog inside a rendered HTML page rather than as raw
+markdown, so both scripts unwrap the markdown from the page, taking the
+download link's `data:text/markdown` URI or the `<pre>` block that renders
+the same bytes. The Gist behind it is a mirror the author last updated in
+March 2026, so it still carries the v1 catalog and now serves as a fallback
+rather than the primary source.
 
 ### Refreshing the vendored Markdown linter
 

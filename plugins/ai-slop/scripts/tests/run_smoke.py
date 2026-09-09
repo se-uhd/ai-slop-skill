@@ -118,6 +118,45 @@ def test_fetch_tropes_emits_body_and_source():
         assert 'source:' in err, f"fetch: no 'source:' line in stderr ({err!r})"
 
 
+RENDERED_PAGE = (
+    '<!DOCTYPE html><html><body>'
+    '<a href="data:text/markdown;charset=utf-8,'
+    '%23%20Catalog%0A%0AOne&#x27;s%20trope.">Download</a>'
+    '<pre class="font-mono"># Catalog\n\nOne&#x27;s trope.</pre>'
+    '</body></html>'
+)
+
+
+def test_fetch_tropes_passes_plain_markdown_through():
+    import fetch_tropes
+    body = '# AI Writing Tropes to Avoid\n\nText.\n'
+    assert fetch_tropes.extract_markdown(body) == body, "extract: markdown altered"
+
+
+def test_fetch_tropes_unwraps_markdown_from_rendered_page():
+    # The viewer serves the catalog inside an HTML page: the download link's
+    # data URI carries the same bytes the <pre> block renders.
+    import fetch_tropes
+    got = fetch_tropes.extract_markdown(RENDERED_PAGE)
+    assert got == "# Catalog\n\nOne's trope.", f"extract data-uri: {got!r}"
+
+
+def test_fetch_tropes_unwraps_markdown_from_pre_block():
+    # A page without the download link still renders the catalog in <pre>.
+    import fetch_tropes
+    page = RENDERED_PAGE.replace('data:text/markdown', 'data:text/plain')
+    got = fetch_tropes.extract_markdown(page)
+    assert got == "# Catalog\n\nOne's trope.", f"extract pre: {got!r}"
+
+
+def test_fetch_tropes_rejects_page_without_markdown():
+    # An error page or a redesigned site must fall through to the next source
+    # rather than be passed off as a catalog.
+    import fetch_tropes
+    page = '<!DOCTYPE html><html><body><h1>502 Bad Gateway</h1></body></html>'
+    assert fetch_tropes.extract_markdown(page) is None, "extract: HTML accepted"
+
+
 # ---------- refresh_tropes.py ----------
 
 def _run_refresh(out_path, fetch_results):
@@ -144,29 +183,32 @@ def _run_refresh(out_path, fetch_results):
 
 def test_refresh_tropes_writes_fetched_content():
     import refresh_tropes
+    urls = dict(refresh_tropes.SOURCES)
     with tempfile.TemporaryDirectory() as d:
         out = Path(d) / 'snap.md'
         write(out, '# stale snapshot\n')
-        rc, err = _run_refresh(out, {refresh_tropes.GIST_URL: '# fresh upstream catalog\n'})
+        rc, err = _run_refresh(out, {urls['tropes.fyi']: '# fresh upstream catalog\n'})
         assert rc == 0, f"refresh write: rc={rc} err={err!r}"
         assert out.read_text(encoding='utf-8') == '# fresh upstream catalog\n', \
             f"refresh write: snapshot not overwritten: {out.read_text(encoding='utf-8')!r}"
-        assert 'source: gist' in err and 'updated' in err, f"refresh write: err={err!r}"
+        assert 'source: tropes.fyi' in err and 'updated' in err, \
+            f"refresh write: err={err!r}"
 
 
-def test_refresh_tropes_falls_back_to_viewer():
-    # Gist fetch fails -> the viewer body is used, mirroring fetch_tropes' chain.
+def test_refresh_tropes_falls_back_to_gist():
+    # Viewer fetch fails -> the gist body is used, mirroring fetch_tropes' chain.
     import refresh_tropes
+    urls = dict(refresh_tropes.SOURCES)
     with tempfile.TemporaryDirectory() as d:
         out = Path(d) / 'snap.md'
         rc, err = _run_refresh(out, {
-            refresh_tropes.GIST_URL: None,
-            refresh_tropes.VIEWER_URL: '# viewer catalog\n',
+            urls['tropes.fyi']: None,
+            urls['gist']: '# gist catalog\n',
         })
-        assert rc == 0, f"refresh viewer: rc={rc} err={err!r}"
-        assert out.read_text(encoding='utf-8') == '# viewer catalog\n', \
-            f"refresh viewer: viewer body not written: {err!r}"
-        assert 'source: tropes.fyi' in err, f"refresh viewer: wrong source line: {err!r}"
+        assert rc == 0, f"refresh gist: rc={rc} err={err!r}"
+        assert out.read_text(encoding='utf-8') == '# gist catalog\n', \
+            f"refresh gist: gist body not written: {err!r}"
+        assert 'source: gist' in err, f"refresh gist: wrong source line: {err!r}"
 
 
 def test_refresh_tropes_noop_when_identical():
@@ -177,7 +219,8 @@ def test_refresh_tropes_noop_when_identical():
         out = Path(d) / 'snap.md'
         write(out, '# same content\n')
         before = out.stat().st_mtime_ns
-        rc, err = _run_refresh(out, {refresh_tropes.GIST_URL: '# same content\n'})
+        urls = dict(refresh_tropes.SOURCES)
+        rc, err = _run_refresh(out, {urls['tropes.fyi']: '# same content\n'})
         assert rc == 0, f"refresh noop: rc={rc} err={err!r}"
         assert 'already up to date' in err, f"refresh noop: err={err!r}"
         assert out.stat().st_mtime_ns == before, "refresh noop: file was rewritten"
@@ -2019,8 +2062,12 @@ TESTS = [
     test_find_latex_root_subdir,
     test_find_latex_root_root_with_includes,
     test_fetch_tropes_emits_body_and_source,
+    test_fetch_tropes_passes_plain_markdown_through,
+    test_fetch_tropes_unwraps_markdown_from_rendered_page,
+    test_fetch_tropes_unwraps_markdown_from_pre_block,
+    test_fetch_tropes_rejects_page_without_markdown,
     test_refresh_tropes_writes_fetched_content,
-    test_refresh_tropes_falls_back_to_viewer,
+    test_refresh_tropes_falls_back_to_gist,
     test_refresh_tropes_noop_when_identical,
     test_refresh_tropes_offline_leaves_snapshot_unchanged,
     test_refresh_tropes_usage_error_too_many_args,

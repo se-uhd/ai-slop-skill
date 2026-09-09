@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev11] - 2026-09-09
+
+- **Changed:** the trope catalog now comes from tropes.fyi first and the upstream gist second. The author released the v2 catalog on the site in August 2026 without updating the gist, so the gist has carried the March 2026 v1 text since. The bundled snapshot is refreshed to v2: 49 tropes instead of 37, each tagged with a status (new, rising, consistent, fading) and a category. Roughly 20 entries are new, among them Reasoning leak, Premise stacking, Preamble, Compulsive counting, The Tie-Back, Self-echo, Never-ending conclusion, Synonym cycling, Promotional language, and Title case headings.
+- **Fixed:** the site step of the fetch chain could hand a rendered HTML page to the review skills in place of the catalog. The site answers the default urllib user agent with 403 and serves the catalog inside a Next.js page, so `fetch_tropes.py` now sends a user agent and unwraps the markdown from the page, taking the download link's `data:text/markdown` URI or the `<pre>` block that renders the same bytes. A page that yields neither falls through to the next source.
+- **Changed:** `/ai-slop:init` inserts a blank line between each `**Avoid patterns like:**` line and the bullet list under it when it inlines the catalog, so the generated `WRITING.md` no longer needs the lint loop to repair 49 run-together lists.
+
 ## [2026-09_rev10] - 2026-09-05
 
 - **Added:** a **Phrases to Avoid** entry (general layer) banning **"arm"** for a condition, group, variant, or split, in favor of the plain noun ("condition" or "treatment" for an experimental manipulation, "group" for a set of subjects, "variant" or "configuration" for a version of a prompt, model, or pipeline, and "split" for a data partition). An arm is a group of subjects randomly assigned to one intervention in a trial, or one option in a bandit. The word is kept for those two designs only.
