@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev16] - 2026-09-09
+
+- **Removed:** the gist mirror and the bundled snapshot. `fetch_tropes.py` reads tropes.fyi and nothing else, and it exits 1 when the site is unreachable instead of serving something older. The mirror had fallen behind the site in August 2026, so it ranked the v1 catalog above the bundled v2 copy, and a fallback that can be stale is worse than a failed fetch. `refresh_tropes.py`, `shared/tropes-snapshot.md`, and the attribution sidecar are gone, the release protocol loses its snapshot-refresh step, and the four skills that load the catalog stop and say so when the fetch fails. `--tropes=<path>` remains the way to review offline or against a pinned catalog.
+- **Changed:** `scan_glyphs.py` counts the dash rather than the character. A new `ascii-dash` category matches `--` and `---` doing a dash's work, and skips a command-line flag, a numeric range, a table separator, a fenced block, and an inline code span. The review skill's density metric adds the `em-dash` and `ascii-dash` rows together. This closes the gap that `G.em-dash-glyphs` opened in rev12: a correctly written LaTeX em dash is `---`, and the metric had been counting none of them.
+- **Changed:** the catalog's status tags are put to work. A trope finding names the status, as in `Negative parallelism (tropes.fyi, consistent)`, and the per-section pass weights by it. Every `new` and `rising` match is reported, a `fading` match is confirmed against the passage first, and a rule layer still outranks the catalog wherever they disagree.
+
 ## [2026-09_rev15] - 2026-09-09
 
 - **Changed:** every commit message in the history was rewritten to follow the general layer, and all 59 release tags moved with their commits. The trees are byte-identical to what they were. Of the 99 semicolons, the ones joining two independent clauses became periods, while those separating items in a parenthetical list or sitting inside quoted output or a code span stay. Nine em-dash glyphs became periods or commas, and the two that quote the glyph as an example stay. The pass also fixed one British spelling, one comma splice, one inhabitance framing, and the mid-subject semicolons that joined two actions, which became commas.

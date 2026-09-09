@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev15"
+  version: "2026-09_rev16"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -55,10 +55,10 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    Read each selected layer file. Each contributes its own rules and its own self-check section. Apply them together. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
 
-3. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given; that is the catalog for this run. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the tropes.fyi viewer, then the upstream Gist, then the bundled fallback, and always emits a non-empty body. It prints one line to stderr identifying which source was used.
+3. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given; that is the catalog for this run. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py` and read its stdout. tropes.fyi is the only source and there is no bundled fallback, so a failed fetch exits 1 with an empty stdout. Stop there and tell the user the catalog could not be fetched, naming `--tropes=<path>` as the way to review against a local copy. Each catalog entry carries a status (`new`, `rising`, `consistent`, or `fading`) and a category under its heading. The status is upstream's own frequency rating for current models, and step 4 weights the trope findings by it.
 
-4. **Per-section pass.** For each paper section, scan the prose against the rules and the trope catalog. For each violation, record:
-   - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name.
+4. **Per-section pass.** For each paper section, scan the prose against the rules and the trope catalog. Weight the catalog by the status under each trope heading. Report every `new` and `rising` match, since those name what current models produce. For a `consistent` match, apply the usual judgment. For a `fading` match, confirm the passage genuinely reads as the pattern before reporting it, because those entries describe habits of older models. A rule layer still outranks the catalog wherever they disagree (`G.catalog-precedence`). For each violation, record:
+   - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name with its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
    - The location (`file:line` for LaTeX; `Section: <name>` for PDF).
    - A short verbatim quote of the offending text, with enough surrounding context to make the quote unique within the paper.
    - A concrete suggested replacement that follows the rules.
@@ -66,9 +66,9 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so revise mode does not insert a guessed noun.
 
 5. **Cross-cutting metrics.** Compute and record the metrics for the layers in scope (skip the scientific metrics, verb-tense compliance and the "significant" audit, when only the general layer is loaded). Run the deterministic glyph recheck first, because the per-section reading pass reliably undercounts these:
-   - **Unicode glyph tells (run `scan_glyphs.py`; do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py <paper-file> [<input.tex> ...]` over the paper file(s). Each stdout line is `<file>:<line>:<col>\t<glyph-name>\t<context>` for one literal Unicode tell, with `em-dash`, `en-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` as the categories, and the stderr summary gives the per-category totals (e.g. `15 Unicode tell(s) [em-dash=15 ...]`). Take the em-dash-density count below from this output, not an eyeball. Report every `em-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` row as a per-section finding with its ASCII replacement. For `en-dash`, keep the dashes in numeric or page ranges (`pp. 12–18`). For any glyph, skip the occurrences inside quoted source material or a code string. A glyph inside a code *comment* is still a finding (the comment is prose). The script exits 0 once it read a file (with or without findings) and 2 on a usage error.
+   - **Glyph and dash tells (run `scan_glyphs.py`; do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py <paper-file> [<input.tex> ...]` over the paper file(s). Each stdout line is `<file>:<line>:<col>\t<glyph-name>\t<context>` for one tell, with `em-dash`, `ascii-dash`, `en-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` as the categories, and the stderr summary gives the per-category totals (e.g. `15 tell(s) [em-dash=15 ascii-dash=0 ...]`). Take the dash-density count below from this output, not an eyeball, adding the `em-dash` and `ascii-dash` rows. Report every `em-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` row as a per-section finding with its ASCII replacement. For `en-dash`, keep the dashes in numeric or page ranges (`pp. 12–18`). For any glyph, skip the occurrences inside quoted source material or a code string. A glyph inside a code *comment* is still a finding (the comment is prose). An `ascii-dash` row is a candidate for the per-mark judgment in **Em-dashes** (`G.em-dashes`), not an automatic finding: `---` is the correct em-dash in LaTeX and `--` is a normal ASCII dash in Markdown, so report one only when the dash itself is the wrong mark. The scan already skips flags, numeric ranges, fenced blocks, and inline code. The script exits 0 once it read a file (with or without findings) and 2 on a usage error.
    - **Reference candidates (run `scan_reference.py`; do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_reference.py <paper-file> [<input.tex> ...]`. Each stdout line is `<file>:<line>:<col>\t<kind>\t<context>` for one candidate: `bare-demonstrative` (a sentence-initial *This*, *These*, *That*, or *It* followed directly by a verb) `such-noun` (*such* + noun), or `stand-in` (*ones*, *the former / the latter*, *respectively*, *do so*, *those of / that / which / with*); the stderr summary gives the per-kind totals. The rows are candidates, not findings. Apply the **Reference** rules' tests to each ("[noun] just mentioned" for the first two kinds; put the noun back for `stand-in`), report the confirmed rows as per-section findings under that rule (or under author judgment when the referent cannot be determined, per step 4), and clear a dummy *it* the script did not filter. First-mention definites are not scanned. Check them in the per-section pass. The script exits 0 once it read a file and 2 on a usage error.
-   - Em-dash density (target: ≤ 2 to 3 per page-equivalent of ~350 words, matching the general layer's em-dash ceiling; take the count from `scan_glyphs.py`).
+   - Dash density, counting `em-dash` and `ascii-dash` rows together (target: ≤ 2 to 3 per page-equivalent of ~350 words, matching the general layer's em-dash ceiling; take the count from `scan_glyphs.py`).
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
    - Capitalization after a colon in running prose (flag a colon when the clause after it is a complete sentence beginning lowercase, except the first item of an enumerated series of independent clauses, which the capitalization rule treats as a list and keeps lowercase, and flag a colon when the text after it is a fragment or list beginning uppercase).
    - Semicolon density in running prose (target: ≤ 1 to 2 per page-equivalent).
@@ -109,7 +109,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-09_rev15 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
+**Skill version:** 2026-09_rev16 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -126,7 +126,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 
 #### Finding <N>
 
-- **Rule:** <rule name and key from a rule layer, e.g. Semicolons (G.semicolons), or trope name from tropes.fyi>
+- **Rule:** <rule name and key from a rule layer, e.g. Semicolons (G.semicolons), or trope name with its catalog status, e.g. Negative parallelism (tropes.fyi, consistent)>
 - **Location:** `<file:line>` or `Section: <name>` if line not available
 - **Quote:** `<verbatim quote of the offending text, with enough surrounding context to be unique>`
 - **Suggested revision:** `<concrete replacement text>`
@@ -155,7 +155,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 - Locations: <list>
 
 ### Combined pause-punctuation signal
-- Per-page-equivalent count (em-dash + colon + semicolon): <N> (target: ≤ 5)
+- Per-page-equivalent count (dash + colon + semicolon): <N> (target: ≤ 5)
 - Pages over the combined cap: <list>
 
 ### Restricted-word density
@@ -195,7 +195,6 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 ## Bundled files
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers (general prose; research-article conventions; LaTeX mechanics). Load the subset the scope calls for (step 2).
-- `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the tropes.fyi viewer and the upstream Gist are both unreachable.
 - `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch chain, citation issues, BibTeX field and reference verification, the Unicode-glyph recheck, the reference-candidate scan, report linting); their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints

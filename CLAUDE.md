@@ -40,17 +40,6 @@ have been broken before:
 5. **Release tags must be ancestors of `main`.** The release history is linear:
    `... revN -> revN+1 -> ...`. If a tag is not reachable from `main`, the history is
    broken and must be repaired before the next release.
-6. **Refresh the bundled tropes snapshot with every rev.** Before bumping, run
-   `python3 plugins/ai-slop/scripts/refresh_tropes.py` to re-pull
-   `plugins/ai-slop/shared/tropes-snapshot.md` from upstream so the offline
-   fallback never drifts from the live catalog. The script reads the same
-   chain `fetch_tropes.py` uses, the tropes.fyi page first and the gist
-   mirror second, and prints the source it took to stderr. The snapshot is kept
-   bit-identical to upstream. When upstream is unchanged, the script reports
-   "already up to date" and leaves the file untouched, so the rev carries no
-   snapshot change. When it has changed, commit the refreshed catalog as part
-   of the rev. Never hand-edit the snapshot. Edits are overwritten on the next
-   refresh (see `tropes-snapshot.ATTRIBUTION.md`).
 
 ## Other conventions
 
@@ -88,6 +77,11 @@ have been broken before:
   parenthetical list, or sitting inside quoted output or a code span, stays. Write the subject line as an imperative ending in
   `; release YYYY-MM_revN` on a release commit. That suffix is the one semicolon
   the convention keeps, and the rest of the subject takes commas.
+- **The trope catalog has one source and no bundled copy.** `fetch_tropes.py`
+  reads tropes.fyi and exits non-zero when it cannot. A stale copy that
+  outranks the live catalog is worse than a failed fetch, which is why the
+  gist mirror and the bundled snapshot were both dropped in 2026-09_rev16.
+  `--tropes=<path>` is the escape hatch for an offline or pinned run.
 - **The bundle follows its own rules.** When a rule is added or tightened,
   sweep the repository's own prose for the pattern in the same rev: the
   Markdown files, the skill and command files, and the Python docstrings and
