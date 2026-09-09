@@ -3,7 +3,7 @@ name: review-repo
 description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default; `--scientific` adds the research-article layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev10"
+  version: "2026-09_rev11"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -73,7 +73,7 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 ## Bundled files
 
 - `../../shared/rules-general.md` and `../../shared/rules-scientific.md` are the rule layers repo mode can load (the LaTeX layer never applies here).
-- `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the upstream Gist and tropes.fyi viewer are both unreachable.
+- `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the tropes.fyi viewer and the upstream Gist are both unreachable.
 - `../../scripts/scan_repo.py` extracts the repository's natural-language text. `../../scripts/fetch_tropes.py` and `../../scripts/lint_markdown.py` implement the catalog fetch and report linting. Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints

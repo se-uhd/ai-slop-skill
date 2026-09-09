@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default; `--scientific` adds the scientific layer and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev10"
+  version: "2026-09_rev11"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -55,7 +55,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    Read each selected layer file. Each contributes its own rules and its own self-check section. Apply them together. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
 
-3. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given; that is the catalog for this run. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the upstream Gist, then the tropes.fyi viewer, then the bundled fallback, and always emits a non-empty body. It prints one line to stderr identifying which source was used.
+3. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given; that is the catalog for this run. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the tropes.fyi viewer, then the upstream Gist, then the bundled fallback, and always emits a non-empty body. It prints one line to stderr identifying which source was used.
 
 4. **Per-section pass.** For each paper section, scan the prose against the rules and the trope catalog. For each violation, record:
    - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name.
@@ -109,7 +109,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-09_rev10 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
+**Skill version:** 2026-09_rev11 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -195,7 +195,7 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 ## Bundled files
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers (general prose; research-article conventions; LaTeX mechanics). Load the subset the scope calls for (step 2).
-- `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the upstream Gist and tropes.fyi viewer are both unreachable.
+- `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the tropes.fyi viewer and the upstream Gist are both unreachable.
 - `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch chain, citation issues, BibTeX field and reference verification, the Unicode-glyph recheck, the reference-candidate scan, report linting); their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
