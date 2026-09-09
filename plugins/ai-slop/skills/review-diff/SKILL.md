@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev15"
+  version: "2026-09_rev16"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -53,10 +53,10 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 6. **Determine which rule layers to load.** Same three layers as `/ai-slop:review` under `../../shared/`. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <repo-root>`. `latex` loads all three layers. `general` loads `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research manuscript). The diff pathspec in step 3 follows the LaTeX/general split. Read each selected layer file. Each adds its own rules and self-check section, and A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
 
-7. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout. The script tries the tropes.fyi viewer, then the upstream Gist, then the bundled fallback, and always emits a non-empty body.
+7. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py` and read its stdout. tropes.fyi is the only source and there is no bundled fallback, so a failed fetch exits 1 with an empty stdout. Stop there and tell the user the catalog could not be fetched, naming `--tropes=<path>` as the way to review against a local copy.
 
 8. **Per-paragraph pass.** For each changed paragraph, scan the prose against the rules and the trope catalog. **A finding is in scope only if at least one line of the offending quote falls inside the changed-line set.** A pre-existing violation on an unchanged line is out of scope, even when adjacent to a change. For each in-scope violation, record:
-   - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name.
+   - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name with its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
    - The location (`file:line` in the new file).
    - A short verbatim quote of the offending text, with enough surrounding context to be unique within the paper.
    - A concrete suggested replacement.
@@ -95,7 +95,6 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 ## Bundled files
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers; load the subset the scope calls for (step 6).
-- `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the tropes.fyi viewer and the upstream Gist are both unreachable.
 - `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch chain, BibTeX field and reference verification, report linting); their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints

@@ -105,19 +105,6 @@ def test_find_latex_root_root_with_includes():
 
 # ---------- fetch_tropes.py ----------
 
-def test_fetch_tropes_emits_body_and_source():
-    """Verifies the script runs end-to-end and reports a source attribution.
-    Network reachability is not required: even fully offline the bundled
-    fallback path produces output."""
-    with tempfile.TemporaryDirectory() as d:
-        fallback = Path(d) / 'fallback.md'
-        write(fallback, '# Fallback content\n\nSome bundled tropes here.\n')
-        rc, out, err = run('fetch_tropes.py', str(fallback))
-        assert rc == 0, f"fetch: rc={rc} err={err!r}"
-        assert out, f"fetch: empty stdout"
-        assert 'source:' in err, f"fetch: no 'source:' line in stderr ({err!r})"
-
-
 RENDERED_PAGE = (
     '<!DOCTYPE html><html><body>'
     '<a href="data:text/markdown;charset=utf-8,'
@@ -127,6 +114,47 @@ RENDERED_PAGE = (
 )
 
 
+def _run_fetch(argv, fetched):
+    """Call fetch_tropes.main with try_fetch stubbed, capturing both streams.
+
+    `fetched` is the body try_fetch should return (None models a failed
+    fetch), so the test never touches the network.
+    """
+    import contextlib
+    import io
+    import fetch_tropes
+    orig = fetch_tropes.try_fetch
+    fetch_tropes.try_fetch = lambda url: fetched
+    out, err = io.StringIO(), io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = fetch_tropes.main(argv)
+    finally:
+        fetch_tropes.try_fetch = orig
+    return rc, out.getvalue(), err.getvalue()
+
+
+def test_fetch_tropes_writes_catalog_to_stdout():
+    rc, out, err = _run_fetch(['fetch_tropes.py'], '# AI Writing Tropes\n\nBody.\n')
+    assert rc == 0, f"fetch: rc={rc} err={err!r}"
+    assert out == '# AI Writing Tropes\n\nBody.\n', f"fetch: stdout={out!r}"
+
+
+def test_fetch_tropes_fails_when_the_site_is_unreachable():
+    # One source, no fallback: the caller must stop rather than review against
+    # a catalog it does not have.
+    rc, out, err = _run_fetch(['fetch_tropes.py'], None)
+    assert rc == 1, f"offline: rc={rc} err={err!r}"
+    assert out == '', f"offline: stdout not empty: {out!r}"
+    assert '--tropes' in err, f"offline: no escape hatch named: {err!r}"
+
+
+def test_fetch_tropes_usage_error_with_arguments():
+    rc, out, err = _run_fetch(['fetch_tropes.py', 'snapshot.md'], '# body\n')
+    assert rc == 2, f"usage: rc={rc} err={err!r}"
+    assert 'usage' in err, f"usage: err={err!r}"
+
+
 def test_fetch_tropes_passes_plain_markdown_through():
     import fetch_tropes
     body = '# AI Writing Tropes to Avoid\n\nText.\n'
@@ -134,7 +162,7 @@ def test_fetch_tropes_passes_plain_markdown_through():
 
 
 def test_fetch_tropes_unwraps_markdown_from_rendered_page():
-    # The viewer serves the catalog inside an HTML page: the download link's
+    # The site serves the catalog inside an HTML page: the download link's
     # data URI carries the same bytes the <pre> block renders.
     import fetch_tropes
     got = fetch_tropes.extract_markdown(RENDERED_PAGE)
@@ -150,104 +178,11 @@ def test_fetch_tropes_unwraps_markdown_from_pre_block():
 
 
 def test_fetch_tropes_rejects_page_without_markdown():
-    # An error page or a redesigned site must fall through to the next source
-    # rather than be passed off as a catalog.
+    # An error page or a redesigned site must fail, not be passed off as a
+    # catalog.
     import fetch_tropes
     page = '<!DOCTYPE html><html><body><h1>502 Bad Gateway</h1></body></html>'
     assert fetch_tropes.extract_markdown(page) is None, "extract: HTML accepted"
-
-
-# ---------- refresh_tropes.py ----------
-
-def _run_refresh(out_path, fetch_results):
-    """Call refresh_tropes.main with try_fetch stubbed and stderr captured.
-
-    fetch_results maps a source URL to the body try_fetch should return for it
-    (a URL absent from the map, or mapped to None, models a failed fetch). The
-    stub keeps the test fully offline: no real network call is made. Returns
-    (rc, stderr_text).
-    """
-    import contextlib
-    import io
-    import refresh_tropes
-    orig = refresh_tropes.try_fetch
-    refresh_tropes.try_fetch = lambda url: fetch_results.get(url)
-    err = io.StringIO()
-    try:
-        with contextlib.redirect_stderr(err):
-            rc = refresh_tropes.main(['refresh_tropes.py', str(out_path)])
-    finally:
-        refresh_tropes.try_fetch = orig
-    return rc, err.getvalue()
-
-
-def test_refresh_tropes_writes_fetched_content():
-    import refresh_tropes
-    urls = dict(refresh_tropes.SOURCES)
-    with tempfile.TemporaryDirectory() as d:
-        out = Path(d) / 'snap.md'
-        write(out, '# stale snapshot\n')
-        rc, err = _run_refresh(out, {urls['tropes.fyi']: '# fresh upstream catalog\n'})
-        assert rc == 0, f"refresh write: rc={rc} err={err!r}"
-        assert out.read_text(encoding='utf-8') == '# fresh upstream catalog\n', \
-            f"refresh write: snapshot not overwritten: {out.read_text(encoding='utf-8')!r}"
-        assert 'source: tropes.fyi' in err and 'updated' in err, \
-            f"refresh write: err={err!r}"
-
-
-def test_refresh_tropes_falls_back_to_gist():
-    # Viewer fetch fails -> the gist body is used, mirroring fetch_tropes' chain.
-    import refresh_tropes
-    urls = dict(refresh_tropes.SOURCES)
-    with tempfile.TemporaryDirectory() as d:
-        out = Path(d) / 'snap.md'
-        rc, err = _run_refresh(out, {
-            urls['tropes.fyi']: None,
-            urls['gist']: '# gist catalog\n',
-        })
-        assert rc == 0, f"refresh gist: rc={rc} err={err!r}"
-        assert out.read_text(encoding='utf-8') == '# gist catalog\n', \
-            f"refresh gist: gist body not written: {err!r}"
-        assert 'source: gist' in err, f"refresh gist: wrong source line: {err!r}"
-
-
-def test_refresh_tropes_noop_when_identical():
-    # A fetched body byte-identical to the bundled copy must not rewrite the file
-    # (no spurious diff): report "already up to date" and leave it untouched.
-    import refresh_tropes
-    with tempfile.TemporaryDirectory() as d:
-        out = Path(d) / 'snap.md'
-        write(out, '# same content\n')
-        before = out.stat().st_mtime_ns
-        urls = dict(refresh_tropes.SOURCES)
-        rc, err = _run_refresh(out, {urls['tropes.fyi']: '# same content\n'})
-        assert rc == 0, f"refresh noop: rc={rc} err={err!r}"
-        assert 'already up to date' in err, f"refresh noop: err={err!r}"
-        assert out.stat().st_mtime_ns == before, "refresh noop: file was rewritten"
-
-
-def test_refresh_tropes_offline_leaves_snapshot_unchanged():
-    # Both upstream sources unreachable: exit 1 and DO NOT clobber the existing
-    # snapshot with empty/stale content (the whole point of a fallback).
-    with tempfile.TemporaryDirectory() as d:
-        out = Path(d) / 'snap.md'
-        write(out, '# preexisting bundled snapshot\n')
-        rc, err = _run_refresh(out, {})  # every fetch returns None
-        assert rc == 1, f"refresh offline: rc={rc} err={err!r}"
-        assert 'unreachable' in err, f"refresh offline: err={err!r}"
-        assert out.read_text(encoding='utf-8') == '# preexisting bundled snapshot\n', \
-            "refresh offline: snapshot was clobbered"
-
-
-def test_refresh_tropes_usage_error_too_many_args():
-    import contextlib
-    import io
-    import refresh_tropes
-    err = io.StringIO()
-    with contextlib.redirect_stderr(err):
-        rc = refresh_tropes.main(['refresh_tropes.py', 'a', 'b'])
-    assert rc == 2, f"refresh usage: rc={rc}"
-    assert 'usage' in err.getvalue(), f"refresh usage: err={err.getvalue()!r}"
 
 
 # ---------- check_bib_fields.py ----------
@@ -1850,7 +1785,7 @@ def test_scan_glyphs_counts_every_occurrence():
         assert len(em) == 3, f"glyphs: expected 3 em-dash rows, got {len(em)}: {em!r}"
         assert any('code comment' in l for l in em), f"glyphs: comment em-dash missed: {em!r}"
         for token in ('em-dash=3', 'arrow=2', 'curly-quote=4', 'en-dash=1',
-                      'ellipsis=1', 'nbsp=1', '12 Unicode tell(s)'):
+                      'ellipsis=1', 'nbsp=1', 'ascii-dash=0', '12 tell(s)'):
             assert token in err, f"glyphs: summary missing {token!r}: {err!r}"
 
 
@@ -1867,14 +1802,39 @@ def test_scan_glyphs_two_on_one_line_distinct_columns():
 
 
 def test_scan_glyphs_clean_ascii_file():
-    # ASCII `--` and `->` are NOT tells; only the non-ASCII glyphs are matched.
+    # `->` is not a tell, and neither is a hyphen on its own.
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / 'clean.md'
-        write(p, 'Plain ASCII prose -- with hyphens and -> arrows.\n')
+        write(p, 'Plain ASCII prose with hyphens and -> arrows.\n')
         rc, out, err = run('scan_glyphs.py', str(p))
         assert rc == 0, f"clean: rc={rc} err={err!r}"
         assert out == '', f"clean: expected empty stdout, got {out!r}"
-        assert '0 Unicode tell(s)' in err, f"clean: summary wrong: {err!r}"
+        assert '0 tell(s)' in err, f"clean: summary wrong: {err!r}"
+
+
+def test_scan_glyphs_ascii_dash_counts_as_a_dash():
+    # Since the glyph rule was tightened, `--` and `---` doing a dash's work
+    # count toward the same density signal as a literal em-dash.
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'Spaced -- dash here.\nA LaTeX dash---like this---counts.\n')
+        rc, out, err = run('scan_glyphs.py', str(p))
+        assert rc == 0, f"ascii dash: rc={rc} err={err!r}"
+        rows = [l for l in out.split('\n') if '\tascii-dash\t' in l]
+        assert len(rows) == 3, f"ascii dash: expected 3 rows, got {rows!r}"
+        assert 'ascii-dash=3' in err, f"ascii dash: summary wrong: {err!r}"
+
+
+def test_scan_glyphs_skips_flags_ranges_and_code():
+    # A command-line flag, a numeric range, a table separator, a fenced block,
+    # and an inline code span are all ordinary `--` syntax, not dashes.
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, ('Run --fix and `git diff --stat` on pp. 12--18.\n\n'
+                  '| a | b |\n|---|---|\n\n```\nsome --code -- here\n```\n'))
+        rc, out, err = run('scan_glyphs.py', str(p))
+        assert rc == 0, f"skips: rc={rc} err={err!r}"
+        assert out == '', f"skips: expected empty stdout, got {out!r}"
 
 
 def test_scan_glyphs_all_unreadable_exits_2():
@@ -2042,6 +2002,8 @@ TESTS = [
     test_scan_glyphs_counts_every_occurrence,
     test_scan_glyphs_two_on_one_line_distinct_columns,
     test_scan_glyphs_clean_ascii_file,
+    test_scan_glyphs_ascii_dash_counts_as_a_dash,
+    test_scan_glyphs_skips_flags_ranges_and_code,
     test_scan_glyphs_all_unreadable_exits_2,
     test_scan_glyphs_partial_read_exits_0,
     test_scan_reference_lists_bare_demonstratives_only,
@@ -2061,16 +2023,13 @@ TESTS = [
     test_find_latex_root_commented_only,
     test_find_latex_root_subdir,
     test_find_latex_root_root_with_includes,
-    test_fetch_tropes_emits_body_and_source,
+    test_fetch_tropes_writes_catalog_to_stdout,
+    test_fetch_tropes_fails_when_the_site_is_unreachable,
+    test_fetch_tropes_usage_error_with_arguments,
     test_fetch_tropes_passes_plain_markdown_through,
     test_fetch_tropes_unwraps_markdown_from_rendered_page,
     test_fetch_tropes_unwraps_markdown_from_pre_block,
     test_fetch_tropes_rejects_page_without_markdown,
-    test_refresh_tropes_writes_fetched_content,
-    test_refresh_tropes_falls_back_to_gist,
-    test_refresh_tropes_noop_when_identical,
-    test_refresh_tropes_offline_leaves_snapshot_unchanged,
-    test_refresh_tropes_usage_error_too_many_args,
     test_check_bib_fields_flags_only_missing,
     test_check_bib_fields_summary_on_clean_input,
     test_check_bib_fields_all_unreadable_exits_2,

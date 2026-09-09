@@ -3,7 +3,7 @@ name: review-repo
 description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default; `--scientific` adds the research-article layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev15"
+  version: "2026-09_rev16"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -44,10 +44,10 @@ The skill scans the repository rooted at the current working directory by defaul
 
 3. **Determine which rule layers to load.** Read `../../shared/rules-general.md` always. Read `../../shared/rules-scientific.md` too when the user passed `--scientific`. Repo mode never loads the dedicated LaTeX layer. It reviews any `.tex` files as prose against the general layer. Each layer contributes its own rules and self-check. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
 
-4. **Load the AI-trope catalog.** Same as `/ai-slop:review` step 3: if `--tropes=<path>` was passed, read each named file and concatenate them in order; otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py ${CLAUDE_SKILL_DIR}/../../shared/tropes-snapshot.md` and read its stdout.
+4. **Load the AI-trope catalog.** Same as `/ai-slop:review` step 3: if `--tropes=<path>` was passed, read each named file and concatenate them in order; otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py` and read its stdout, stopping as review does when the fetch fails.
 
 5. **Review file by file.** Group the scan output by `<relpath>` and review each group's extracted text against the rules and the trope catalog. The `commit <short-sha>` groups are reviewed the same way as files. A repository can be large, so be systematic. Take one group's lines at a time and record only real findings. For each violation record:
-   - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name.
+   - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name with its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
    - The location (`<relpath>:<line>`, or `commit <short-sha>:<line>` for a commit message).
    - A short verbatim quote of the offending text. The scan strips comment markers, so read the file at that line when an exact quote matters. For a commit message use `git show <short-sha>`.
    - A concrete suggested replacement.
@@ -73,7 +73,6 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 ## Bundled files
 
 - `../../shared/rules-general.md` and `../../shared/rules-scientific.md` are the rule layers repo mode can load (the LaTeX layer never applies here).
-- `../../shared/tropes-snapshot.md` is the offline fallback the trope-fetch script falls through to when the tropes.fyi viewer and the upstream Gist are both unreachable.
 - `../../scripts/scan_repo.py` extracts the repository's natural-language text. `../../scripts/fetch_tropes.py` and `../../scripts/lint_markdown.py` implement the catalog fetch and report linting. Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints

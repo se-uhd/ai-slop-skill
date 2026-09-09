@@ -6,6 +6,6 @@ Use the `ai-slop:review` skill.
 
 The skill's workflow and report template are in `skills/review/SKILL.md`. By default the skill scans the current working directory for the paper to review (LaTeX root first, falling back to PDF). A path to a `.tex`, `.pdf`, or plain-text file can be passed as an argument to override the scan. The rule layers are chosen automatically. A LaTeX source (`.tex`, detected by `scripts/detect_scope.py`) loads all three layers (general + scientific + LaTeX). Any other input loads the general layer only. Add `--scientific` to also apply the research-article rules to a non-LaTeX manuscript (a Markdown or PDF paper); LaTeX includes them automatically.
 
-By default the review fetches the trope catalog from the live source (the tropes.fyi viewer, then the upstream Gist, then the bundled `shared/tropes-snapshot.md`). To override for a single run, pass `--tropes=<path>` (repeatable). Each named file is read as-is and the contents are concatenated in the order given to form the catalog.
+By default the review fetches the trope catalog from tropes.fyi, the only source. A failed fetch stops the review. To override for a single run, pass `--tropes=<path>` (repeatable). Each named file is read as-is and the contents are concatenated in the order given to form the catalog.
 
 Do not modify the user's document. The only output is `ai-slop-report.md` in the working directory.
