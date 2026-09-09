@@ -14,7 +14,7 @@ have been broken before:
 1. **Every rev bump is its own commit AND a matching git tag.** After bumping
    the version, create `git tag YYYY-MM_revN` on that commit and push it. A
    release without its tag is not done. List the current month's tags with
-   `git tag -l "$(date +%Y-%m)*"`; the next rev is the highest current rev + 1
+   `git tag -l "$(date +%Y-%m)*"`. The next rev is the highest current rev + 1
    (the bare `YYYY-MM` tag is rev0, so the release after it is `_rev1`).
 2. **Never amend, rebase, or rewrite a commit that is already tagged, released,
    or pushed as part of ordinary work.** If more work is needed after a release,
@@ -22,8 +22,8 @@ have been broken before:
    commit. Amending a released commit orphans its tag and breaks the linear
    release history. (Amending a released commit is the mistake that produced the
    dangling-tag situation at the release now numbered `2026-05_rev15`.) A
-   history repair the maintainer asks for is the one exception, and it carries
-   three obligations. Rewrite with `git filter-branch --tag-name-filter cat --
+   history repair the maintainer asks for is the one exception, and it comes
+   with obligations. Rewrite with `git filter-branch --tag-name-filter cat --
    --branches --tags` so every tag moves with its commit. Verify against
    `refs/original` that the trees are unchanged and that no tag is left off
    `main`. Force-push `main` and `--tags` together, because a forced branch
@@ -85,9 +85,14 @@ have been broken before:
 - **The bundle follows its own rules.** When a rule is added or tightened,
   sweep the repository's own prose for the pattern in the same rev: the
   Markdown files, the skill and command files, and the Python docstrings and
-  comments. Released `CHANGELOG.md` entries are edited only to correct or
-  complete the record, never to restate it. Upstream-owned files are left to
-  their own repo.
+  comments. Two smoke tests hold the line between sweeps.
+  `test_first_party_prose_semicolons_are_list_separators` counts the prose
+  semicolons in the first-party Markdown and fails above the known number of
+  list separators, and `test_first_party_prose_avoids_the_plain_words_seeds`
+  runs `scan_repo.py` over the repository and fails on "lives in" outside a
+  quoted example. Released `CHANGELOG.md` entries are edited only to correct
+  or complete the record, never to restate it. Upstream-owned files are left
+  to their own repo.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
   `grounding-quotes.json`) are never committed. The skills add them to the
   target repo's `.gitignore`.

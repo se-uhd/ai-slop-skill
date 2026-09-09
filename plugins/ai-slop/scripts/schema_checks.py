@@ -8,7 +8,10 @@ Two checks against `ai-slop-report.md` and `WRITING.md`:
                                 `**Suggested revision:**`).
   writing-md-structure          `WRITING.md`: not exactly one
                                 `## AI Writing Tropes to Avoid` section,
-                                or an H1 appears inside that section.
+                                or an H1 appears inside that section. A
+                                WRITING.md is recognized by its H1, which
+                                `/ai-slop:init` writes as "Writing rules for
+                                this project" (older files say "paper").
 
 The linter (`lint_markdown.py`, synced from pymarkdown-skill) loads this
 file via importlib and calls `schema_findings(text, path)` at lint time.
@@ -18,7 +21,7 @@ import re
 SKILL_NAME = "ai-slop"
 
 REPORT_H1_BODY = "AI Slop Review"
-WRITING_H1_BODY = "Writing rules for this paper"
+WRITING_H1_BODIES = ("Writing rules for this project", "Writing rules for this paper")
 WRITING_TROPES_H2_BODY = "AI Writing Tropes to Avoid"
 FINDING_LABELS = (
     "**Rule:**",
@@ -75,7 +78,7 @@ def schema_findings(text, path):
             if level == 1 and not is_report and not is_writing:
                 if body == REPORT_H1_BODY:
                     is_report = True
-                elif body == WRITING_H1_BODY:
+                elif body in WRITING_H1_BODIES:
                     is_writing = True
             if in_trope_section and level == 1:
                 h1_in_trope_section.append((i, body))

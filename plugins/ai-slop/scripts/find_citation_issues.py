@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """find_citation_issues.py <texfile> [<texfile> ...]
 
-Scan one or more LaTeX files for two deterministic citation issues and print
-one tab-separated line per finding to stdout:
+Scan one or more LaTeX files, plus every file they pull in with \\input /
+\\include, for two deterministic citation issues and print one tab-separated
+line per finding to stdout:
 
     <file>:<line>\\t<issue>\\t<keys>\\t<context>
 
@@ -39,9 +40,13 @@ Recognized and ignored entirely: \\nocite (BibTeX-only marker, not textual).
 
 Other commands are not flagged. The recognized list is an allowlist.
 
-Comment handling: a line is skipped when its code portion (before the first
-unescaped `%`) contains no recognized cite call. Cite calls inside comments do
-not count.
+Comment handling: the code portion of each line (before the first unescaped
+`%`) is what gets scanned, so cite calls inside comments do not count. The
+scan runs over the lines joined, so a call whose key list spans lines is
+found and reported at the line it starts on. Its grounding comment is looked
+for below the line it ends on, where a comment under the cite sits. The
+scanner and the \\input walker are shared with extract_cites.py (cite_scan.py),
+so the two tools see the same files and the same calls.
 
 Exits 0 when at least one input file was read, whether or not findings were
 emitted. Exits 2 on a usage error: no arguments, or none of the given paths
@@ -66,11 +71,6 @@ Known limitations:
   - Cite calls inside \\verb, listings, or other non-`%`-comment LaTeX
     constructs are still scanned. See find_latex_root.py for the same
     limitation.
-  - \\input / \\include are not followed. Pass the full file list
-    explicitly.
-  - Multi-line cite calls (where `}` is on a different line from the
-    opening `\\cite{`) are skipped silently. Restructure such calls onto a
-    single logical line if you want them checked.
   - Multi-cite biblatex forms \\textcites / \\autocites / \\fullcites use
     multiple {key} groups. This script reads only the first group and
     undercounts keys.
@@ -86,11 +86,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cite_scan import has_grounding, iter_cite_calls  # noqa: E402
-from scan_io import report_unreadable  # noqa: E402
+from cite_scan import gather_files, has_grounding, iter_cite_calls, split_code_and_comment  # noqa: E402
 
-# The cite regex, command-classification sets, and the comment/key/grounding
-# helpers are in cite_scan.py, shared with extract_cites.py.
+# The cite regex, command-classification sets, the comment/key/grounding
+# helpers, and the \input walker are in cite_scan.py, shared with extract_cites.py.
 
 CLUSTER_THRESHOLD = 3
 
@@ -102,26 +101,34 @@ def truncate(text, limit=120):
     return text if len(text) <= limit else text[: limit - 3] + '...'
 
 
-def scan_file(path, stats):
-    """Scan one .tex file for cite-cluster and missing-grounding findings,
+def scan_text(path, text, stats):
+    """Scan one file's text for cite-cluster and missing-grounding findings,
     print one TSV row per finding to stdout, and update `stats` in place."""
-    try:
-        text = Path(path).read_text(encoding='utf-8', errors='replace')
-    except OSError as e:
-        report_unreadable(path, e)
-        return
     stats['files'] += 1
     lines = text.splitlines()
-    for idx, command, keys, comment, raw_line in iter_cite_calls(lines):
+    for call in iter_cite_calls(lines):
         stats['considered'] += 1
-        line_no = idx + 1
-        context = truncate(raw_line)
-        if len(keys) >= CLUSTER_THRESHOLD:
+        line_no = call.start + 1
+        keys = ','.join(call.keys)
+        context = truncate(lines[call.start])
+        if len(call.keys) >= CLUSTER_THRESHOLD:
             stats['clusters'] += 1
-            print(f"{path}:{line_no}\tcluster\t{','.join(keys)}\t{context}")
-        if not has_grounding(lines, idx, comment):
+            print(f"{path}:{line_no}\tcluster\t{keys}\t{context}")
+        _, comment = split_code_and_comment(lines[call.end])
+        if not has_grounding(lines, call.end, comment):
             stats['missing_grounding'] += 1
-            print(f"{path}:{line_no}\tmissing-grounding\t{','.join(keys)}\t{context}")
+            print(f"{path}:{line_no}\tmissing-grounding\t{keys}\t{context}")
+
+
+def scan_file(path, stats, seen):
+    """Scan one .tex file and the files it pulls in. `seen` holds the resolved
+    paths already scanned, so a file named twice is scanned once. The given
+    path is echoed as it was passed for its own findings, and an included file
+    is reported by its resolved path."""
+    given = Path(path)
+    for rp, text in gather_files(given, seen):
+        shown = path if rp == given.resolve() else str(rp)
+        scan_text(shown, text, stats)
 
 
 def main(argv):
@@ -130,8 +137,9 @@ def main(argv):
         return 2
     stats = {'files': 0, 'considered': 0, 'clusters': 0, 'missing_grounding': 0}
     paths = argv[1:]
+    seen = set()
     for path in paths:
-        scan_file(path, stats)
+        scan_file(path, stats, seen)
     print(
         f"considered {stats['considered']} cite call(s) across {stats['files']} file(s); "
         f"{stats['clusters']} cluster(s), {stats['missing_grounding']} missing-grounding",

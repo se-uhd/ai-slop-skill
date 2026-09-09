@@ -105,11 +105,16 @@ def test_find_latex_root_root_with_includes():
 
 # ---------- fetch_tropes.py ----------
 
+# A catalog-shaped body: an H1 first, then enough `## ` trope headings for
+# fetch_tropes.looks_like_catalog. One trope carries an apostrophe so the
+# HTML unwrapping is exercised.
+CATALOG = '# AI Writing Tropes to Avoid\n\nintro\n\n' + ''.join(
+    f"## Trope {i}\n\n`new` · Cat\n\nOne's trope.\n\n" for i in range(6))
 RENDERED_PAGE = (
     '<!DOCTYPE html><html><body>'
     '<a href="data:text/markdown;charset=utf-8,'
-    '%23%20Catalog%0A%0AOne&#x27;s%20trope.">Download</a>'
-    '<pre class="font-mono"># Catalog\n\nOne&#x27;s trope.</pre>'
+    + __import__('urllib.parse').parse.quote(CATALOG) + '">Download</a>'
+    '<pre class="font-mono">' + CATALOG.replace("'", '&#x27;') + '</pre>'
     '</body></html>'
 )
 
@@ -135,9 +140,12 @@ def _run_fetch(argv, fetched):
 
 
 def test_fetch_tropes_writes_catalog_to_stdout():
-    rc, out, err = _run_fetch(['fetch_tropes.py'], '# AI Writing Tropes\n\nBody.\n')
+    rc, out, err = _run_fetch(['fetch_tropes.py'], CATALOG)
     assert rc == 0, f"fetch: rc={rc} err={err!r}"
-    assert out == '# AI Writing Tropes\n\nBody.\n', f"fetch: stdout={out!r}"
+    assert out == CATALOG, f"fetch: stdout={out!r}"
+    # The identity line names what was accepted, so a changed catalog is visible.
+    assert 'fetched' in err and '6 trope heading(s)' in err and 'sha256' in err, \
+        f"fetch: identity line missing: {err!r}"
 
 
 def test_fetch_tropes_fails_when_the_site_is_unreachable():
@@ -157,8 +165,7 @@ def test_fetch_tropes_usage_error_with_arguments():
 
 def test_fetch_tropes_passes_plain_markdown_through():
     import fetch_tropes
-    body = '# AI Writing Tropes to Avoid\n\nText.\n'
-    assert fetch_tropes.extract_markdown(body) == body, "extract: markdown altered"
+    assert fetch_tropes.extract_markdown(CATALOG) == CATALOG, "extract: markdown altered"
 
 
 def test_fetch_tropes_unwraps_markdown_from_rendered_page():
@@ -166,7 +173,7 @@ def test_fetch_tropes_unwraps_markdown_from_rendered_page():
     # data URI carries the same bytes the <pre> block renders.
     import fetch_tropes
     got = fetch_tropes.extract_markdown(RENDERED_PAGE)
-    assert got == "# Catalog\n\nOne's trope.", f"extract data-uri: {got!r}"
+    assert got == CATALOG, f"extract data-uri: {got!r}"
 
 
 def test_fetch_tropes_unwraps_markdown_from_pre_block():
@@ -174,7 +181,7 @@ def test_fetch_tropes_unwraps_markdown_from_pre_block():
     import fetch_tropes
     page = RENDERED_PAGE.replace('data:text/markdown', 'data:text/plain')
     got = fetch_tropes.extract_markdown(page)
-    assert got == "# Catalog\n\nOne's trope.", f"extract pre: {got!r}"
+    assert got == CATALOG, f"extract pre: {got!r}"
 
 
 def test_fetch_tropes_rejects_page_without_markdown():
@@ -183,6 +190,30 @@ def test_fetch_tropes_rejects_page_without_markdown():
     import fetch_tropes
     page = '<!DOCTYPE html><html><body><h1>502 Bad Gateway</h1></body></html>'
     assert fetch_tropes.extract_markdown(page) is None, "extract: HTML accepted"
+
+
+def test_fetch_tropes_rejects_bodies_without_the_catalog_shape():
+    # A plain-text error, a JSON error body, and an error page that happens to
+    # carry a <pre> block must all be rejected: only something with an H1 and
+    # the trope headings is the catalog.
+    import fetch_tropes
+    bodies = {
+        'plain-text 503': 'Service Unavailable\n',
+        'json error': '{"error": "rate limited"}',
+        'error page with <pre>': ('<!DOCTYPE html><html><body><h1>Application error</h1>'
+                                  '<pre>TypeError: x\n    at page.tsx:12</pre></body></html>'),
+        'H1 without tropes': '# AI Writing Tropes to Avoid\n\nBody.\n',
+    }
+    for name, body in bodies.items():
+        assert fetch_tropes.extract_markdown(body) is None, f"extract: {name} accepted as catalog"
+
+
+def test_fetch_tropes_decodes_base64_data_uri():
+    import base64
+    import fetch_tropes
+    page = ('<!DOCTYPE html><html><a href="data:text/markdown;base64,'
+            + base64.b64encode(CATALOG.encode('utf-8')).decode('ascii') + '">dl</a></html>')
+    assert fetch_tropes.extract_markdown(page) == CATALOG, "extract: base64 data URI not decoded"
 
 
 # ---------- check_bib_fields.py ----------
@@ -565,7 +596,7 @@ def test_lint_markdown_finding_block_clean_passes():
 
 
 def test_lint_markdown_writing_md_h1_in_tropes_section():
-    content = (b"# Writing rules for this paper\n\n"
+    content = (b"# Writing rules for this project\n\n"
                b"## AI Writing Tropes to Avoid\n\nintro\n\n"
                b"# Spurious\n\nbody\n")
     with tempfile.TemporaryDirectory() as d:
@@ -577,7 +608,7 @@ def test_lint_markdown_writing_md_h1_in_tropes_section():
 
 
 def test_lint_markdown_writing_md_no_tropes_section():
-    content = b"# Writing rules for this paper\n\n## Language\n\nrules\n"
+    content = b"# Writing rules for this paper\n\n## Language\n\nrules\n"  # the pre-rev17 H1 still counts
     with tempfile.TemporaryDirectory() as d:
         p = _write_md(d, 'WRITING.md', content)
         rc, out, err = run('lint_markdown.py', str(p))
@@ -1183,7 +1214,7 @@ def test_cite_scan_iter_cite_calls():
         '\\citeauthor{styleonly} text',
         '\\nocite{ignore}',
     ]
-    calls = [(cmd, keys) for _, cmd, keys, _, _ in cite_scan.iter_cite_calls(lines)]
+    calls = [(c.command, c.keys) for c in cite_scan.iter_cite_calls(lines)]
     assert ('cite', ['x']) in calls, f"iter: x missing: {calls!r}"
     assert ('cite', ['a', 'b', 'c']) in calls, f"iter: cluster missing: {calls!r}"
     assert all('ghost' not in keys for _, keys in calls), f"iter: commented cite leaked: {calls!r}"
@@ -1197,10 +1228,10 @@ def test_cite_scan_recognizes_plural_forms():
         r'See \textcites{aa}{bb} and \parencites{cc}{dd}.',
         r'Also \cites{ee} and \autocites{ff}{gg}.',
     ]))
-    cmds = {cmd for _, cmd, _, _, _ in calls}
+    cmds = {c.command for c in calls}
     for plural in ('textcites', 'parencites', 'cites', 'autocites'):
         assert plural in cmds, f"plural form {plural} not recognized: {cmds!r}"
-    keys = [k for _, _, ks, _, _ in calls for k in ks]
+    keys = [k for c in calls for k in c.keys]
     # Documented limitation: only the first {key} group is read.
     assert {'aa', 'cc', 'ee', 'ff'} <= set(keys), f"plural first-group keys missing: {keys!r}"
     assert not ({'bb', 'dd', 'gg'} & set(keys)), f"plural second group should be undercounted: {keys!r}"
@@ -1996,6 +2027,310 @@ def test_rule_keys_unique_and_resolvable():
             assert key in defined, f"keys: {key} cited in {path.name} is not defined in any layer"
 
 
+
+# ---------- rev17 regressions ----------
+
+def test_scan_repo_generated_marker_needs_a_comment_line():
+    # A prose file that merely mentions the phrase is scanned. A generated
+    # header on a comment line is skipped and named on stderr.
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'WRITING.md',
+              '# Writing rules for this project\n\nThey were generated by `/ai-slop:init` from the skill.\n')
+        write(Path(d) / 'CONTRIBUTING.md',
+              '# Contributing\n\nPlease do not edit generated files under `build/`.\n')
+        write(Path(d) / 'gen.go',
+              '// Code generated by protoc-gen-go. DO NOT EDIT.\n// a real comment\npackage x\n')
+        write(Path(d) / 'doc.md', '<!-- generated by docgen -->\n# API\n\nprose\n')
+        rc, out, err = run('scan_repo.py', d, '--no-commits')
+        assert rc == 0, f"generated marker: rc={rc} err={err!r}"
+        paths = _scan_paths(out)
+        assert 'WRITING.md' in paths and 'CONTRIBUTING.md' in paths, \
+            f"generated marker: prose mentioning the phrase was dropped: {paths!r}"
+        assert 'gen.go' not in paths and 'doc.md' not in paths, \
+            f"generated marker: generated file scanned: {paths!r}"
+        assert 'skipped 2 generated file(s)' in err and 'gen.go' in err and 'doc.md' in err, \
+            f"generated marker: skipped files not named on stderr: {err!r}"
+
+
+def test_scan_repo_bad_commit_range_exits_2():
+    with tempfile.TemporaryDirectory() as d:
+        _git_repo_with_commit(d, 'Subject line', 'body text')
+        rc, out, err = run('scan_repo.py', d, '--commits=nosuchbranch..HEAD')
+        assert rc == 2, f"bad range: rc={rc} err={err!r}"
+        assert '--commits=nosuchbranch..HEAD' in err, f"bad range: not named: {err!r}"
+        assert out == '', f"bad range: stdout not empty: {out!r}"
+
+
+def test_scan_repo_commit_spec_rejects_options():
+    # A value git would read as an option never reaches git.
+    with tempfile.TemporaryDirectory() as d:
+        _git_repo_with_commit(d, 'Subject line', 'body text')
+        target = Path(d) / 'pwned.txt'
+        rc, out, err = run('scan_repo.py', d, f'--commits=--output={target}')
+        assert rc == 2 and 'usage' in err, f"option spec: rc={rc} err={err!r}"
+        assert not target.exists(), "option spec: git wrote the --output file"
+
+
+def test_scan_repo_skips_front_matter_indented_code_and_pins():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'doc.md',
+              '---\nname: review\nlicense: CC\n---\n# Title\n\nProse here.\n\n'
+              '    indented_code();\n    more_code();\n\nAfter the block.\n\n'
+              '1. A list item\n\n    Continuation paragraph inside the list.\n')
+        write(Path(d) / 'requirements.txt', 'requests==2.31.0\n')
+        rc, out, err = run('scan_repo.py', d, '--no-commits')
+        assert rc == 0, f"md skips: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'name: review' not in text and 'license: CC' not in text, f"front matter scanned: {out!r}"
+        assert 'indented_code' not in text and 'more_code' not in text, f"indented code scanned: {out!r}"
+        assert 'Prose here.' in text and 'After the block.' in text, f"prose dropped: {out!r}"
+        assert 'Continuation paragraph inside the list.' in text, f"list continuation dropped: {out!r}"
+        assert 'requirements.txt' not in _scan_paths(out), f"requirements.txt scanned as prose: {out!r}"
+
+
+def test_scan_glyphs_ignores_tex_comments_and_banners():
+    # The ` -- ` separator of the bundle's own grounding comments, and a
+    # comment banner of many dashes, must not count toward the dash density.
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'g.tex'
+        write(p, 'A claim~\\cite{k}.\n% GROUNDING: k -- "quote"\n'
+                 '% GROUNDING: j -- TODO verify -- paywalled\nA dash---here. % and -- in a comment\n')
+        rc, out, err = run('scan_glyphs.py', str(p))
+        rows = [l for l in out.split('\n') if '\tascii-dash\t' in l]
+        assert len(rows) == 1 and ':4:' in rows[0], f"tex comments: {rows!r}"
+        q = Path(d) / 'b.py'
+        write(q, '# ---------- section ----------\nx = 1  # a -- dash in a comment\n')
+        rc, out, err = run('scan_glyphs.py', str(q))
+        rows = [l for l in out.split('\n') if '\tascii-dash\t' in l]
+        assert len(rows) == 1 and ':2:' in rows[0], f"banner: {rows!r}"
+
+
+def test_scan_glyphs_and_reference_honor_nested_fences():
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'f.md'
+        write(p, '````markdown\ntemplate -- outer. This shows X.\n```text\ninner -- code. This shows Y.\n'
+                 '```\nstill -- inside. This shows Z.\n````\nprose -- outside. This shows W.\n')
+        rc, out, err = run('scan_glyphs.py', str(p))
+        rows = [l for l in out.split('\n') if '\tascii-dash\t' in l]
+        assert len(rows) == 1 and ':8:' in rows[0], f"glyph fences: {rows!r}"
+        rc, out, err = run('scan_reference.py', str(p))
+        rows = [l for l in out.split('\n') if l]
+        assert len(rows) == 1 and ':8:' in rows[0], f"reference fences: {rows!r}"
+
+
+def test_verify_references_accepts_any_recorded_year_and_venue_abbreviations():
+    rec = {'title': 'A Study of Code Review', 'year': '2021', 'years': {'2021', '2022'},
+           'venue': 'Empirical Software Engineering'}
+    assert vref.compare_entry({'title': 'a study of code review', 'year': '2022', 'venue': 'EMSE'}, rec)[0] == 'ok'
+    assert vref.compare_entry({'title': 'a study of code review', 'year': '2019', 'venue': 'EMSE'}, rec)[0] == 'year-mismatch'
+    tosem = {'title': 'A Study of Code Review', 'year': '2021',
+             'venue': 'ACM Transactions on Software Engineering and Methodology'}
+    assert vref.compare_entry({'title': 'a study of code review', 'year': '2021', 'venue': 'TOSEM'}, tosem)[0] == 'ok'
+    dblp = {'title': 'A Study of Code Review', 'year': '2021', 'venue': 'Empir. Softw. Eng.'}
+    assert vref.compare_entry({'title': 'a study of code review', 'year': '2021',
+                               'venue': 'Empirical Software Engineering'}, dblp)[0] == 'ok'
+    assert vref.compare_entry({'title': 'a study of code review', 'year': '2021', 'venue': 'NeurIPS'}, tosem)[0] == 'venue-mismatch'
+
+
+def test_verify_references_merges_dblp_for_doi_entries():
+    crossref = {'title': 'A Study of Code Review', 'year': '2021', 'years': {'2021'},
+                'venue': 'Empirical Software Engineering'}
+    curated = {'title': 'A Study of Code Review', 'year': '2022', 'venue': 'Empir. Softw. Eng.'}
+    entry = {'doi': '10.1/x', 'title': 'a study of code review', 'year': '2022', 'venue': 'EMSE'}
+    assert vref.verify_entry(entry, lambda d: dict(crossref), lambda t: [], lambda t: [])[0] == 'year-mismatch'
+    assert vref.verify_entry(entry, lambda d: dict(crossref), lambda t: [dict(curated)], lambda t: [])[0] == 'ok'
+
+
+def test_find_latex_root_skips_subfiles_chapters():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'thesis.tex',
+              '\\documentclass{book}\n\\usepackage{subfiles}\n\\begin{document}\n\\subfile{ch1}\n\\end{document}\n')
+        for ch in ('ch1', 'ch2'):
+            write(Path(d) / f'{ch}.tex',
+                  '\\documentclass[thesis.tex]{subfiles}\n\\begin{document}\nText.\n\\end{document}\n')
+        rc, out, err = run('find_latex_root.py', d)
+        assert rc == 0 and out.strip().endswith('thesis.tex'), f"subfiles: rc={rc} out={out!r}"
+
+
+def test_find_citation_issues_follows_input_and_multiline_cites():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'main.tex',
+              '\\documentclass{a}\n\\begin{document}\nA claim~\\cite{a,\n  b}.\n'
+              '% GROUNDING: a -- "x"\n\\input{sec}\n\\end{document}\n')
+        write(Path(d) / 'sec.tex', 'Second~\\cite{c}.\n')
+        rc, out, err = run('find_citation_issues.py', str(Path(d) / 'main.tex'))
+        assert rc == 0, f"follow: rc={rc} err={err!r}"
+        assert 'considered 2 cite call(s) across 2 file(s)' in err, f"follow: summary: {err!r}"
+        missing = [l for l in out.split('\n') if '\tmissing-grounding\t' in l]
+        assert len(missing) == 1 and '\tc\t' in missing[0] and 'sec.tex' in missing[0], \
+            f"follow: expected only sec.tex's cite missing: {missing!r}"
+        rc, out, err = run('extract_cites.py', d)
+        sites = [(s['line'], s['end_line'], s['keys'], s['grounded']) for s in json.loads(out)['sites']]
+        assert sites == [(3, 4, ['a', 'b'], True), (1, 1, ['c'], False)], f"follow: extract disagrees: {sites!r}"
+
+
+def test_insert_grounding_multiline_cite_comment_after_closing_line():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        tex = Path(d) / 'main.tex'
+        write(tex, '\\documentclass{a}\n\\begin{document}\nA claim~\\cite{m1,\n  m2}.\n\\end{document}\n')
+        rc, out, err = run('extract_cites.py', d)
+        extract = Path(d) / 'e.json'
+        write(extract, out)
+        write(Path(d) / 'q.json', json.dumps({'m1': {'quote': 'one'}, 'm2': {'todo': 'paywalled'}}))
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert rc == 0 and 'inserted 2' in err, f"multiline insert: rc={rc} err={err!r}"
+        lines = tex.read_text(encoding='utf-8').splitlines()
+        assert lines[3] == '  m2}.' and lines[4].startswith('% GROUNDING: m1') \
+            and lines[5].startswith('% GROUNDING: m2'), f"multiline insert: placement: {lines!r}"
+        rc, out, err = run('extract_cites.py', d)
+        write(extract, out)
+        rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q.json'))
+        assert 'inserted 0' in err, f"multiline insert: not idempotent: {err!r}"
+
+
+def test_bib_parse_escaped_quotes_concatenation_and_accents():
+    import bib_parse
+    text = (r'@article{esc, title = "Quoted \"inner\" title", journal = JCS # " Letters", year = 2020}' + '\n'
+            r'@article{acc, title = {Gr{\"u}n and M{\"u}ller: {\'E}tude of \c{c} and \ss}, year = {2020}}' + '\n')
+    entries = {k: f for k, _, f in bib_parse.iter_entries(text)}
+    assert entries['esc']['title'] == 'Quoted "inner" title', entries['esc']
+    assert entries['esc']['journal'] == 'JCS Letters', entries['esc']
+    assert entries['acc']['title'] == 'Grün and Müller: Étude of ç and ß', entries['acc']
+
+
+def test_check_quotes_confirms_and_downgrades():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        src = Path(d) / 'smith.txt'
+        write(src, 'Intro.\nWe found that the effect per-\nsisted across all three groups, "as expected".\n')
+        page = Path(d) / 'lee.html'
+        write(page, '<html><body><script>x()</script><p>Latency fell by 40&#37; after the change.</p></body></html>')
+        pdf = Path(d) / 'jones.pdf'
+        pdf.write_bytes(b'%PDF-1.4\x00binary')
+        quotes = Path(d) / 'q.json'
+        write(quotes, json.dumps({
+            'smith': {'quote': 'the effect persisted across all three groups, \u201cas expected\u201d', 'source': str(src)},
+            'lee': {'quote': 'Latency fell by 40% after the change.', 'source': str(page)},
+            'wrong': {'quote': 'a sentence that is not in the file', 'source': str(src)},
+            'jones': {'quote': 'anything', 'source': str(pdf)},
+            'gone': {'quote': 'anything', 'source': str(Path(d) / 'missing.txt')},
+            'nosrc': {'quote': 'anything'},
+            'todo': {'todo': 'paywalled'},
+        }))
+        rc, out, err = run('check_quotes.py', str(quotes))
+        assert rc == 0, f"check_quotes: rc={rc} err={err!r}"
+        verdicts = {l.split('\t')[0]: l.split('\t')[1] for l in out.split('\n') if l}
+        assert verdicts == {'smith': 'confirmed', 'lee': 'confirmed', 'wrong': 'not-in-source',
+                            'jones': 'unverifiable', 'gone': 'unreachable', 'nosrc': 'unverifiable'}, verdicts
+        assert json.loads(quotes.read_text(encoding='utf-8'))['wrong']['quote'], "check_quotes: rewrote without --apply"
+        rc, out, err = run('check_quotes.py', str(quotes), '--apply')
+        assert rc == 0, f"check_quotes --apply: rc={rc} err={err!r}"
+        data = json.loads(quotes.read_text(encoding='utf-8'))
+        assert data['wrong'] == {'todo': 'unverified', 'source': str(src)}, data['wrong']
+        assert data['smith']['quote'].startswith('the effect'), "check_quotes: confirmed quote altered"
+        assert '1 downgraded' in err, f"check_quotes --apply: summary: {err!r}"
+
+
+def test_check_quotes_sources_dir_and_bad_json():
+    import json
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / 'src').mkdir()
+        write(Path(d) / 'src' / 'k.md', 'The quote is here.\n')
+        quotes = Path(d) / 'q.json'
+        write(quotes, json.dumps({'k': {'quote': 'The quote is here.', 'source': 'k.md'}}))
+        rc, out, err = run('check_quotes.py', str(quotes), '--sources-dir', str(Path(d) / 'src'))
+        assert rc == 0 and 'k\tconfirmed' in out, f"sources-dir: rc={rc} out={out!r}"
+        write(quotes, '{not json')
+        rc, out, err = run('check_quotes.py', str(quotes))
+        assert rc == 2 and 'not valid JSON' in err, f"bad json: rc={rc} err={err!r}"
+
+
+# ---------- the bundle follows its own rules ----------
+
+FIRST_PARTY_MARKDOWN = (
+    ['README.md', 'CLAUDE.md']
+    + [f'plugins/ai-slop/shared/{n}' for n in ('rules-general.md', 'rules-scientific.md',
+                                              'rules-latex.md', 'rules-rationale.md')]
+    + sorted(str(p.relative_to(SCRIPTS.parent.parent.parent))
+             for p in (SCRIPTS.parent / 'skills').glob('*/SKILL.md'))
+    + sorted(str(p.relative_to(SCRIPTS.parent.parent.parent))
+             for p in (SCRIPTS.parent / 'commands').glob('*.md'))
+)
+# Semicolons that separate the items of an enumeration ("(a) ...; and (b)"),
+# which the general layer keeps.
+ENUMERATION_SEMICOLON_RE = re.compile(r';\s+(?:and\s+|or\s+)?\(')
+# The count of remaining prose semicolons, all list separators. A clause-joining
+# semicolon (`G.semicolons`) is the failure this guards; the message lists every
+# line so the author can tell the two apart. Lower this when a list is rewritten.
+MAX_PROSE_SEMICOLONS = 8
+
+
+def _markdown_prose(path):
+    """Yield (lineno, text) for a Markdown file's prose lines with fenced
+    blocks, tables, code spans, parenthetical groups, and double-quoted
+    strings removed, the contexts the semicolon convention exempts."""
+    in_fence = False
+    for i, raw in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+        if re.match(r'^\s*(?:```|~~~)', raw):
+            in_fence = not in_fence
+            continue
+        if in_fence or raw.lstrip().startswith('|'):
+            continue
+        text = re.sub(r'`[^`]*`', '', raw)
+        depth, kept = 0, []
+        for ch in text:
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth = max(0, depth - 1)
+            elif depth == 0:
+                kept.append(ch)
+        yield i, re.sub(r'"[^"]*"', '', ''.join(kept))
+
+
+def test_first_party_prose_semicolons_are_list_separators():
+    """The bundle's own Markdown keeps a semicolon only between list items or
+    inside code, quotes, and parentheticals. This ratchet lists every other
+    prose semicolon and fails when there are more than the known list
+    separators, so a clause-joining semicolon cannot come back silently."""
+    repo_root = SCRIPTS.parent.parent.parent
+    offenders = []
+    for rel in FIRST_PARTY_MARKDOWN:
+        for ln, text in _markdown_prose(repo_root / rel):
+            if ';' in ENUMERATION_SEMICOLON_RE.sub(' ', text):
+                offenders.append(f"{rel}:{ln}: {text.strip()[:90]}")
+    assert len(offenders) <= MAX_PROSE_SEMICOLONS, (
+        f"{len(offenders)} prose semicolon(s), more than the {MAX_PROSE_SEMICOLONS} "
+        "known list separators. Each must separate list items, not join clauses "
+        "(G.semicolons):\n  " + "\n  ".join(offenders))
+
+
+def test_first_party_prose_avoids_the_plain_words_seeds():
+    """`G.plain-words` names "lives in" as a colorful synonym for "is in". The
+    bundle's own Markdown, docstrings, and comments must not use it, except
+    where a rule quotes it as the pattern to avoid (inside double quotes)."""
+    repo_root = SCRIPTS.parent.parent.parent
+    rc, out, err = run('scan_repo.py', str(repo_root), '--no-commits')
+    assert rc == 0, f"self-scan: rc={rc} err={err!r}"
+    seed = re.compile(r'\blives? (?:in|here|under|outside|inside|on|at)\b')
+    skip = ('CHANGELOG.md', 'lint_markdown.py', 'check_baseline.py', 'refresh_vendor.py',
+            'run_smoke.py', '_vendor/', 'bundled_licenses/')
+    offenders = []
+    for line in out.split('\n'):
+        if not line or line.startswith('commit '):
+            continue
+        rel, _, rest = line.partition(':')
+        if any(s in rel for s in skip):
+            continue
+        _, _, text = rest.partition(':')
+        text = re.sub(r'"[^"]*"', '', re.sub(r'`[^`]*`', '', text))
+        if seed.search(text):
+            offenders.append(line[:120])
+    assert not offenders, "\"lives in\" (G.plain-words) in first-party prose:\n  " + "\n  ".join(offenders)
+
+
 # ---------- runner ----------
 
 TESTS = [
@@ -2030,6 +2365,8 @@ TESTS = [
     test_fetch_tropes_unwraps_markdown_from_rendered_page,
     test_fetch_tropes_unwraps_markdown_from_pre_block,
     test_fetch_tropes_rejects_page_without_markdown,
+    test_fetch_tropes_rejects_bodies_without_the_catalog_shape,
+    test_fetch_tropes_decodes_base64_data_uri,
     test_check_bib_fields_flags_only_missing,
     test_check_bib_fields_summary_on_clean_input,
     test_check_bib_fields_all_unreadable_exits_2,
@@ -2125,6 +2462,22 @@ TESTS = [
     test_insert_grounding_non_string_quote_becomes_todo,
     test_insert_grounding_replaces_todo_stubs,
     test_grounding_comment_block_read_write_agree,
+    test_scan_repo_generated_marker_needs_a_comment_line,
+    test_scan_repo_bad_commit_range_exits_2,
+    test_scan_repo_commit_spec_rejects_options,
+    test_scan_repo_skips_front_matter_indented_code_and_pins,
+    test_scan_glyphs_ignores_tex_comments_and_banners,
+    test_scan_glyphs_and_reference_honor_nested_fences,
+    test_verify_references_accepts_any_recorded_year_and_venue_abbreviations,
+    test_verify_references_merges_dblp_for_doi_entries,
+    test_find_latex_root_skips_subfiles_chapters,
+    test_find_citation_issues_follows_input_and_multiline_cites,
+    test_insert_grounding_multiline_cite_comment_after_closing_line,
+    test_bib_parse_escaped_quotes_concatenation_and_accents,
+    test_check_quotes_confirms_and_downgrades,
+    test_check_quotes_sources_dir_and_bad_json,
+    test_first_party_prose_semicolons_are_list_separators,
+    test_first_party_prose_avoids_the_plain_words_seeds,
 ]
 
 
