@@ -18,6 +18,10 @@ collapsed, capped at 120 characters.
 Kinds:
 
   - long-sentence:   a sentence of more than 25 words (`T.short-sentences`).
+                     The context gives the count, so the caller can apply
+                     the rule's tolerance band. A sentence of 26 to 35 words
+                     gets the rule's clause test, and a longer sentence is
+                     split.
   - uniform-run:     three or more consecutive sentences in one paragraph with
                      word counts within 5 of each other (`T.vary-length`). The
                      scan prints one row per run, at its first sentence, with
@@ -38,10 +42,7 @@ its arguments.
 This scan is a CANDIDATE finder, not a verdict, exactly like
 scan_reference.py. The caller applies each rule's test before reporting. A
 passive with an unknown actor stays, and a light verb before a noun that names
-a thing rather than an action is not a nominalization. A sentence that carries
-the `T.keep-and-mark` marker (`[KEPT: reason]` after the sentence, inline, in
-an HTML comment, or in a LaTeX comment) gets no long-sentence, passive, or
-nominalization row. Its word count still takes part in the uniform-run check.
+a thing rather than an action is not a nominalization.
 
 Skipped up front, because they are not running prose: fenced code blocks
 (nesting honored), YAML front matter, Markdown headings, tables, block quotes,
@@ -85,7 +86,7 @@ from scan_io import FenceTracker, report_unreadable  # noqa: E402
 
 KINDS = ('long-sentence', 'uniform-run', 'passive', 'nominalization')
 
-MAX_WORDS = 25   # T.short-sentences, the ASD-STE100 limit for descriptive text
+MAX_WORDS = 25   # T.short-sentences target. The caller applies the band up to 35.
 RUN_LENGTH = 3   # T.vary-length, the same test as G.sentence-length:
 RUN_SPREAD = 5   # three sentences in a row within 5 words of each other
 
@@ -103,7 +104,6 @@ WORD_CHAR_RE = re.compile(r'[A-Za-z0-9]')
 
 # ---------- normalization (every substitution keeps the length) ----------
 
-KEPT_RE = re.compile(r'(?:<!--\s*)?\[KEPT:[^\]\n]*\](?:\s*-->)?')
 QUOTE_RE = re.compile(r'"[^"]*"|\u201c[^\u201d]*\u201d')
 URL_RE = re.compile(r'https?://[^\s)>\]]+')
 
@@ -297,10 +297,9 @@ def blank_tex_commands(text):
 
 
 def normalize(ptext, is_tex):
-    """Return (norm, markers). `norm` is `ptext` with everything the word count
-    leaves out replaced by blanks or a single-letter word of the same length,
-    so offsets into `norm` are offsets into `ptext`. `markers` lists the offsets
-    of the `[KEPT: ...]` markers that were removed."""
+    """Return `ptext` with everything the word count leaves out replaced by
+    blanks or a single-letter word of the same length, so offsets into the
+    result are offsets into `ptext`."""
     s = ptext
     if is_tex:
         s = TEX_VERB_RE.sub(one_word, s)
@@ -312,8 +311,6 @@ def normalize(ptext, is_tex):
         s = TEX_BRACE_RE.sub(blank, s)
     else:
         s = MD_CODE_RE.sub(one_word, s)
-    markers = [m.start() for m in KEPT_RE.finditer(s)]
-    s = KEPT_RE.sub(blank, s)
     if not is_tex:
         s = HTML_COMMENT_RE.sub(blank, s)
         s = MD_IMAGE_RE.sub(one_word, s)
@@ -322,7 +319,7 @@ def normalize(ptext, is_tex):
         s = MD_EMPHASIS_RE.sub(blank, s)
     s = URL_RE.sub(one_word, s)
     s = QUOTE_RE.sub(one_quote, s)
-    return s, markers
+    return s
 
 
 def is_abbreviation(norm, i):
@@ -422,10 +419,7 @@ def markdown_paragraphs(text):
                 in_comment = True
                 continue
             if MD_COMMENT_LINE_RE.match(line):
-                if para and KEPT_RE.search(line):
-                    para.append((idx, 0, line))
-                else:
-                    flush()
+                flush()
                 continue
         m = MD_LIST_RE.match(line)
         if m:
@@ -439,8 +433,7 @@ def markdown_paragraphs(text):
 
 def tex_paragraphs(text):
     """Return the paragraphs of a LaTeX file in the same shape as
-    markdown_paragraphs. A `[KEPT: ...]` marker found in a comment is appended
-    as a segment of its own, after the prose it follows."""
+    markdown_paragraphs."""
     lines = text.splitlines()
     paragraphs, para = [], []
 
@@ -459,7 +452,6 @@ def tex_paragraphs(text):
         line = lines[idx]
         cm = TEX_COMMENT_RE.search(line)
         prose = line[:cm.start()] if cm else line
-        marker = KEPT_RE.search(cm.group(0)) if cm else None
         if in_env:
             in_env = not TEX_SKIP_END_RE.search(prose)
             continue
@@ -473,8 +465,6 @@ def tex_paragraphs(text):
         if not prose.strip():
             if not line.strip():
                 flush()
-            elif marker and para:
-                para.append((idx, cm.start() + marker.start(), marker.group(0)))
             continue
         sm = TEX_STRUCTURE_RE.match(prose)
         if sm:
@@ -491,8 +481,6 @@ def tex_paragraphs(text):
             if TEX_ITEM_RE.match(prose):
                 flush()
             para.append((idx, 0, prose))
-        if marker:
-            para.append((idx, cm.start() + marker.start(), marker.group(0)))
     flush()
     return paragraphs
 
@@ -505,7 +493,7 @@ def scan_paragraph(segments, is_tex, stats):
         starts.append(pos)
         pos += len(seg) + 1
     ptext = ' '.join(seg for _, _, seg in segments)
-    norm, markers = normalize(ptext, is_tex)
+    norm = normalize(ptext, is_tex)
 
     def locate(offset):
         i = bisect.bisect_right(starts, offset) - 1
@@ -525,16 +513,8 @@ def scan_paragraph(segments, is_tex, stats):
             spans.append((s2, e2, words))
     stats['sentences'] += len(spans)
 
-    kept = set()
-    for k in markers:
-        ended = [i for i, (_, e, _) in enumerate(spans) if e <= k]
-        if ended:
-            kept.add(ended[-1])
-
     rows = []
-    for i, (s, e, words) in enumerate(spans):
-        if i in kept:
-            continue
+    for s, e, words in spans:
         if words > MAX_WORDS:
             rows.append((*locate(s), 'long-sentence', context(f"{words} words", s, e)))
         sentence = norm[s:e]
