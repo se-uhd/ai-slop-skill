@@ -195,7 +195,7 @@ def _read_value(rest, j):
 
 def parse_entry_values(body):
     """Return (key, {field: value}) for one entry body. The first top-level
-    comma ends the key; field values may be brace-, quote-, or bare-delimited."""
+    comma ends the key, and field values may be brace-, quote-, or bare-delimited."""
     depth = 0
     key_end = None
     for i, c in enumerate(body):

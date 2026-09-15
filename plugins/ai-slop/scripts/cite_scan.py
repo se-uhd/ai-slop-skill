@@ -31,7 +31,7 @@ count as grounding comments for is_grounding_comment / has_grounding (the cite
 is marked, not missing), but grounding_quality classifies them 'todo' rather
 than 'quote', so a grounding run can still pick the site up and fill the quote.
 
-A comment "belongs" to a cite when it sits on the cite's own line or in the
+A comment "belongs" to a cite when it is on the cite's own line or in the
 contiguous run of blank and `%`-comment lines directly below it. The first code
 line ends that block. iter_comment_block is the single walker for this block. The
 read side (has_grounding / grounding_quality, used by find_citation_issues.py

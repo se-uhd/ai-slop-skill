@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev22] - 2026-09-15
+
+- **Fixed:** prose that the rev21 sweep missed. A follow-up scan of the whole repository found three more uses of "doing a dash's work", nine semicolons joining independent clauses, two lowercase sentences after a colon, seven uses of "sits", "sitting", or "lies" to say where something is (`G.plain-words`), and an "orchestration" section banner in `verify_references.py`. The fixes are in the script docstrings and comments, the smoke-test comments, `CLAUDE.md`, the README, the review-diff skill, and one cell of the restricted-words table.
+
 ## [2026-09_rev21] - 2026-09-15
 
 - **Fixed:** README, `CLAUDE.md`, and manifest statements that no longer matched the bundle, found by a review of the whole repository against its code. Three helpers reach the network, since `check_quotes.py` fetches a quote source that is a URL. All three review modes share the report schema. The maintainer notes point to the ten version callsites in the Versioning section instead of misnaming the init callsite. The layout names the glyph and reference scans, and the descriptions of review, init, and the layer selection include `--ste`. The manifests credit the trope catalog to its author instead of a community, and `CLAUDE.md` calls a rule change an edit in three places, since the self-check is in the layer file.

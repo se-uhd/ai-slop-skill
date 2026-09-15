@@ -69,7 +69,7 @@ from cite_scan import (  # noqa: E402
     parse_keys, split_code_and_comment,
 )
 
-# Characters that may appear inside a BibTeX key; used to bound the key when
+# Characters that may appear inside a BibTeX key, used to bound the key when
 # testing whether a comment already grounds it (so "smith2020" does not match
 # inside "smith2020a").
 KEYCHARS = r'A-Za-z0-9_:.\-+/'

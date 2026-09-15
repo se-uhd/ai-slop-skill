@@ -233,7 +233,7 @@ def classify(relpath):
 
 
 def looks_generated(text, spec=None):
-    """True if a generated-file marker sits in the first HEAD_LINES lines on a
+    """True if a generated-file marker is in the first HEAD_LINES lines on a
     comment line (the file's own comment openers for a source or config file
     per `spec`, or `<!--` / `%` for a prose file, where `spec` is None), or if
     one of those lines carries the `@generated` tag or the uppercase
@@ -521,7 +521,7 @@ def parse_args(argv):
                 return None  # empty, or a value git would read as an option
             commit_spec = int(val) if val.isdigit() else val
         elif arg.startswith('--'):
-            continue  # a skill-layer flag (e.g. --scientific); not ours
+            continue  # a skill-layer flag (e.g. --scientific), not ours
         elif root is None:
             root = Path(arg)
         else:
