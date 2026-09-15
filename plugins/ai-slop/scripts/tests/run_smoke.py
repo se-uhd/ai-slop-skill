@@ -2,7 +2,8 @@
 """Smoke tests for the ai-slop scripts.
 
 Runs each script against fixtures and asserts exit codes + stdout/stderr.
-Exits 0 if all pass; non-zero on the first failure (with a summary at the end).
+Exits 0 if all tests pass, or 1 if any fails, with the failure count printed at
+the end.
 """
 import os
 import re
@@ -91,7 +92,8 @@ def test_find_latex_root_subdir():
 
 
 def test_find_latex_root_root_with_includes():
-    """Multi-file paper: root has \\documentclass; \\input-ed fragments don't."""
+    """Multi-file paper: the root has \\documentclass, and the fragments pulled
+    in with \\input do not."""
     with tempfile.TemporaryDirectory() as d:
         sections = Path(d) / 'sections'
         sections.mkdir()
@@ -169,8 +171,8 @@ def test_fetch_tropes_passes_plain_markdown_through():
 
 
 def test_fetch_tropes_unwraps_markdown_from_rendered_page():
-    # The site serves the catalog inside an HTML page: the download link's
-    # data URI carries the same bytes the <pre> block renders.
+    # The site serves the catalog inside an HTML page. The download link's
+    # data URI carries the same bytes that the <pre> block renders.
     import fetch_tropes
     got = fetch_tropes.extract_markdown(RENDERED_PAGE)
     assert got == CATALOG, f"extract data-uri: {got!r}"
@@ -194,8 +196,8 @@ def test_fetch_tropes_rejects_page_without_markdown():
 
 def test_fetch_tropes_rejects_bodies_without_the_catalog_shape():
     # A plain-text error, a JSON error body, and an error page that happens to
-    # carry a <pre> block must all be rejected: only something with an H1 and
-    # the trope headings is the catalog.
+    # carry a <pre> block must all be rejected. Only a body with an H1 and the
+    # trope headings is the catalog.
     import fetch_tropes
     bodies = {
         'plain-text 503': 'Service Unavailable\n',
@@ -277,7 +279,7 @@ def test_check_bib_fields_flags_only_missing():
         # @online is BibLaTeX, unknown to standard BibTeX → must be silently skipped
         assert 'biblatex-only' not in joined, f"bib: unknown @online was flagged: {lines!r}"
         # Fixture has 5 standard-BibTeX entries (article good/bad, inproceedings bad,
-        # misc, book); @online and @string are skipped. Of those, 2 are flagged.
+        # misc, book), and @online and @string are skipped. Of the 5, 2 are flagged.
         assert 'checked 5 entries across 1 file(s), 2 missing-field issue(s)' in err, \
             f"bib: stderr summary missing or wrong: {err!r}"
 
@@ -374,7 +376,7 @@ def test_find_citation_issues_basic():
                 f"cite: cluster {expected} missing: {clusters!r}"
 
         # Grounded (must NOT appear in missing): ok2024, follow2025, styleonly, biblatex-grounded.
-        # Ignored entirely (must NOT appear anywhere): ghost, phantom, wraith, ignore, \textbf args.
+        # Ignored entirely (must NOT appear anywhere): ghost, phantom, wraith, ignore, capskip (\Citeauthor), \textbf args.
         for grounded_key in ('ok2024', 'follow2025', 'styleonly', 'biblatex-grounded'):
             assert not any(grounded_key in m for m in missing), \
                 f"cite: {grounded_key} should be grounded, found in missing: {missing!r}"
@@ -435,14 +437,14 @@ def test_find_citation_issues_per_key_grounding_not_flagged():
 
 
 def test_find_citation_issues_optional_args():
-    """\\cite[opt]{key} and \\citep[see, e.g.,][p.~3]{a, b, c} parse correctly."""
+    """\\citep[see, e.g.,][p.~3]{a, b, c} parses correctly."""
     with tempfile.TemporaryDirectory() as d:
         tex = Path(d) / 'paper.tex'
         write(tex, '\\citep[see, e.g.,][p.~3]{a, b, c}\n')
         rc, out, err = run('find_citation_issues.py', str(tex))
         assert rc == 0, f"optargs: rc={rc} err={err!r}"
         lines = [line for line in out.strip().split('\n') if line]
-        # Must detect the cluster of 3 keys; the comma-bearing optional arg
+        # Must detect the cluster of 3 keys. The comma-bearing optional arg
         # must not be parsed as part of the key list.
         assert any('cluster' in l and 'a,b,c' in l for l in lines), \
             f"optargs: cluster not detected: {lines!r}"
@@ -584,7 +586,7 @@ def test_lint_markdown_finding_block_missing_label():
 
 def test_lint_markdown_finding_block_clean_passes():
     # Heading-to-list spacing satisfies MD022/MD032 (blank lines around
-    # headings and lists); only the schema check is under test here.
+    # headings and lists), so only the schema check is under test here.
     content = (b"# AI Slop Review\n\n## Findings by section\n\n"
                b"### Abstract\n\n#### Finding 1\n\n"
                b"- **Rule:** test\n- **Location:** foo.tex:1\n"
@@ -729,8 +731,8 @@ def test_detect_scope_file_tex():
 
 
 def test_detect_scope_file_pdf():
-    # A PDF is not LaTeX source, so it detects as general; --scientific is what
-    # pulls in the research-article rules for a non-LaTeX paper.
+    # A PDF is not LaTeX source, so it detects as general. The --scientific flag
+    # adds the research-article rules for a non-LaTeX paper.
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / 'paper.pdf'
         write(p, 'pdf')
@@ -913,7 +915,7 @@ def test_scan_repo_respects_gitignore():
 
 def test_scan_repo_excludes_committed_vendor_dir():
     # A vendored/third-party directory that is committed (so `git ls-files` lists
-    # it) must still be excluded: it is not the repository's own prose.
+    # it) must still be excluded, because it is not the repository's own prose.
     import subprocess as sp
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'own.md', 'first-party prose\n')
@@ -1367,7 +1369,7 @@ def test_extract_cites_sentence_split_abbrev_aware():
     import extract_cites as ec
     text = 'Smith et al. found gains. The next claim cites other work.'
     bounds = ec.sentence_boundaries(text)
-    # "et al." must NOT count as a sentence end; the period after "al" is mid-claim.
+    # "et al." must NOT count as a sentence end, because the period after "al" is mid-claim.
     after_al = text.index('al.') + len('al.')
     assert after_al not in bounds, f"sentence split: abbreviation split at 'al.': bounds={bounds}"
     # The real boundary is after "gains." (where "The" begins).
@@ -1405,9 +1407,9 @@ def test_extract_cites_claim_stops_at_paragraph_break():
 
 
 def test_extract_cites_multiline_cite():
-    # A \cite with keys spanning lines is caught by the joined-text scan (unlike
-    # the line-based find_citation_issues). The reported line maps to the
-    # macro's line.
+    # A \cite with keys spanning lines is caught by the joined-text scan that
+    # extract_cites shares with find_citation_issues. The reported line is the
+    # line the macro starts on.
     import json
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'main.tex',
@@ -1436,12 +1438,13 @@ def test_extract_cites_addbibresource_and_missing_key_meta():
 
 
 def test_extract_cites_commented_input_skipped():
-    # A commented-out \input must not be followed (ghost.tex does not exist; if it
-    # were followed the file count would differ).
+    # A commented-out \input must not be followed. ghost.tex exists, so following
+    # the directive would raise the file count from 1 to 2.
     import json
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'main.tex',
               "\\documentclass{a}\n\\begin{document}\n% \\input{ghost}\nReal claim~\\cite{k}.\n\\end{document}\n")
+        write(Path(d) / 'ghost.tex', "Ghost text.\n")
         rc, out, err = run('extract_cites.py', d)
         assert rc == 0, f"commented input: rc={rc} err={err!r}"
         assert 'scanned 1 file(s)' in err, f"commented input: ghost followed: {err!r}"
@@ -1546,8 +1549,8 @@ def test_insert_grounding_non_dict_extract_exits_2():
 
 
 def test_insert_grounding_blank_quote_becomes_todo():
-    # Anti-fabrication: a whitespace-only (or non-string) quote must not produce
-    # an empty quoted comment; it is routed to a TODO instead.
+    # Anti-fabrication: a whitespace-only quote must not produce an empty quoted
+    # comment and is routed to a TODO instead (a non-string quote is tested separately).
     import json
     with tempfile.TemporaryDirectory() as d:
         tex = Path(d) / 'main.tex'
@@ -1566,7 +1569,7 @@ def test_insert_grounding_blank_quote_becomes_todo():
 
 
 def test_insert_grounding_key_match_ignores_quote_body():
-    # grounds_key must look only at the comment header, not the quote body: a key
+    # grounds_key must look only at the comment header, not the quote body. A key
     # named inside another key's quote must still be groundable on a later run.
     import json
     with tempfile.TemporaryDirectory() as d:
@@ -1609,7 +1612,7 @@ def test_insert_grounding_preserves_crlf():
         raw = Path(tex).read_bytes()
         assert b'% GROUNDING: wk -- "Supporting evidence."\r\n' in raw, \
             f"crlf: inserted comment not CRLF-terminated: {raw!r}"
-        # Every newline is part of a CRLF; no bare LF was introduced.
+        # Every newline is part of a CRLF, so no bare LF was introduced.
         assert raw.replace(b'\r\n', b'').count(b'\n') == 0, f"crlf: stray LF introduced: {raw!r}"
 
 
@@ -1702,11 +1705,10 @@ def test_insert_grounding_non_string_quote_becomes_todo():
 
 def test_insert_grounding_replaces_todo_stubs():
     # A quote-less TODO stub, whether the revise-mode form (`% GROUNDING: TODO
-    # verify <key>`) or the reasoned form an earlier run wrote, must not block
-    # the
-    # fill: extract_cites reports the site ungrounded, and insert_grounding
-    # replaces the stub line in place with the retrieved quote. Re-running
-    # with the same quotes is then a no-op.
+    # verify <key>`) or the reasoned form an earlier run wrote, must not keep the
+    # quote from being filled. extract_cites reports the site ungrounded, and
+    # insert_grounding replaces the stub line in place with the retrieved quote.
+    # Re-running with the same quotes is then a no-op.
     import json
     with tempfile.TemporaryDirectory() as d:
         tex = Path(d) / 'main.tex'
@@ -1805,8 +1807,8 @@ GLYPH_FIXTURE = (
 
 
 def test_scan_glyphs_counts_every_occurrence():
-    # The exact-count recheck that the LLM review pass undercounts: three em-dashes
-    # (two on a prose line, one in a code comment) must all be reported.
+    # The LLM review pass undercounts em-dashes, so this scan recounts them. All
+    # three (two on a prose line, one in a code comment) must be reported.
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / 'doc.md'
         write(p, GLYPH_FIXTURE)
@@ -2364,8 +2366,9 @@ def test_check_quotes_sources_dir_and_bad_json():
 
 def test_first_party_prose_avoids_the_plain_words_seeds():
     """`G.plain-words` names "lives in" as a colorful synonym for "is in". The
-    bundle's own Markdown, docstrings, and comments must not use it, except
-    where a rule quotes it as the pattern to avoid (inside double quotes)."""
+    bundle's own Markdown, docstrings, and comments must not use it or a
+    variant such as "lives under", except inside double quotes or a code span.
+    CHANGELOG.md, this file, and the upstream-owned files are skipped."""
     repo_root = SCRIPTS.parent.parent.parent
     rc, out, err = run('scan_repo.py', str(repo_root), '--no-commits')
     assert rc == 0, f"self-scan: rc={rc} err={err!r}"

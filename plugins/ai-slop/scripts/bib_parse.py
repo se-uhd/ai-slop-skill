@@ -26,8 +26,8 @@ import unicodedata
 SKIP_TYPES = {'string', 'preamble', 'comment'}
 
 # TeX accent commands: the symbol or letter after the backslash -> combining
-# mark. Applied to the letter that follows (braced or not) after the braces
-# are stripped, so {\"u}, \"{u}, and \"u all become ü.
+# mark. Applied to the letter that follows, braced or not, before clean_value
+# strips the remaining braces, so {\"u}, \"{u}, and \"u all become ü.
 _COMBINING = {
     '"': '\u0308', "'": '\u0301', '`': '\u0300', '^': '\u0302', '~': '\u0303',
     '=': '\u0304', '.': '\u0307', 'c': '\u0327', 'v': '\u030c', 'u': '\u0306',

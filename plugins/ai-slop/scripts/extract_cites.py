@@ -3,21 +3,22 @@ r"""extract_cites.py [PATH]
 
 Gather, for grounding, every citation in a LaTeX document together with the
 claim the surrounding sentence attributes to it, and the bibliographic metadata
-for each cited key. PATH is a `.tex` file or a directory (default: cwd); a
+for each cited key. PATH is a `.tex` file or a directory (default: cwd). A
 directory is resolved to its LaTeX root the same way find_latex_root.py does.
 The root and every file it pulls in with `\input` / `\include` are scanned.
 
-This script opens the loop that find_citation_issues.py reports: that script lists the
-`\cite` calls missing a grounding comment; this script collects what each
-of them needs grounded (the enclosing claim) and the source identity needed to
-find a supporting quote (title / author / year / DOI / URL / eprint). A
-grounding workflow then fetches each source once and returns a verbatim quote
-(or a `TODO verify -- <reason>`); insert_grounding.py writes the result back.
+find_citation_issues.py lists the `\cite` calls that lack a grounding comment.
+This script collects what each of those calls needs for grounding, namely the
+enclosing claim and the metadata that identifies the source (title, author,
+year, DOI, URL, eprint, howpublished). A grounding workflow then fetches each
+source once and returns a verbatim quote (or a `TODO verify -- <reason>`), and
+insert_grounding.py writes the result back.
 
-This script fabricates nothing: it only extracts text already in the `.tex`
+This script fabricates nothing. It only extracts text already in the `.tex`
 and `.bib` files. The anti-fabrication rule, which allows a quote only when
-the source was actually retrieved, is enforced downstream by the workflow that
-fills the quotes.
+the source was actually retrieved, is enforced downstream by the grounding
+workflow and by check_quotes.py, which confirms that each returned quote
+occurs in its source.
 
 Output is one JSON object on stdout:
 
@@ -36,13 +37,13 @@ Output is one JSON object on stdout:
 places the comment after `end_line`.
 
 `groundable` is True for the cite macros that require a grounding comment
-(\cite, \citep, \citet, \parencite, ...); style-only helpers (\citeauthor,
-\citeyear) are recorded with groundable=False so their claims enrich `by_key`
+(e.g., \cite, \citep, \parencite). Style-only helpers (e.g., \citeauthor,
+\citeyear) are recorded with groundable=False, so their claims add to `by_key`
 without becoming insertion targets. `grounded` is True only when the site has a
-grounding comment carrying a retrieved quote; a quote-less `TODO verify` stub
-(planted by revise mode or by an earlier grounding run) counts as ungrounded,
-so a grounding workflow picks the site up and insert_grounding.py fills the
-quote the stub only promises. A one-line summary is printed to stderr.
+grounding comment carrying a quote. A quote-less `TODO verify` stub (planted by
+revise mode or by an earlier grounding run) counts as ungrounded, so a
+grounding workflow picks the site up and insert_grounding.py replaces the stub
+with the quote. A one-line summary is printed to stderr.
 
 Exit codes:
   0  at least one source file was scanned.
@@ -217,7 +218,7 @@ def scan_text(path, text):
     for call in calls:
         _, same_comment = split_code_and_comment(raw_lines[call.end])
         # A quote-less TODO stub classifies as 'todo', not 'quote', so the
-        # site stays an insertion target until a retrieved quote lands. The
+        # site stays an insertion target until a retrieved quote is written. The
         # comment block is looked up below the line the call ends on.
         grounded = grounding_quality(raw_lines, call.end, same_comment) == 'quote'
         yield {

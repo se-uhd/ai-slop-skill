@@ -2,9 +2,10 @@
 """check_quotes.py <quotes.json> [--apply] [--sources-dir DIR]
 
 Check that each grounding quote a workflow agent returned occurs in the source
-the agent says it read. This is the mechanical half of the anti-fabrication
-rule: the agent prompt forbids a quote from memory, and this script enforces
-it wherever the source is text the script can read itself.
+the agent says it read. This script is the mechanical half of the
+anti-fabrication rule. The agent prompt forbids a quote from memory, and this
+script enforces the rule wherever the source is text that the script can read
+itself.
 
 The quotes JSON is the file `/ai-slop:ground` assembles for insert_grounding.py.
 Each key maps to either a quote or a todo, and a quote names its source:
@@ -25,9 +26,10 @@ One tab-separated line per checked key goes to stdout:
 Verdicts:
     confirmed      the quote occurs in the source text
     not-in-source  the source was read and the quote does not occur in it
-    unverifiable   the source is not text this script can read: a PDF or other
-                   binary, a missing `source` field, or a URL that served a
-                   non-text content type. The caller checks these by hand.
+    unverifiable   the quote or source cannot be checked as text: an empty
+                   quote, a missing `source` field, a PDF or other binary, a
+                   URL that served a non-text content type, or a response over
+                   the 5 MB cap. The caller checks these by hand.
     unreachable    the source could not be fetched or opened
 
 A local `source` is resolved as given, then under --sources-dir when that is

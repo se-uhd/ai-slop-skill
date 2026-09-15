@@ -3,8 +3,8 @@
 
 Deterministic recheck for the Unicode and ASCII dash "tells" the writing rules flag
 mechanically. The per-section review pass is an LLM reading prose, and it
-undercounts these glyphs: it will report "twelve em-dashes" when there are
-fifteen, or miss one in a code comment. This scan is the ground truth. It reads
+undercounts these glyphs. It reports "twelve em-dashes" when there are
+fifteen, or misses one in a code comment. This scan is the ground truth. It reads
 each file byte for byte and prints one tab-separated line per offending glyph to
 stdout:
 
@@ -22,14 +22,14 @@ the authoritative lists):
                  `.tex` is a tell. Replace with the format's ASCII form (`:`, a
                  comma, a period, or `---` in LaTeX).
   - en-dash:     U+2013 (–). A tell as a `term – gloss` separator, but legitimate
-                 in a numeric or page range (`pp. 12–18`); the caller judges.
+                 in a numeric or page range (`pp. 12–18`). The caller judges.
   - arrow:       U+2192 → and the rest of the family (← ↔ ⇒ ⇐ ⇔). "Claude loves
-                 the -> arrow"; real writers type `->`.
+                 the -> arrow". Real writers type `->`.
   - curly-quote: U+2018/2019/201C/201D and the low-9 variants (‚ „). A text editor
-                 produces straight quotes; smart quotes are pasted in.
+                 produces straight quotes. Smart quotes are pasted in.
   - ellipsis:    U+2026 (…). Typed as `...`.
   - nbsp:        U+00A0, a non-breaking space. Typed as a normal space (or `~` in
-                 LaTeX); a literal one is a paste artifact.
+                 LaTeX). A literal one is a paste artifact.
   - ascii-dash:  `--` and `---` doing a dash's work: spaced (` -- `), unspaced
                  between letters (`word--word`), or LaTeX's `---`. The general
                  layer counts the dash, not the character, so rewriting `—` as
@@ -42,7 +42,7 @@ the authoritative lists):
                  in the bundle's own `% GROUNDING:` comments never counts.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like find_citation_issues.py.
-It flags every occurrence; the caller applies the documented exceptions before
+It flags every occurrence. The caller applies the documented exceptions before
 reporting: an en-dash inside a range, any glyph inside quoted source material or
 a code string/identifier, and a lone ASCII hyphen or minus sign, which is never
 matched. The glyph in a *code comment* is still a tell and is meant to be
@@ -58,18 +58,18 @@ Exits 2 on a usage error: no arguments, or none of the given paths could be read
 (nothing was scanned). The exit-2 case guards the same shell-quoting mishap as
 the citation scanner, namely a whole file list collapsed into one unreadable argument,
 which would otherwise look like a clean "no tells" run. Non-empty stdout signals
-findings; empty stdout means none.
+findings, and empty stdout means none.
 
 Known limitations:
   - No format awareness for the Unicode glyphs. The scan does not parse Markdown
     fences, LaTeX verbatim, or string literals, so a glyph inside fenced code or a
-    quoted string is still emitted; the `<context>` line lets the caller judge.
-    (The omission is deliberate: a literal em-dash in a code *comment* must be
+    quoted string is still emitted. The `<context>` line lets the caller judge.
+    (The omission is deliberate. A literal em-dash in a code *comment* must be
     caught, and distinguishing a comment from a string per language is the
-    extractor's job, not this scan's.) The ASCII dash pass is the exception: it
+    extractor's job, not this scan's.) The ASCII dash pass is the exception. It
     skips fenced blocks (nesting honored), inline code spans, and LaTeX
-    comments, because `--` is ordinary syntax there and the false-positive rate
-    would swamp the signal.
+    comments, because `--` is ordinary syntax there and false positives would
+    outnumber the real dashes.
   - splitlines() consumes the Unicode line separators U+2028/U+2029 and U+0085, so
     a glyph that is itself a line separator is not reported as content.
 """
@@ -80,8 +80,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from scan_io import FenceTracker, report_unreadable  # noqa: E402
 
-# Codepoint -> category name. Adding a glyph is a one-line edit here; the stderr
-# breakdown and the smoke tests read the category names from CATEGORIES below.
+# Codepoint -> category name. Adding a glyph to an existing category is a
+# one-line edit here. A new category also needs its name in CATEGORIES below,
+# which sets the stderr breakdown.
 GLYPHS = {
     '—': 'em-dash',
     '–': 'en-dash',
@@ -107,7 +108,7 @@ SEPARATOR_LINE = re.compile(r'^[\s|:+-]+$')
 CODE_SPAN = re.compile(r'`[^`]*`')
 TEX_COMMENT = re.compile(r'(?<!\\)%.*$')
 
-# Display order for the stderr breakdown; every category appears once.
+# Display order for the stderr breakdown. Every category appears once.
 CATEGORIES = ('em-dash', 'ascii-dash', 'en-dash', 'arrow', 'curly-quote',
               'ellipsis', 'nbsp')
 
@@ -120,8 +121,8 @@ def truncate(text, limit=120):
 
 
 def scan_file(path, stats):
-    """Scan one file for Unicode-glyph tells, print one TSV row per occurrence
-    to stdout, and update `stats` in place."""
+    """Scan one file for Unicode-glyph and ASCII-dash tells, print one TSV row
+    per occurrence to stdout, and update `stats` in place."""
     try:
         text = Path(path).read_text(encoding='utf-8', errors='replace')
     except OSError as e:

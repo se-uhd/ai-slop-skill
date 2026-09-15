@@ -34,10 +34,10 @@ Kinds:
                      validation"). See `T.verbs-not-nouns`.
 
 The word count leaves out what the STE layer protects. A quotation counts as
-one word, and so does an inline code span, a URL, and a math span. A LaTeX
-command that carries no prose (a citation, a reference, a label, a footnote, a
-to-do note) counts as nothing, and any other command keeps only the text of
-its arguments.
+one word, and so does an inline code span, a URL, and, in a `.tex` file, a
+math span. A LaTeX command that carries no prose (a citation, a reference, a
+label) or prose outside the sentence (a footnote, a to-do note) counts as
+nothing, and any other command keeps only the text of its brace arguments.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like
 scan_reference.py. The caller applies each rule's test before reporting. A

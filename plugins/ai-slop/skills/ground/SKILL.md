@@ -3,13 +3,13 @@ name: ground
 description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify -- <reason>` stub when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev20"
+  version: "2026-09_rev21"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
 # AI Slop Review: Ground Mode
 
-This skill fills the grounding comments review mode flags as missing. `/ai-slop:review` lists every `\cite{}` missing a `% GROUNDING:` comment as a grounding to-do but never fills it. Ground mode fetches each cited source, extracts a verbatim quote supporting the claim the paper attributes to it, and writes the grounding comment into the LaTeX. Where the source cannot be retrieved, it writes a `TODO verify -- <reason>` stub instead, never a quote from memory. Quote-less `TODO verify` stubs, planted by `/ai-slop:revise` or by an earlier ground run, count as unfilled. Ground picks those sites up and replaces the stub with the retrieved quote.
+This skill fills the grounding comments that review mode flags as missing. `/ai-slop:review` lists every `\cite{}` missing a `% GROUNDING:` comment as a grounding to-do but never fills it. Ground mode fetches each cited source, extracts a verbatim quote supporting the claim the paper attributes to it, and writes the grounding comment into the LaTeX. Where the source cannot be retrieved, it writes a `TODO verify -- <reason>` stub instead, never a quote from memory. Quote-less `TODO verify` stubs, planted by `/ai-slop:revise` or by an earlier ground run, count as unfilled. Ground picks those sites up and replaces the stub with the retrieved quote.
 
 **Audience and tone.** The default user is an author who has citations to ground before submission. The result is an audit trail in the source: a quote that co-authors and reviewers can check against each citation. Frame the summary as work completed and work still needing the author's attention, not as a verdict.
 
@@ -56,14 +56,14 @@ The skill operates on the LaTeX paper in the current working directory. No argum
 
 5. **Assemble the quotes file.** Collect the agents' results into `grounding-quotes.json`, mapping each key to either `{"quote": "<verbatim text>", "source": "<url or path>"}` or `{"todo": "<reason>"}`. Write nothing for a key if its agent failed entirely. Leaving it absent keeps it for a future run.
 
-6. **Check the quotes against their sources.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_quotes.py grounding-quotes.json --apply [--sources-dir <dir>]`. For each quote it re-reads the named source (a local text file, or an HTML or plain-text URL) and confirms the quote occurs in it after whitespace and punctuation normalization. A quote that does not occur is downgraded in place to `{"todo": "unverified"}`, and each verdict is printed as `<key>\t<verdict>\t<detail>`. A PDF, a binary, or an unreachable source comes back `unverifiable` or `unreachable`: open that source yourself (Read for a local PDF, WebFetch for a URL), confirm the quote, and downgrade it by hand the same way when you cannot. Nothing goes into the paper that neither the script nor you have seen in the source.
+6. **Check the quotes against their sources.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_quotes.py grounding-quotes.json --apply [--sources-dir <dir>]`. For each quote it re-reads the named source (a local text file, or an HTML or plain-text URL) and confirms the quote occurs in it after whitespace and punctuation normalization. A quote that does not occur is downgraded in place to `{"todo": "unverified", "source": "<the same source>"}`, and each verdict is printed as `<key>\t<verdict>\t<detail>`. A PDF, a binary, or an unreachable source comes back `unverifiable` or `unreachable`: open that source yourself (Read for a local PDF, WebFetch for a URL), confirm the quote, and downgrade it by hand the same way when you cannot. Nothing goes into the paper that neither the script nor you have seen in the source.
 
 7. **Insert the comments.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/insert_grounding.py grounding-cites.json grounding-quotes.json`. It writes `% GROUNDING: <key> -- "<quote>"` (or the `TODO verify -- <reason>` form) after each groundable, ungrounded cite line, matching the line's indentation. An existing quote-less `TODO verify` stub for the key is replaced in place. A site with a quote-backed comment for the key is left alone (idempotent), and each line is re-checked against the file before editing, so any site that moved is skipped. Use `--dry-run` first if the user wants to preview the edits.
 
 8. **Summarize.** Tell the user, in plain terms:
    - How many citations were grounded with a retrieved quote, and how many of those quotes step 6 confirmed mechanically.
    - How many got a TODO, broken down by reason (`unverified` marks a returned quote the check could not find in its source).
-   - **The `source-does-not-support` cases, called out first.** These cases are not mere gaps. The source was read and does not back the claim, which flags a likely miscitation (a wrong key, or a cite stretched past what the source says). Report each one with its key and the claim so the author can fix the citation, not just the comment.
+   - **The `source-does-not-support` cases, called out first.** Each one flags a likely miscitation (a wrong key, or a citation that claims more than the source says), because the source was read and does not back the claim. Report each one with its key and the claim so the author can fix the citation, not just the comment.
    - Any keys missing `.bib` metadata.
 
 9. **Stop.** Leave the edits in the working tree. The user inspects them with `git diff` and commits when satisfied. Do not commit, and do not run a review.
@@ -122,7 +122,7 @@ Map each result to `grounding-quotes.json`: `status: 'quote'` becomes `{quote, s
 - `../../scripts/check_quotes.py`: checks each returned quote against the source it names and downgrades the ones it cannot find.
 - `../../scripts/insert_grounding.py`: writes the `% GROUNDING:` comments back idempotently from the quotes JSON.
 - `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`: locate the root and gate the skill to LaTeX.
-- `../../shared/rules-latex.md`: defines the `% GROUNDING:` convention this skill fills. It is referenced as a fallback when the user asks why grounding matters.
+- `../../shared/rules-latex.md`: defines the `% GROUNDING:` convention that this skill fills. It is referenced as a fallback when the user asks why grounding matters.
 
 ## Constraints
 

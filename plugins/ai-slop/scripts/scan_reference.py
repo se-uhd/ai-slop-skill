@@ -3,7 +3,7 @@
 
 Recall aid for the general layer's **Reference** rules. The per-section review
 pass is an LLM reading prose, and it misses unanchored references the same way
-it undercounts Unicode glyphs: a sentence-initial "This shows that ..." reads
+it undercounts Unicode glyphs. A sentence-initial "This shows that ..." reads
 fluently, so the reviewer does not stop on it. This scan lists every candidate
 so the reviewer applies the rule's test ("the [noun] just mentioned") to each
 one. It
@@ -19,21 +19,24 @@ Kinds:
 
   - bare-demonstrative: a sentence-initial This / These / That / It followed
                         directly by a verb (an auxiliary, a modal, or one of the
-                        closed list of commentary verbs in VERBS, optionally after
-                        an adverb such as "also" or "in turn"). A demonstrative
-                        followed by a noun ("These tests were") is anchored and
-                        is not listed. The verb list is closed on purpose: an
-                        "-s means verb" heuristic would list "These tests".
+                        commentary verbs in the closed lists VERBS_3SG,
+                        VERBS_BASE, and VERBS_PAST, optionally after an adverb
+                        such as "also" or "in turn"). A demonstrative followed
+                        by a noun ("These tests were") is anchored and is not
+                        listed. The verb lists are closed on purpose, because a
+                        heuristic that reads every "-s" word as a verb would
+                        list "These tests".
   - such-noun:          "such" + noun anywhere in running prose ("such tools",
                         "such an approach"). Whether the text has instantiated
-                        the category is the reviewer's judgment; the scan only
+                        the category is the reviewer's judgment. The scan only
                         guarantees recall. "such as" and "such that" are not
                         matched.
   - stand-in:           a word standing in for a noun the sentence could name
-                        (ones, the former, the latter, respectively, do / did so, and
-                        "those" followed by of / that / which / with). "one" is
-                        not scanned: the numeral and the generic "one" would
-                        swamp the list.
+                        (ones, the former, the latter, respectively, do / does /
+                        did / doing / done so, and "those" followed by of /
+                        that / which / with). "one" is not scanned, because
+                        the numeral and the generic "one" would outnumber the
+                        real stand-ins.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like scan_glyphs.py. The
 caller applies the rule's test and exceptions before reporting. Skipped up
@@ -50,20 +53,21 @@ A one-line summary is always printed to stderr:
 
 Exits 0 when at least one input file was read, whether or not candidates were
 found. Exits 2 on a usage error: no arguments, or none of the given paths could
-be read. Non-empty stdout signals candidates; empty stdout means none.
+be read. Non-empty stdout signals candidates, and empty stdout means none.
 
 Known limitations:
   - Matching is case-sensitive on the capitalized forms, and a sentence start is
     detected from punctuation on the same line (or the line start). A "This" at
-    the start of a hard-wrapped LaTeX line mid-sentence is therefore listed; the
-    test applies to it either way, so this costs the reviewer one glance.
-  - A dummy "it" outside the cue list ("It remains an open question whether")
-    is listed; the reviewer skips it.
+    the start of a hard-wrapped LaTeX line mid-sentence is therefore listed. The
+    test applies to it either way, so the extra row costs the reviewer one
+    glance.
+  - A dummy "it" outside the cue list ("It seems odd that") is listed. The
+    reviewer skips it.
   - A past participle used as an adjective after a demonstrative ("This limited
     scope") can be listed as a verb, and "the latter" as an adjective ("the
-    latter half") is listed like the stand-in; the reviewer clears both.
-  - First-mention definite articles (the third Reference rule) are not scanned:
-    telling a first mention from an anaphoric "the" needs discourse tracking, and
+    latter half") is listed like the stand-in. The reviewer clears both.
+  - First-mention definite articles (the third Reference rule) are not scanned.
+    Telling a first mention from an anaphoric "the" needs discourse tracking, and
     "the + noun + to/that" alone is too noisy to list.
 """
 import re
@@ -195,7 +199,7 @@ def is_connective(pron, verb, rest):
 def prose_lines(path, text):
     """Yield (line_idx, line, prose) for lines to scan, where `prose` is the
     line with any LaTeX comment removed. Skips fenced code and skip-listed LaTeX
-    environments; `line` is the original for context and column numbers."""
+    environments. `line` is the original for context and column numbers."""
     is_tex = Path(path).suffix.lower() == '.tex'
     fences = FenceTracker()
     in_env = False
