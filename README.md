@@ -1,12 +1,12 @@
 # AI Slop Review Skill
 
-An [Agent Skill](https://agentskills.io/home) bundle that catches AI slop in prose and enforces conventions for clear writing. It works on any text, such as a Markdown draft, documentation, or a blog post, and adds a scientific layer for empirical software engineering papers (voice and tense, statistical reporting per APA/IEEE/ACM, citations) and a LaTeX layer for LaTeX source (BibTeX, `\citeauthor`, `% GROUNDING`). Both load automatically for `.tex` source, and `--scientific` opts a non-LaTeX manuscript into the scientific layer. Agent Skills is an open standard originally developed by Anthropic and now read by Claude Code, Cursor, GitHub Copilot, and OpenAI Codex, among others. The [client list](https://agentskills.io/clients) names the rest.
+An [Agent Skill](https://agentskills.io/home) bundle that catches AI slop in prose and enforces conventions for clear writing. It works on any text, such as a Markdown draft, documentation, or a blog post, and adds a scientific layer for empirical software engineering papers (voice and tense, statistical reporting per APA/IEEE/ACM, citations) and a LaTeX layer for LaTeX source (BibTeX, `\citeauthor`, `% GROUNDING`). Both load automatically for `.tex` source, and `--scientific` opts a non-LaTeX manuscript into the scientific layer. An optional STE layer (`--ste`) applies rules based on ASD-STE100 Simplified Technical English to any input. Agent Skills is an open standard originally developed by Anthropic and now read by Claude Code, Cursor, GitHub Copilot, and OpenAI Codex, among others. The [client list](https://agentskills.io/clients) names the rest.
 
-The skill keeps three layers of writing rules (listed under Rule layers below) and fetches a general AI-trope catalog (named patterns such as negative parallelism, em-dash addiction, and rule-of-three groupings, each tagged with a status) at runtime from [tropes.fyi](https://tropes.fyi), the only source for it. Each mode always loads the general layer, adds the LaTeX layer when the input is LaTeX source (detected by `scripts/detect_scope.py`), and adds the scientific (research article) layer for LaTeX or when you pass `--scientific`. So the same bundle reviews a Markdown blog draft, a non-LaTeX manuscript (with `--scientific`), or a full LaTeX paper.
+The skill keeps four layers of writing rules (listed under Rule layers below) and fetches a general AI-trope catalog (named patterns such as negative parallelism, em-dash addiction, and rule-of-three groupings, each tagged with a status) at runtime from [tropes.fyi](https://tropes.fyi), the only source for it. Each mode always loads the general layer, adds the LaTeX layer when the input is LaTeX source (detected by `scripts/detect_scope.py`), adds the scientific (research article) layer for LaTeX or when you pass `--scientific`, and adds the STE layer when you pass `--ste`. So the same bundle reviews a Markdown blog draft, a non-LaTeX manuscript (with `--scientific`), or a full LaTeX paper.
 
 ## Rule layers
 
-The writing rules ship as three layers. Which layers load depends on whether the input is LaTeX source (detected automatically by `scripts/detect_scope.py`) and whether you pass `--scientific`:
+The writing rules ship as four layers. Which of the first three load depends on whether the input is LaTeX source (detected automatically by `scripts/detect_scope.py`) and whether you pass `--scientific`:
 
 | Input | general | scientific | latex |
 |---|:---:|:---:|:---:|
@@ -15,6 +15,10 @@ The writing rules ship as three layers. Which layers load depends on whether the
 | Anything else, `--scientific` | yes | yes | no |
 
 `rules-general.md` applies to any prose (vocabulary, punctuation, structure, tone). Every rule carries a stable key (`G.semicolons`, `S.significant`, `L.grounding-comments`) that reports, cross-references, and the self-checks cite alongside its name. `rules-scientific.md` adds research article conventions (verb tense by section, citations, statistics, figures and tables, threats to validity). `rules-latex.md` adds LaTeX source mechanics (LaTeX quotes, `\citeauthor`, `% GROUNDING`, BibTeX). A LaTeX paper is always treated as a research article, so the scientific layer loads automatically. For a non-LaTeX manuscript (Markdown or PDF), `--scientific` opts into it.
+
+`rules-ste.md` is the optional STE layer, and `--ste` adds it to any row of the table. It applies part of ASD-STE100 Simplified Technical English: short sentences with the subject and verb near the start, active voice, one topic per paragraph, one meaning per word, verbs instead of nominalizations, and no dropped articles. It changes the STE rules on sentence length and style. Sentence length varies, with a short sentence next to a long one of up to 25 words, and each unit (a reply, a headed section, or a text without headings) carries one stylistic device at most. Quotations and literal strings stay as written. Where the STE layer and the general layer set different limits for the same thing, the STE limit applies. The STE rules carry `T.` keys.
+
+When an STE rewrite of an existing sentence would lose meaning, precision, or force, the sentence stays and gets a `[KEPT: reason]` marker. A review lists these sentences in its report. `/ai-slop:revise` inserts the markers, inside a comment in LaTeX and Markdown so the rendered output does not show them, and a later STE review skips the marked sentences. `scripts/scan_sentences.py` lists the candidates that a count or a word pattern can find: sentences over 25 words, runs of sentences of similar length, passive verbs, and a light verb followed by an action noun ("make a decision").
 
 ## Versioning
 
@@ -46,7 +50,7 @@ Six slash commands become available:
 /ai-slop:init
 ```
 
-`review`, `review-diff`, and `init` detect LaTeX source automatically and load all three rule layers for it. Any other input loads the general layer. Add `--scientific` to also apply the research article rules to a non-LaTeX manuscript (a Markdown or PDF paper). `review-repo` is the whole-codebase mode and always loads the general layer (`--scientific` optional). It never loads the LaTeX layer, since it reviews a repository's prose and code comments rather than a single paper.
+`review`, `review-diff`, and `init` detect LaTeX source automatically and load all three rule layers for it. Any other input loads the general layer. Add `--scientific` to also apply the research article rules to a non-LaTeX manuscript (a Markdown or PDF paper). `review-repo` is the whole-codebase mode and always loads the general layer (`--scientific` optional). It never loads the LaTeX layer, since it reviews a repository's prose and code comments rather than a single paper. `--ste` adds the STE layer in `review`, `review-diff`, `review-repo`, and `init`.
 
 Run them from your project directory. `/ai-slop:review` finds the document to review in the current directory (a LaTeX root or a PDF; pass an explicit path for a Markdown or plain-text draft), walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines you changed in the git working tree (default base `HEAD`; pass any git ref as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:review-repo` sweeps a whole repository instead of one document. It extracts every Markdown, plain-text, and LaTeX file, the comments and doc-comments of the source and config files (Shell, Java, Kotlin, Python, JavaScript, and TypeScript, plus most other common source, markup, and config languages; the full set is the `COMMENT_SPECS`/`NAME_SPECS` table in `scan_repo.py`), and the commit messages, then reports slop grouped by file and by commit, so prose that drifted across many commits gets caught the way a diff review never does. In a git repository it covers the tracked files, so `.gitignore`d build output and dependencies drop out. Generated files, lockfiles, binaries, and vendored directories are skipped. Commit-message scanning defaults to the most recent 200 commits and is tunable with `--commits=<N|all|range>` or `--no-commits`. `/ai-slop:revise` reads the report and applies its suggested revisions to the source. Both review modes write the same report schema. `/ai-slop:ground` fills the grounding comments that the review flags as missing, for LaTeX papers. Review *finds* the `\cite{}` calls missing a grounding comment, and ground *fills* them by fetching each cited source and inserting a retrieved verbatim quote (or a `TODO verify -- <reason>` stub when the source cannot be retrieved). `/ai-slop:init` is a one-shot setup command. It copies the bundled writing rules into a project-local `WRITING.md` and adds a reference to it in the repository's `CLAUDE.md` (creating `CLAUDE.md` if missing) so collaborators and any Agent Skills client see the conventions even without this plugin installed. Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "ground the citations", "set up writing rules in this repo").
 
@@ -67,7 +71,7 @@ The skills are laid out per the [Agent Skills specification](https://agentskills
 
 ## Use as a system prompt
 
-For chat UIs or LLM APIs without Agent Skills support, paste the contents of the rule layers (`rules-general.md`, plus `rules-scientific.md` and `rules-latex.md` as your text calls for) and the catalog from [tropes.fyi](https://tropes.fyi/tropes-md) into the system prompt. The catalog page has a download button, and the file behind it is plain markdown formatted for system-prompt use.
+For chat UIs or LLM APIs without Agent Skills support, paste the contents of the rule layers (`rules-general.md`, plus `rules-scientific.md`, `rules-latex.md`, and `rules-ste.md` as your text calls for) and the catalog from [tropes.fyi](https://tropes.fyi/tropes-md) into the system prompt. The catalog page has a download button, and the file behind it is plain markdown formatted for system-prompt use.
 
 ## What the skills do
 
@@ -105,9 +109,10 @@ Given a previously generated report and the document's source (LaTeX, Markdown, 
 2. **Locates each `Quote` in the document** using the report's `Location` hint to disambiguate.
 3. **Applies the `Suggested revision`** with one Edit call per finding (so each change is one diff hunk).
 4. **Inserts `% GROUNDING: TODO verify <key>` stubs (LaTeX only)** after the ungrounded `\cite{}` calls listed in the report's grounding to-do, for the author to fill, or for `/ai-slop:ground` to replace with retrieved quotes.
-5. **Skips findings** with a `Quote` that cannot be located uniquely or a suggestion that would break the markup (e.g., LaTeX), with reasons logged in the summary.
-6. **Skips items in "Items requiring author judgment"** (they need manual decisions).
-7. **Prints a summary** of applied, skipped, and author-judgment-required findings.
+5. **Marks kept sentences (STE reports only)** with a `[KEPT: reason]` marker in the position that `rules-ste.md` gives for the format, without changing the sentence.
+6. **Skips findings** with a `Quote` that cannot be located uniquely or a suggestion that would break the markup (e.g., LaTeX), with reasons logged in the summary.
+7. **Skips items in "Items requiring author judgment"** (they need manual decisions).
+8. **Prints a summary** of applied, skipped, and author-judgment-required findings.
 
 Revise mode does not regenerate the report and does not commit. The user runs `git diff` to inspect and `git commit` to keep the changes.
 
@@ -130,7 +135,7 @@ The init skill is a one-shot setup command for new (or existing) project reposit
 
 ## Repository layout
 
-The plugin is under `plugins/ai-slop/`: `commands/` holds the six slash commands, `skills/` the six `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, init), `shared/` the three rule layers plus the rationale doc, and `scripts/` the stdlib Python helpers: scope and LaTeX root detection, the repository prose extractor (`scan_repo.py`), the trope-catalog fetch, citation, BibTeX, and reference checks, citation extraction, the grounding-quote check, and grounding-comment insertion, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
+The plugin is under `plugins/ai-slop/`: `commands/` holds the six slash commands, `skills/` the six `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, init), `shared/` the four rule layers plus the rationale doc, and `scripts/` the stdlib Python helpers: scope and LaTeX root detection, the repository prose extractor (`scan_repo.py`), the sentence scan for STE mode (`scan_sentences.py`), the trope-catalog fetch, citation, BibTeX, and reference checks, citation extraction, the grounding-quote check, and grounding-comment insertion, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
 
 ## Maintainer notes
 
@@ -159,7 +164,7 @@ If a user reports `Failed to install: This plugin uses a source type your Claude
 
 ## Acknowledgements
 
-The general AI-trope catalog is the work of [Ossama Chaib](https://ossama.is) at [tropes.fyi](https://tropes.fyi). This skill fetches the catalog at runtime and bundles no copy of it. All credit for the trope catalog goes to him. The layered writing rules (`rules-general.md`, `rules-scientific.md`, `rules-latex.md`) are maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd).
+The general AI-trope catalog is the work of [Ossama Chaib](https://ossama.is) at [tropes.fyi](https://tropes.fyi). This skill fetches the catalog at runtime and bundles no copy of it. All credit for the trope catalog goes to him. The layered writing rules (`rules-general.md`, `rules-scientific.md`, `rules-latex.md`, `rules-ste.md`) are maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd). The STE layer adapts writing rules from the ASD-STE100 Simplified Technical English specification, which ASD maintains, and reproduces neither the specification nor its dictionary.
 
 ## License
 

@@ -12,6 +12,7 @@ The printed value drives which rule layers a skill loads:
     general -> rules-general.md
                (plus rules-scientific.md only when --scientific is passed, to
                 treat a non-LaTeX document as a research article)
+    With --ste, a skill adds rules-ste.md to either set.
 
 Detection:
     A file is `latex` iff its extension is `.tex`; everything else (.pdf, .md,
