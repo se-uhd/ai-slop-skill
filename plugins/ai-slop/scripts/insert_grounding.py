@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 r"""insert_grounding.py <extract.json> <quotes.json> [--dry-run]
 
-Write grounding comments back into a LaTeX source, closing the loop that
-extract_cites.py opens. It takes the extract JSON (citation sites) and a quotes
+Write grounding comments back into a LaTeX source at the citation sites that
+extract_cites.py collected. It takes the extract JSON (citation sites) and a quotes
 JSON (one result per cited key, produced by a grounding workflow) and inserts,
 after each groundable cite line, a comment of the form
 
@@ -12,12 +12,12 @@ when a quote was retrieved, or
 
     % GROUNDING: <key> -- TODO verify -- <reason>
 
-when it was not (reasons such as paywalled, abstract-only, book, not-found,
-source-does-not-support, or unverified, the last written by check_quotes.py
-when a returned quote could not be found in its source). The TODO form is the anti-fabrication guarantee: a
-quote appears ONLY when the workflow actually retrieved the source text;
-otherwise the comment records why it could not, for a human to resolve. This
-script never invents a quote. It writes exactly what the quotes JSON carries.
+when it was not. The workflow gives reasons such as paywalled, not-found, or
+source-does-not-support, and check_quotes.py writes unverified when a returned
+quote could not be found in its source. The TODO form is the anti-fabrication
+guarantee. A quote appears ONLY when the workflow actually retrieved the source
+text. Otherwise the comment records why the source could not be retrieved, for
+a human to resolve. This script never invents a quote. It writes exactly what the quotes JSON carries.
 
 The quotes JSON holds one entry per cited key, each with EITHER a quote OR a todo:
 
@@ -31,30 +31,31 @@ subset and later runs can fill the rest (resumable over the still-TODO keys).
 
 Behavior:
   - Only `groundable` sites (the cite macros find_citation_issues.py flags) are
-    annotated; style-only \citeauthor / \citeyear sites are skipped.
+    annotated, and style-only \citeauthor / \citeyear sites are skipped.
   - Idempotent: a (line, key) that already has a quote-backed `% GROUNDING:`
     comment naming that key is left alone, so re-running is safe.
   - A quote-less `TODO verify` stub naming the key, planted by revise mode
     (`% GROUNDING: TODO verify <key>`) or by an earlier run of this script,
-    does NOT count as grounded: it is replaced in place with the new comment,
-    so a later grounding run can fill what a stub only marks. Replacing a stub
-    with identical content is a no-op. A stub on the cite's own line is never
-    edited (mid-line edits risk the code); the new comment is inserted below
-    and the inline stub is left for the author to drop.
+    does NOT count as grounded. The run replaces the stub line in place with
+    the new comment. Replacing a stub with identical content is a no-op. A
+    stub on the cite's own line is never edited, because an edit in the middle
+    of a line could damage the LaTeX before the `%`. The new comment is
+    inserted below, and the author removes the inline stub.
   - Each comment matches the cite line's indentation and is inserted on its own
     line directly after the line the call ends on (`end_line` in the extract,
     the same line as `line` unless the key list spans lines). A `%` comment's
     trailing newline is consumed by LaTeX, so the surrounding markup still
     renders unchanged.
-  - The cite lines are re-checked against the file before editing; if the
-    source moved since extraction (the lines no longer hold a call with that
-    key) the site is skipped with a warning rather than edited blindly.
+  - The cite lines are re-checked against the file before editing. If the
+    source changed since extraction (the lines no longer hold a call with that
+    key), the site is skipped with a warning and not edited.
   - --dry-run prints what would change without writing.
 
-A one-line summary is printed to stderr, with a per-reason breakdown of the
-TODOs (source-does-not-support is called out because it flags a likely miscitation,
-not merely an ungrounded claim). Exits 0 on success; 2 if an input JSON cannot
-be read or parsed.
+A one-line summary is printed to stderr. When the run has TODOs, a second line
+breaks them down by reason, and a note follows for source-does-not-support,
+because that reason flags a likely miscitation, not merely an ungrounded claim.
+Exits 0 on success, and 2 if an input JSON cannot be read, cannot be parsed,
+or is not a JSON object.
 """
 import argparse
 import json
@@ -89,8 +90,8 @@ def comment_for(key, result):
     """Build the GROUNDING comment body (without indentation) for one key.
     Returns (text, kind) where kind is 'quote' or a TODO reason. A non-string or
     whitespace-only quote is treated as no quote and routed to a TODO, so an
-    empty or malformed quote never crosses the anti-fabrication boundary into a
-    `% GROUNDING: <key> -- ""` that falsely asserts a retrieved quote."""
+    empty or malformed quote never becomes a `% GROUNDING: <key> -- ""`
+    comment that falsely asserts a retrieved quote."""
     raw = result.get('quote')
     quote = ' '.join(raw.split()) if isinstance(raw, str) else ''  # one line, collapsed
     if quote:
@@ -118,9 +119,9 @@ def grounds_key(text, key):
 def already_grounded(lines, idx, key):
     """True if the cite on line `idx` already has a quote-backed GROUNDING
     comment for `key`, either inline or in the attached comment block. A
-    quote-less `TODO verify` stub for the key does NOT count: stubs are
-    placeholders this script upgrades in place (see find_todo_stub), so
-    treating them as grounded would permanently block the fill."""
+    quote-less `TODO verify` stub for the key does NOT count. Stubs are
+    placeholders that this script upgrades in place (see find_todo_stub), so
+    treating them as grounded would keep their quotes from ever being filled."""
     _, same_comment = split_code_and_comment(lines[idx])
     return any(grounds_key(text, key) and is_quote_grounding(text)
                for _, text in iter_comment_block(lines, idx, same_comment))
@@ -158,7 +159,7 @@ def plan_file(lines, sites, quotes, stats):
     """Return (inserts, replacements) for one file, updating `stats` in place:
     {line_index: [comment lines]} of new comments to insert after a cite line,
     and {line_index: new line} of TODO-stub lines to rewrite in place.
-    Each site is a dict with line/keys/groundable."""
+    Each site is a dict with line/end_line/keys/groundable/file."""
     inserts = {}
     replacements = {}
     for site in sites:

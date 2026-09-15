@@ -15,11 +15,11 @@ The printed value drives which rule layers a skill loads:
     With --ste, a skill adds rules-ste.md to either set.
 
 Detection:
-    A file is `latex` iff its extension is `.tex`; everything else (.pdf, .md,
+    A file is `latex` iff its extension is `.tex`. Everything else (.pdf, .md,
     .txt, ...) is `general`.
     A directory is `latex` iff it contains a LaTeX root (a .tex with an
     uncommented \\documentclass and \\begin{document}, as find_latex_root.py
-    decides); otherwise `general`.
+    decides), and `general` otherwise.
 
 The directory check shells out to find_latex_root.py so the two agree on what
 counts as a root (commented-out markers, main.tex/paper.tex preference, and the

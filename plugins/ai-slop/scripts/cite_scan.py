@@ -32,7 +32,7 @@ is marked, not missing), but grounding_quality classifies them 'todo' rather
 than 'quote', so a grounding run can still pick the site up and fill the quote.
 
 A comment "belongs" to a cite when it sits on the cite's own line or in the
-contiguous run of blank and `%`-comment lines directly below it; the first code
+contiguous run of blank and `%`-comment lines directly below it. The first code
 line ends that block. iter_comment_block is the single walker for this block. The
 read side (has_grounding / grounding_quality, used by find_citation_issues.py
 and extract_cites.py) and the write side (insert_grounding.py) both use it, so
@@ -49,11 +49,12 @@ Recognized commands:
   - \nocite is a BibTeX-only print marker, ignored entirely.
 
 Capitalized sentence-start variants (\Cite, \Textcite, \Citeauthor, ...) are
-matched too; the command is lowercased before any set lookup.
+matched too. The command is lowercased before any set lookup.
 
-Limitations inherited by both callers:
+Limitations inherited by every caller (find_citation_issues.py,
+extract_cites.py, and insert_grounding.py's key re-check):
   - Plural multi-cite forms (\textcites, \autocites, ...) use several {key}
-    groups; only the first group is read, so their keys are undercounted.
+    groups. Only the first group is read, so their keys are undercounted.
   - Cite calls inside \verb, listings, or other non-`%`-comment constructs are
     still scanned (only `%` comments are stripped).
 """
@@ -81,9 +82,10 @@ CITE_PATTERN = re.compile(
 )
 
 # Cite calls that DO require a grounding comment and DO count toward the cluster
-# check. Stored lowercased; the regex captures both lower- and capitalized forms
-# and the lookup normalizes. The plural multi-cite forms (cites, parencites, ...)
-# are included; only their first key group is read (see Limitations above).
+# check. Stored lowercased. The regex captures both lower- and capitalized forms,
+# and scan_cite_calls lowercases the command before the lookup. The plural
+# multi-cite forms (cites, parencites, ...) are included, but only their first
+# key group is read (see Limitations above).
 GROUNDED_COMMANDS = {
     'cite', 'citep', 'citet', 'citealp', 'citealt', 'citetext', 'cites',
     'parencite', 'textcite', 'autocite', 'fullcite', 'smartcite', 'footcite',
@@ -102,7 +104,7 @@ CITATION_COMMANDS = GROUNDED_COMMANDS | SKIPPED_COMMANDS
 
 # A grounding comment leads with the GROUNDING marker. The key (if named) may
 # sit either after the colon (`% GROUNDING: <key> -- ...`) or before it
-# (`% GROUNDING <key>: ...`); detection only needs the leading marker word, so
+# (`% GROUNDING <key>: ...`). Detection only needs the leading marker word, so
 # neither the colon position nor the presence of a key matters here. Anchored at
 # the start of the comment (after the `%`), so a stray lowercase "grounding"
 # mention inside a prose comment is not mistaken for the marker.
@@ -159,8 +161,8 @@ def iter_comment_block(lines, idx, same_line_comment):
 
 
 def is_quote_grounding(comment):
-    """True if `comment` is a grounding comment carrying a quote (a
-    double-quoted segment), that is, a completed grounding, as opposed to a quote-less
+    """True if `comment` is a grounding comment that contains a double-quote
+    character, which marks a completed grounding, as opposed to a quote-less
     `TODO verify` stub, which records that the quote is still owed."""
     return is_grounding_comment(comment) and '"' in comment
 
@@ -183,7 +185,7 @@ def has_grounding(lines, idx, same_line_comment):
     """Return True if a grounding comment (quote-backed or TODO stub, any form
     recognized by is_grounding_comment) is attached to the cite on line `idx`,
     either on its own line or in the contiguous blank/comment block below it.
-    Other `%` comments in between do not break the association; the first
+    Other `%` comments in between do not break the association, but the first
     code line does."""
     return grounding_quality(lines, idx, same_line_comment) != 'none'
 

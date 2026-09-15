@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 """scan_io.py: shared helpers for the ai-slop scanners.
 
-`report_unreadable` is the stderr warning emitted when a path passed on the
-command line cannot be read. It was copy-pasted, byte-identical, into the
-citation, BibTeX-field, reference, and grounding scanners, and is defined here
-once so the scanners share one implementation. The "several paths joined into
-one" hint guards the classic unquoted-variable-in-zsh mistake that collapses a
-whole file list into a single over-long, unreadable argument, which would
-otherwise look like a clean "nothing to do" run.
+`report_unreadable` prints the stderr warning for a command-line path that
+cannot be read. It was once copy-pasted, byte-identical, into the citation,
+BibTeX-field, reference, and grounding scanners. It is now defined here once,
+and those scanners, the glyph and sentence scanners, and verify_references.py
+import it. The "several paths joined into one" hint targets a common zsh
+mistake. An unquoted variable is not split on whitespace, so a whole file list
+arrives as a single over-long, unreadable argument, which would otherwise look
+like a clean "nothing to do" run.
 
 `FenceTracker` follows Markdown fenced code blocks line by line for the
-scanners that skip code (scan_glyphs.py, scan_reference.py). It honors nesting
-the way scan_repo.py does: a fence closes only on a bare marker of the same
-character that is at least as long as the opener, so a ``` block quoted inside
-a ```` block does not end the outer block.
+scanners that skip code (scan_glyphs.py, scan_reference.py, scan_sentences.py).
+It honors nesting the way scan_repo.py does. A fence closes only on a bare
+marker of the same character that is at least as long as the opener, so a ```
+block quoted inside a ```` block does not end the outer block.
 """
 import errno
 import re
@@ -45,9 +46,9 @@ class FenceTracker:
 
 def report_unreadable(path, err):
     """Print a friendly stderr warning for an unreadable path. Truncates the
-    path so a runaway argument cannot flood the terminal, and adds a hint when
-    the argument looks like several paths collapsed into one (the classic
-    unquoted-variable-in-zsh mistake)."""
+    path so an over-long argument cannot fill the terminal, and adds a hint when
+    the argument looks like several paths collapsed into one (in zsh, an
+    unquoted variable holding a file list)."""
     shown = str(path)
     if len(shown) > 80:
         shown = shown[:77] + '...'

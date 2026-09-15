@@ -9,8 +9,9 @@ BibTeX spec and print one tab-separated line per offending entry to stdout:
 Empty stdout means all parsed entries are clean. A one-line summary is always
 printed to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field
 issue(s)`) so callers can confirm the run completed without parsing stdout.
-Files that cannot be opened or entries that cannot be parsed are reported on
-stderr but do not abort the run, as long as at least one file is read. The
+Files that cannot be opened, files with unbalanced braces (none of their
+entries is checked), and entries that cannot be parsed are reported on stderr
+but do not abort the run, as long as at least one file is read. The
 script exits 2 on a usage error: no arguments, or none of the given paths
 could be read (so nothing was checked). The exit-2 case keeps a shell mishap
 that collapses the file list into one unreadable argument from passing as a
@@ -29,8 +30,8 @@ Notes:
   - Unknown entry types are silently skipped. Skipping them avoids false positives
     on BibLaTeX-style entries (@online, @dataset, @software, @thesis,
     @report), since their required-field rules are not modeled here.
-  - 'crossref' inheritance is NOT honored; an @inproceedings that
-    legitimately inherits 'booktitle' from a referenced @proceedings will be
+  - 'crossref' inheritance is NOT honored. An @inproceedings that
+    legitimately inherits 'booktitle' from a referenced @proceedings is
     flagged. Sanity-check flagged entries.
   - Assumes BibTeX keys contain no tabs (true in practice).
 """
@@ -44,7 +45,7 @@ from scan_io import report_unreadable  # noqa: E402
 # Required-fields table from Patashnik's btxdoc (the canonical BibTeX manual):
 # https://mirrors.ctan.org/biblio/bibtex/base/btxdoc.tex
 # Update this table only against btxdoc, not by guessing or copying from BibLaTeX
-# docs (BibLaTeX has different rules; see the module docstring).
+# docs. BibLaTeX has different rules (see the module docstring).
 REQUIRED = {
     'article':       ['author', 'title', 'journal', 'year'],
     'book':          ['title', 'publisher', 'year'],   # author OR editor handled separately

@@ -15,8 +15,8 @@ The repo root is positional and defaults to the current working directory. Examp
 - `/ai-slop:review-repo --commits=main..HEAD`: scan the files plus only a branch's commit messages.
 - `/ai-slop:review-repo --no-commits`: skip commit messages and scan only the files.
 
-Commit messages are scanned by default (the most recent 200 commits; merge commits and trailer lines such as `Co-authored-by` are dropped). `--commits=<N>` sets a different count, `--commits=all` covers the full history, and `--commits=<range>` takes a git revision range. Since pushed history is rewritten only by a deliberate repair, commit-message findings are advisory rather than something `/ai-slop:revise` applies. The `--tropes=<path>` override flag (repeatable) from `/ai-slop:review` works the same way here.
+Commit messages are scanned by default (the most recent 200 commits, with merge commits and trailer lines such as `Co-authored-by` dropped). `--commits=<N>` sets a different count, `--commits=all` covers the full history, and `--commits=<range>` takes a git revision range. Since pushed history is rewritten only by a deliberate repair, commit-message findings are advisory rather than something `/ai-slop:revise` applies. The `--tropes=<path>` override flag (repeatable) from `/ai-slop:review` works the same way here.
 
-Use `/ai-slop:review` for a single document and `/ai-slop:review-diff` for only the lines a branch changed. Repo mode is for prose that has accumulated across a codebase, the kind that a diff review never revisits.
+Use `/ai-slop:review` for a single document and `/ai-slop:review-diff` for only the lines a branch changed. Repo mode is for prose that has accumulated across a codebase and that a diff review never revisits.
 
 Do not modify the repository. The only output is `ai-slop-report.md` in the working directory, plus its name in the repository's `.gitignore` when that line is missing. `/ai-slop:revise` applies one document at a time, so fix a repo-wide report's files directly, or run `/ai-slop:revise ai-slop-report.md <file>` per file.

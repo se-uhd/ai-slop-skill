@@ -2,15 +2,16 @@
 """verify_references.py <bibfile> [<bibfile> ...] [--mailto EMAIL]
 
 Best-effort check that each BibTeX entry refers to a real publication, by
-looking it up in academic databases. Online-first: an entry with a DOI is
-resolved at CrossRef, and its title is then looked up at DBLP so DBLP's
-curated year and venue take part in the comparison (the rule layers name DBLP
-as the canonical record for CS/SE venues). An entry without a DOI is looked up
-by title at DBLP and then CrossRef. When there is no network, the affected
-entries are reported `unchecked-offline` and the run still exits 0.
+looking it up in academic databases. Every lookup is online. An entry with a
+DOI is resolved at CrossRef, and its title is then looked up at DBLP so that
+DBLP's curated year and venue take part in the comparison (the rule layers
+name DBLP as the canonical record for CS/SE venues). An entry without a DOI is
+looked up by title at DBLP and then CrossRef. When a required lookup fails, the
+entry is reported `unchecked-offline` and the run still exits 0. A failed DBLP
+lookup for an entry with a DOI only drops DBLP from the comparison.
 
-Two comparisons are deliberately lenient, because the strict form flagged
-correct entries. The year matches when it equals any year the databases record
+The year and venue comparisons are deliberately lenient, because the strict
+forms flagged correct entries. The year matches when it equals any year the databases record
 for the work (CrossRef's online-first and print dates, DBLP's year), since a
 journal paper legitimately carries either. The venue matches on shared words of
 four or more letters, where a common SE venue abbreviation (TOSEM, EMSE, ICSE,
@@ -29,23 +30,26 @@ Verdicts:
     year-mismatch      record found, but the year differs
     venue-mismatch     record found, but the venue differs
     not-found          no DOI and no database match for the title
-    unchecked-offline  a lookup could not run (no network)
+    unchecked-offline  a lookup failed (no network, an HTTP error other than
+                       404, or an unparseable response)
     unchecked          entry has no DOI and no title to look up, or the per-run
                        lookup cap was reached
 
 Cleanly verified entries (`ok`) are not printed. A one-line summary is always
 printed to stderr. The run exits 0 when at least one bib file is read (network
-reachable or not), and exits 2 only when none of the given paths could be read,
-so nothing was checked.
+reachable or not), and exits 2 when no bib file is given or none of the given
+paths could be read, so nothing was checked.
 
-This check is advisory. It confirms, or fails to confirm. It never asserts a reference
-is fabricated except where a DOI provably does not resolve. For an exhaustive,
+This check is advisory. No verdict asserts that a reference is fabricated. For
+an exhaustive,
 non-LLM audit of someone else's submission, use the `hallucite` skill instead.
 
 Canonical metadata: where DBLP and CrossRef disagree, prefer DBLP's curated
 record for CS/SE venues, except when DBLP holds only a preprint and the
-published version is available via the DOI. In code that means the years of
-both are accepted and the venues of both are compared against the entry.
+published version is available via the DOI. For an entry with a DOI, the code
+accepts the years of both records and lets both venue strings take part in the
+venue comparison. For an entry without a DOI, a DBLP title match is used
+whenever one exists, so the preprint exception is not applied.
 
 Future (not yet wired): an optional local DBLP dump ($AI_SLOP_DBLP) for offline
 and faster bulk checks; richer venue-abbreviation matching.
@@ -66,7 +70,7 @@ from scan_io import report_unreadable  # noqa: E402
 
 USER_AGENT = "ai-slop-verify-references/1.0 (+https://github.com/se-uhd/ai-slop-skill)"
 TIMEOUT = 10
-MAX_LOOKUPS = 200  # bound network calls per run; excess entries report `unchecked`
+MAX_LOOKUPS = 200  # at most this many entries are looked up per run, at up to two requests each, and later entries are reported `unchecked`
 
 # Common software-engineering venue abbreviations, expanded before venues are
 # compared. A recall aid for the venue check, not a canonical list.
@@ -99,7 +103,8 @@ VENUE_ABBREVIATIONS = {
 
 
 class NetworkError(Exception):
-    """A lookup could not complete because the network was unreachable."""
+    """A lookup failed because the network was unreachable, the server returned
+    an HTTP error other than 404, or the response was not valid JSON."""
 
 
 # ---------- BibTeX entry projection ----------
@@ -156,8 +161,8 @@ def _words_overlap(ta, tb):
 
 
 def _is_initialism(short, long_):
-    """True when `short` is a single 3- to 8-letter token whose letters appear
-    in order among the initials of `long_`'s words."""
+    """True when `short` is a single token of 3 to 8 letters and its letters
+    appear in order among the initials of `long_`'s words."""
     st = _tokens(short)
     if len(st) != 1 or not st[0].isalpha() or not 3 <= len(st[0]) <= 8:
         return False
@@ -176,7 +181,7 @@ def _venue_match(a, b):
 
 
 def _record_years(record):
-    """Every year a record carries: the `years` set when present, else `year`."""
+    """Every year a record carries, i.e., the `years` set together with `year`."""
     years = {str(y).strip() for y in (record.get('years') or []) if str(y).strip()}
     single = str(record.get('year', '')).strip()
     if single:
@@ -298,8 +303,8 @@ def verify_entry(entry, fetch_doi, fetch_dblp, fetch_title):
     """Resolve one entry to a verdict using the supplied fetchers (injected so
     this is testable without network). A DOI resolves at CrossRef, and DBLP's
     record for the same title is then merged in so its curated year and venue
-    count. Without a DOI, DBLP is consulted before CrossRef title search, so
-    its curated record wins on CS/SE venues."""
+    count. Without a DOI, DBLP candidates are tried before CrossRef candidates,
+    so a DBLP title match is used whenever one exists."""
     doi = (entry.get('doi') or '').strip()
     title = (entry.get('title') or '').strip()
     if doi:

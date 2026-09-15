@@ -6,14 +6,14 @@ Locate the LaTeX root .tex file under dir (default cwd).
 A file qualifies as the root iff it contains both \\documentclass and
 \\begin{document} on lines that are not LaTeX comments (i.e., the marker is
 not preceded by `%` on its own line). Multi-file papers using \\input{} or
-\\include{} are handled implicitly: fragments lack these markers, so only
+\\include{} are handled implicitly. Fragments lack these markers, so only
 the root qualifies. A chapter of a `subfiles` project carries both markers
 too (\\documentclass[main.tex]{subfiles} plus its own \\begin{document}), so
-a file whose document class is `subfiles` is never a root.
+a file with the document class `subfiles` is never a root.
 
-Search strategy: glob *.tex in dir non-recursively first; if no candidates
-qualify, fall back to a recursive search of the same tree. The fast path
-covers the common layout where the root sits in the working directory; the
+Search strategy: glob *.tex in dir non-recursively first. If no candidate
+qualifies, fall back to a recursive search of the same tree. The fast path
+covers the common layout with the root in the working directory, and the
 fallback covers `paper/main.tex` style subdir layouts.
 
 Exit codes:

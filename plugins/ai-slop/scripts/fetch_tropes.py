@@ -14,11 +14,11 @@ markdown, so `extract_markdown` unwraps it: first from the download link's
 block that renders the same text. Both come from the site's own generator and
 carry the same bytes. Whatever is extracted, and a body that arrives as plain
 text, is accepted only when it has the catalog's shape (see
-`looks_like_catalog`): a Markdown H1 as its first line and at least
+`looks_like_catalog`): a Markdown H1 as its first non-blank line and at least
 MIN_HEADINGS `## ` trope headings. A plain-text error message, a JSON error
 body, or an error page that happens to carry a `<pre>` block is rejected, so a
-redesign or an outage fails loudly instead of passing something else off as the
-catalog. A body over MAX_BYTES is rejected too.
+redesign or an outage stops the run with an error instead of returning other
+text as the catalog. A body over MAX_BYTES is rejected too.
 
 What was accepted is described on stderr (byte count, heading count, and a
 content hash), so a changed catalog is visible in the run's log and two runs
@@ -49,7 +49,7 @@ import urllib.request
 VIEWER_URL = "https://tropes.fyi/tropes-md"
 USER_AGENT = "ai-slop-skill (+https://github.com/se-uhd/ai-slop-skill)"
 TIMEOUT = 10
-MAX_BYTES = 2_000_000   # the catalog is tens of kilobytes; anything larger is not it
+MAX_BYTES = 2_000_000   # the catalog is tens of kilobytes, so a body this large is not the catalog
 MIN_HEADINGS = 5        # the catalog carries dozens of `## ` trope headings
 
 DATA_URI_RE = re.compile(r'href="(data:text/markdown[^"]*)"')

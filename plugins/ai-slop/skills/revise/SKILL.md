@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev20"
+  version: "2026-09_rev21"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -34,6 +34,7 @@ Both inputs default to the current working directory. No arguments are required.
 ## Workflow
 
 1. **Read the report.** Parse the finding blocks under `Findings by section` (or, in a repo-mode report, under `Findings by file`, taking only the blocks under the `### <relpath>` heading that matches the document being edited). Each block has `Rule`, `Location`, `Quote`, and `Suggested revision`. Skip blocks under "Items requiring author judgment". Those blocks need human input. Blocks under a `### commit <sha>` heading name no file and are listed as skipped.
+
 2. **Read the document.** For LaTeX, open the source root and follow `\input{}` / `\include{}` to gather the full text, and note the file each section is in if the paper is multi-file. For Markdown or plain text, open the file named in the report header or on the command line.
 
 3. **Apply each finding.** For each finding, in document order:
@@ -43,9 +44,9 @@ Both inputs default to the current working directory. No arguments are required.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one, prefer the location closest to the hint and log the ambiguity in the summary.
    - For a LaTeX document, if the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys), log it as skipped with the reason rather than apply it.
 
-4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment immediately after that `\cite{}` call (one Edit per cite, matching the surrounding indentation and comment placement). These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any cite if its location cannot be matched.
+4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment on its own line directly below the line on which that `\cite{}` call ends (one Edit per cite, matching the indentation of the cite line). A stub placed inside the line would comment out the rest of it, and `/ai-slop:ground` never edits a stub on the cite's own line. These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any cite if its location cannot be matched.
 
-5. **Cross-cutting metrics.** These metrics are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section". Do not invent new edits to balance a metric.
+5. **Cross-cutting metrics.** These metrics are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section" (or "Findings by file" in a repo-mode report). Do not invent new edits to balance a metric.
 
 6. **Summarize.** Print a summary to the console with three lists:
    - **Applied:** findings with the `Quote` located and replaced, plus grounding stubs inserted.
