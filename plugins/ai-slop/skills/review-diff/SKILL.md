@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev19"
+  version: "2026-09_rev20"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -63,7 +63,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
    - A short verbatim quote of the offending text, with enough surrounding context to be unique within the paper.
    - A concrete suggested replacement.
 
-   In STE mode, handle kept sentences as `/ai-slop:review` step 4 does. Do not report a sentence under an STE rule when it carries a `[KEPT: reason]` marker, and list a changed sentence that an STE rewrite would weaken under **Kept sentences** instead of reporting it.
+   In STE mode, list a changed sentence that an STE rewrite would weaken under **Items requiring author judgment** instead of reporting it, as `/ai-slop:review` step 4 does.
 
 9. **Cross-cutting metrics, scoped to the diff.** Compute on changed lines only:
    - Dash count and locations in changed lines. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py` over the changed files and keep the rows inside the changed-line set, as `/ai-slop:review` step 5 does.

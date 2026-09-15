@@ -16,9 +16,9 @@ The writing rules ship as four layers. Which of the first three load depends on 
 
 `rules-general.md` applies to any prose (vocabulary, punctuation, structure, tone). Every rule carries a stable key (`G.semicolons`, `S.significant`, `L.grounding-comments`) that reports, cross-references, and the self-checks cite alongside its name. `rules-scientific.md` adds research article conventions (verb tense by section, citations, statistics, figures and tables, threats to validity). `rules-latex.md` adds LaTeX source mechanics (LaTeX quotes, `\citeauthor`, `% GROUNDING`, BibTeX). A LaTeX paper is always treated as a research article, so the scientific layer loads automatically. For a non-LaTeX manuscript (Markdown or PDF), `--scientific` opts into it.
 
-`rules-ste.md` is the optional STE layer, and `--ste` adds it to any row of the table. It applies part of ASD-STE100 Simplified Technical English: short sentences with the subject and verb near the start, active voice, one topic per paragraph, one meaning per word, verbs instead of nominalizations, and no dropped articles. It changes the STE rules on sentence length and style. Sentence length varies, with a short sentence next to a long one of up to 25 words, and each unit (a reply, a headed section, or a text without headings) carries one stylistic device at most. Quotations and literal strings stay as written. Where the STE layer and the general layer set different limits for the same thing, the STE limit applies. The STE rules carry `T.` keys.
+`rules-ste.md` is the optional STE layer, and `--ste` adds it to any row of the table. It applies part of ASD-STE100 Simplified Technical English: short sentences with the subject and verb near the start, active voice, one topic per paragraph, one meaning per word, verbs instead of nominalizations, and no dropped articles. It changes the STE rules on sentence length and style. Sentence length varies around a target of 25 words, with a tolerance up to 35. Each unit (a reply, a headed section, or a text without headings) carries one stylistic device at most. Quotations and literal strings stay as written. Where the STE layer and the general layer set different limits for the same thing, the STE limit applies. The STE rules carry `T.` keys.
 
-When an STE rewrite of an existing sentence would lose meaning, precision, or force, the sentence stays and gets a `[KEPT: reason]` marker. A review lists these sentences in its report. `/ai-slop:revise` inserts the markers, inside a comment in LaTeX and Markdown so the rendered output does not show them, and a later STE review skips the marked sentences. `scripts/scan_sentences.py` lists the candidates that a count or a word pattern can find: sentences over 25 words, runs of sentences of similar length, passive verbs, and a light verb followed by an action noun ("make a decision").
+When an STE rewrite of an existing sentence would lose meaning, precision, or force, the sentence stays as written, and a review lists it for author judgment. `scripts/scan_sentences.py` lists the candidates that a count or a word pattern can find: sentences over 25 words, runs of sentences of similar length, passive verbs, and a light verb followed by an action noun ("make a decision").
 
 ## Versioning
 
@@ -109,10 +109,9 @@ Given a previously generated report and the document's source (LaTeX, Markdown, 
 2. **Locates each `Quote` in the document** using the report's `Location` hint to disambiguate.
 3. **Applies the `Suggested revision`** with one Edit call per finding (so each change is one diff hunk).
 4. **Inserts `% GROUNDING: TODO verify <key>` stubs (LaTeX only)** after the ungrounded `\cite{}` calls listed in the report's grounding to-do, for the author to fill, or for `/ai-slop:ground` to replace with retrieved quotes.
-5. **Marks kept sentences (STE reports only)** with a `[KEPT: reason]` marker in the position that `rules-ste.md` gives for the format, without changing the sentence.
-6. **Skips findings** with a `Quote` that cannot be located uniquely or a suggestion that would break the markup (e.g., LaTeX), with reasons logged in the summary.
-7. **Skips items in "Items requiring author judgment"** (they need manual decisions).
-8. **Prints a summary** of applied, skipped, and author-judgment-required findings.
+5. **Skips findings** with a `Quote` that cannot be located uniquely or a suggestion that would break the markup (e.g., LaTeX), with reasons logged in the summary.
+6. **Skips items in "Items requiring author judgment"** (they need manual decisions).
+7. **Prints a summary** of applied, skipped, and author-judgment-required findings.
 
 Revise mode does not regenerate the report and does not commit. The user runs `git diff` to inspect and `git commit` to keep the changes.
 

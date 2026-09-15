@@ -291,20 +291,27 @@ understand for readers whose first language is not English. The entries below
 explain where the layer departs from full STE and how it fits with the general
 layer.
 
-- **Sentence limit** (`T.short-sentences`). ASD-STE100 limits a sentence in
-  procedural text to 20 words and a sentence in descriptive text to 25. The
-  layer applies 25 to all text, because most prose that the skills review is
-  descriptive and because **Vary sentence length** (`T.vary-length`) needs room
-  for a long sentence. A quotation or a literal string counts as one word
+- **Sentence length band** (`T.short-sentences`). ASD-STE100 limits a sentence
+  in procedural text to 20 words and a sentence in descriptive text to 25. The
+  layer takes 25 as a target for all text and allows up to 35. A word count is
+  approximate. A statistics parenthetical adds words that a reader skims, and a
+  citation adds none, so a cutoff at 25 would pass or flag a sentence on a
+  difference of one or two counted words. The count also stands in for the
+  test that matters, whether the reader must hold several clauses before the
+  point. A 28-word sentence can pass that test, and a 20-word sentence can fail
+  it. Between 26 and 35 words the test decides, and above 35 the sentence is
+  split. The upper bound is the top of the range for a long sentence in
+  **Sentence length** (`G.sentence-length`), so the two layers agree on
+  length. A quotation or a literal string counts as one word
   (`T.quotations`, `T.literals`). The writer cannot shorten either one, so
   counting their words would flag sentences that have no fix.
 - **Varied length** (`T.vary-length`). A strict STE rewrite yields runs of short
   sentences of similar length. Uniform length is the low burstiness that the
   general layer names as a mark of machine-written text (`G.sentence-length`),
   so a strict rewrite makes prose plainer and more obviously generated at the
-  same time. The changed rule keeps the STE maximum and asks for contrast below
-  it. Its example pairs a five-word sentence with a 24-word one, which stays
-  under the maximum.
+  same time. The changed rule asks for contrast within the length band. Its
+  example pairs a five-word sentence with a 24-word one, which stays within the
+  STE target.
 - **Active voice** (`T.active-voice`). A passive sentence can leave out its
   actor, and in technical text the actor is often what the reader needs to
   know. The layer keeps one exception, the unknown actor, because an active
@@ -331,12 +338,10 @@ layer.
   allows an idiom that the general layer removes. The units (a reply, a headed
   section, a text without headings) are the spans a reader takes in as one
   piece.
-- **Kept sentences** (`T.keep-and-mark`). An STE rewrite can drop a
+- **Kept sentences** (`T.keep-original`). An STE rewrite can drop a
   qualification that depends on two clauses at once, or flatten the emphasis
   that an argument needs. Forcing the rewrite would make the text less
-  accurate, while STE exists to make technical text less ambiguous. Keeping the
-  sentence without a marker would hide the decision, and the next review would
-  flag the sentence again. The marker records the reason next to the sentence.
-  In LaTeX and Markdown it goes in a comment, so the published output never
-  shows it, the same placement that **Keep metacommentary in comment-commands**
-  (`L.editorial-comments`) gives an author's note.
+  accurate, while STE exists to make technical text less ambiguous. The layer
+  leaves no marker on a kept sentence. A marker in the source goes stale once
+  someone edits the sentence, and a review already lists a sentence it will not
+  rewrite as an item for author judgment.

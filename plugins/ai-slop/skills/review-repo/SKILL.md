@@ -3,7 +3,7 @@ name: review-repo
 description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research-article layer, and `--ste` adds the Simplified Technical English layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev19"
+  version: "2026-09_rev20"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -54,7 +54,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
    When unsure whether a flagged line is prose or code the extractor surfaced by accident, open the file for context and drop the finding if it is not natural language.
 
-   In STE mode, handle kept sentences as `/ai-slop:review` step 4 does. Do not report a sentence under an STE rule when it carries a `[KEPT: reason]` marker, and list a sentence that an STE rewrite would weaken under **Kept sentences** instead of reporting it. List no kept sentences for a commit message, since revise mode never edits one.
+   In STE mode, list a sentence that an STE rewrite would weaken under **Items requiring author judgment** instead of reporting it, as `/ai-slop:review` step 4 does.
 
 6. **Cross-cutting metrics, repo-wide.** Compute over the extracted text and report raw counts with locations (per-page densities do not apply to a repository): dashes, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py` run over the Markdown, plain-text, and LaTeX files the scan listed (do not eyeball them, and treat the rows as `/ai-slop:review` step 5 does); American-vs-British spelling (a frequent source of drift in code comments); restricted-word occurrences; and, when the scientific layer is in scope, the "significant" audit and verb tense. A single punctuation mark that is the wrong choice (a semicolon joining two independent clauses, an em-dash standing in for a period, a colon used as a generic mid-sentence pause) is a per-file finding under step 5. In STE mode, also run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_sentences.py` over the same Markdown, plain-text, and LaTeX files and test its rows as `/ai-slop:review` step 5 does. Read comments and commit messages for the same rules without the scan.
 
