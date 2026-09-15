@@ -28,7 +28,7 @@ Notes:
   - @conference is treated as an alias of @inproceedings (Scribe-compat
     entry per btxdoc).
   - Unknown entry types are silently skipped. Skipping them avoids false positives
-    on BibLaTeX-style entries (@online, @dataset, @software, @thesis,
+    on BibLaTeX-style entries (e.g., @online, @dataset, @software, @thesis,
     @report), since their required-field rules are not modeled here.
   - 'crossref' inheritance is NOT honored. An @inproceedings that
     legitimately inherits 'booktitle' from a referenced @proceedings is

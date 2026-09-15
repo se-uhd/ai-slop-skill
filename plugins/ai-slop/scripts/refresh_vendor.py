@@ -4,14 +4,19 @@
 Refresh the vendored PyMarkdown tree under `./_vendor/` (sibling of this
 script) and regenerate `./_vendor/NOTICE`.
 
-The script creates a temporary virtual environment, installs
-`pymarkdownlnt` with `--no-binary :all:` so every dependency is built from
-source (forcing pure-Python wheels where the package supports it), walks
-the resolved package set, copies the top-level packages into `_vendor/`,
-replaces the `pyjson5` C-extension with a stdlib shim (PyMarkdown is
-always invoked with `--no-json5`), strips `__pycache__` directories,
-verifies no compiled extensions landed in the tree, and writes a NOTICE
-file collecting each package's license metadata.
+The script runs these steps:
+
+  1. Create a temporary virtual environment.
+  2. Install `pymarkdownlnt` with `--no-binary :all:`, so every dependency
+     is built from source (forcing pure-Python wheels where the package
+     supports it).
+  3. Walk the resolved package set.
+  4. Copy the top-level packages into `_vendor/`.
+  5. Strip `__pycache__` directories.
+  6. Replace the `pyjson5` C-extension with a stdlib shim (PyMarkdown is
+     always invoked with `--no-json5`).
+  7. Verify that no compiled extensions are in the tree.
+  8. Write a NOTICE file that collects each package's license metadata.
 
 Maintainer-only. End users invoke `lint_markdown.py`, which loads the
 vendored tree from `_vendor/` directly and never shells out to pip.
@@ -42,8 +47,8 @@ from pathlib import Path
 PYJSON5_SHIM = '''"""Stdlib-backed pyjson5 shim used by the vendored PyMarkdown tree.
 
 PyMarkdown's `application_properties` dependency imports pyjson5 at module
-load time. The upstream pyjson5 ships as a C extension; vendoring it would
-bake one platform's compiled artifact into the skill bundle. The
+load time. The upstream pyjson5 ships as a C extension, so vendoring it would
+include one platform's compiled artifact in the skill bundle. The
 PyMarkdown CLI is always invoked with --no-json5, so the
 `load_json_files_as_json5` code paths in application_properties never run.
 This shim therefore only satisfies the imports and the exception symbols
@@ -85,8 +90,8 @@ SKIP_ENTRIES = frozenset({
 # upstream project has a known license. Examples:
 #   - sly 0.5: METADATA classifies as MIT but the shipped LICENSE is a
 #     3-clause BSD-style notice with a non-endorsement clause.
-#   - Columnar 1.4.1: METADATA's License: field is absent; classifiers
-#     and the upstream LICENSE.txt confirm MIT.
+#   - Columnar 1.4.1: METADATA's License: field is absent, but
+#     classifiers and the upstream LICENSE.txt confirm MIT.
 LICENSE_LABEL_OVERRIDES = {
     "sly": "BSD-3-Clause",
     "columnar": "MIT",
@@ -115,8 +120,8 @@ def strip_pycache(root: Path) -> None:
 def find_binary_extensions(root: Path) -> list[Path]:
     """Return any compiled artifacts found under root.
 
-    Even a POSIX-host build can pick up `.pyd`/`.dll` files: a sdist may
-    ship them as package data, in which case pip copies them verbatim
+    Even a POSIX-host build can pick up `.pyd`/`.dll` files, because a sdist
+    may ship them as package data, in which case pip copies them verbatim
     into site-packages regardless of platform.
     """
     binaries = []
@@ -149,7 +154,7 @@ def collect_notice(
     without attribution.
     """
     # Stems, not file names: top_level.txt entries are bare module names,
-    # so a single-module dist like typing_extensions must be recorded as
+    # so a single-module dist such as typing_extensions must be recorded as
     # "typing_extensions", not "typing_extensions.py".
     vendored_names = {
         p.stem if p.is_file() else p.name
@@ -175,7 +180,7 @@ def collect_notice(
         metadata = di / "METADATA"
         if not metadata.is_file():
             continue
-        # METADATA is RFC 822; email.parser handles folded multiline
+        # METADATA is RFC 822, so email.parser handles folded multiline
         # values that naive line-prefix matching would truncate.
         msg = email.parser.Parser().parsestr(
             metadata.read_text(encoding="utf-8", errors="replace"),
@@ -183,7 +188,7 @@ def collect_notice(
         )
         name = (msg.get("Name") or "").strip()
         version = (msg.get("Version") or "").strip()
-        # License-Expression (PEP 639) is canonical; the deprecated
+        # License-Expression (PEP 639) is canonical. The deprecated
         # free-text License field is the fallback, whichever order the
         # wheel's build backend emitted them in.
         license_field = " ".join(
@@ -198,11 +203,11 @@ def collect_notice(
                 ln.strip() for ln in top_level_path.read_text(
                     encoding="utf-8").splitlines() if ln.strip()
             ]
-        # Skip dist-infos whose top-level entries aren't in the vendored
-        # tree. Dist-infos without top_level.txt are kept: dropping them
-        # on a name guess could lose attribution for packages whose
-        # module name differs from the dist name (PyYAML installs
-        # `yaml`), and over-attribution is harmless.
+        # Skip a dist-info if its top-level entries aren't in the vendored
+        # tree. Dist-infos without top_level.txt are kept, because dropping
+        # them on a name guess could lose attribution for packages with a
+        # module name other than the dist name (PyYAML installs `yaml`),
+        # and over-attribution is harmless.
         if top_levels and not any(t in vendored_names for t in top_levels):
             continue
         override = LICENSE_LABEL_OVERRIDES.get(name.lower())
@@ -232,8 +237,8 @@ def collect_notice(
                 if parts:
                     license_text = "\n".join(parts)
         if license_text is None and bundled_dir.is_dir():
-            # Maintainer-supplied text for packages whose wheel does not
-            # ship a LICENSE file in its dist-info (e.g. Columnar 1.4.1).
+            # Maintainer-supplied text for packages that ship no LICENSE
+            # file in their wheel's dist-info (e.g. Columnar 1.4.1).
             for candidate in (f"{name}.txt", f"{name.lower()}.txt"):
                 entry = bundled_dir / candidate
                 if entry.is_file():
@@ -253,8 +258,8 @@ def collect_notice(
             missing.append(f"{name} {version}")
         # Apache-2.0 §4(d) requires reproducing any upstream NOTICE file.
         # We do this unconditionally so future Apache-licensed additions don't
-        # silently miss the obligation. It is a no-op for packages that don't
-        # ship one.
+        # silently miss the obligation. Copying a NOTICE file is a no-op for
+        # packages that don't ship one.
         for candidate in ("NOTICE", "NOTICE.txt", "NOTICE.md"):
             nf = di / candidate
             if nf.is_file():
@@ -314,7 +319,7 @@ def main() -> int:
             return 2
         sys.stderr.write(f"resolved site-packages: {site_packages}\n")
 
-        # Stage the new tree in a sibling directory; swap at the end.
+        # Stage the new tree in a sibling directory and swap it in at the end.
         staging = scripts_dir / "_vendor.new"
         if staging.exists():
             shutil.rmtree(staging)
@@ -381,7 +386,7 @@ def _populate_and_swap(site_packages, scripts_dir, staging) -> int:
     (staging / "NOTICE").write_text(notice, encoding="utf-8")
 
     # Swap via two renames so the old tree is never deleted before the
-    # new one is in place; a crash in the window between them leaves
+    # new one is in place. A crash in the window between them leaves
     # both trees on disk (_vendor.old and _vendor.new), recoverable by
     # renaming either back.
     old_dir = scripts_dir / "_vendor.old"

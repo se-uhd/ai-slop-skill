@@ -3,13 +3,13 @@ name: init
 description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the repository's CLAUDE.md (creating CLAUDE.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", "init the writing conventions", or `/ai-slop:init`. Writes WRITING.md and creates or amends CLAUDE.md, and does not modify your content.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev22"
+  version: "2026-09_rev23"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
 # AI Slop Review: Init Mode
 
-This skill builds a project-local `WRITING.md` by concatenating the layered writing rules with the AI-trope catalog (fetched live from tropes.fyi), then either creates a `CLAUDE.md` that references it or appends a reference to an existing one. The result is a repository where any Agent Skills client sees both the rules and the trope catalog through the standard CLAUDE.md mechanism, even if the user has not installed this plugin and even when offline.
+This skill builds a project-local `WRITING.md` by concatenating the layered writing rules with the AI trope catalog (fetched live from tropes.fyi), then either creates a `CLAUDE.md` that references it or appends a reference to an existing one. The result is a repository where any Agent Skills client sees both the rules and the trope catalog through the standard CLAUDE.md mechanism, even if the user has not installed this plugin and even when offline.
 
 **Audience and tone.** The default user is an author setting up a new project repository or retrofitting an existing one. After this mode runs, the user may edit WRITING.md to add project-specific conventions. The file is a starting point, not a synced replica of the bundled rules.
 
@@ -21,7 +21,7 @@ Invoke this skill when the user:
 2. Runs `/ai-slop:init`.
 3. Wants the writing rules visible to co-authors and to other Agent Skills clients without requiring this plugin to be installed.
 
-Do **not** invoke when the user wants to audit a draft (use `/ai-slop:review` or `/ai-slop:review-diff`) or to apply review findings (`/ai-slop:revise`).
+Do not invoke when the user wants to audit a draft (use `/ai-slop:review` or `/ai-slop:review-diff`) or to apply review findings (`/ai-slop:revise`).
 
 ## Inputs
 
@@ -31,18 +31,18 @@ The skill operates on the current working directory. No arguments are required.
 
 ## Workflow
 
-1. **Resolve the target directory.** Default is the working directory. If the user passed a directory argument, use that. Verify it exists and is writable.
+1. **Resolve the target directory.** Default is the working directory. If the user passed a directory argument, use that. Verify that it exists and is writable.
 
-2. **Determine which rule layers to include.** Four layers under `../../shared/`: `rules-general.md` (always), `rules-scientific.md` (research-article conventions), `rules-latex.md` (LaTeX-source mechanics), and `rules-ste.md` (the optional Simplified Technical English layer). Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <target-directory>`. `latex` (the directory has a LaTeX root) includes all three layers. `general` includes `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research-article project). `--general` overrides the detection and includes `rules-general.md` alone, for a code repository that happens to contain a paper under a subdirectory. `--ste` adds `rules-ste.md` to whatever the detection or `--general` chose, for a project that writes in Simplified Technical English. From each selected layer file, take everything from its first `##` heading onward (skip the H1 title and the intro paragraph). These bodies, concatenated in the order general, scientific, latex, ste, form the rules section of WRITING.md.
+2. **Determine which rule layers to include.** The layers under `../../shared/` are `rules-general.md` (always), `rules-scientific.md` (research article conventions), `rules-latex.md` (LaTeX-source mechanics), and `rules-ste.md` (the optional Simplified Technical English layer). Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <target-directory>`. `latex` (the directory has a LaTeX root) includes the general, scientific, and LaTeX layers. `general` includes `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research article project). `--general` overrides the detection and includes `rules-general.md` alone, for a code repository that happens to contain a paper under a subdirectory. `--ste` adds `rules-ste.md` to whatever the detection or `--general` chose, for a project that writes in Simplified Technical English. From each selected layer file, take everything from its first `##` heading onward (skip the H1 title and the intro paragraph). These bodies, concatenated in the order general, scientific, latex, ste, form the rules section of WRITING.md.
 
-3. **Load the AI-trope catalog.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py`. tropes.fyi is the only source and there is no bundled fallback, so a failed fetch exits 1 with an empty stdout. Stop there and tell the user, rather than writing a `WRITING.md` with no trope catalog in it. The script accepts only a body with the catalog's shape and prints the size, heading count, and content hash of what it accepted to stderr.
+3. **Load the AI trope catalog.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py`. tropes.fyi is the only source and there is no bundled fallback, so the script exits 1 with an empty stdout when it cannot fetch the catalog. Stop there and tell the user, rather than writing a `WRITING.md` with no trope catalog in it. The script accepts only a body with the catalog's shape and prints the size, heading count, and content hash of what it accepted to stderr.
 
 4. **Normalize the trope catalog for inlining.** The fetched catalog is a standalone document with its own H1 and a leading preamble that points readers at system-prompt usage. Neither belongs inside WRITING.md. To inline it cleanly:
    - Drop everything before the first H2 (a line starting with `##`) in the trope content (the original H1 `# AI Writing Tropes to Avoid`, the "Add this file to your AI assistant's system prompt..." paragraph, and the leading `---` separator).
    - Demote every remaining heading by one level: `## Negative parallelism` becomes `### Negative parallelism`, `## "Quietly" and other magic adverbs` becomes `### "Quietly" and other magic adverbs`, and so on. Adjust headings only at the start of a line. Do not touch `#` characters that appear mid-sentence.
    - Insert a blank line between each `**Avoid patterns like:**` line and the bullet list that follows it. The catalog runs the two together, which the Markdown linter flags as a list without surrounding blank lines.
    - Leave the status line under each heading (e.g., `` `consistent` · Sentence Structure ``) as it stands. It carries the catalog's own frequency rating and category.
-   - Keep the trailing closing paragraph ("Remember: any of these patterns used once might be fine...") at the end of the demoted content. It closes the catalog.
+   - Keep the trailing closing paragraph ("Remember: any of these patterns used once might be fine...") at the end of the demoted content.
 
 5. **Build the WRITING.md content.** Compose the file as `<header>` + `<rules body>` + `<separator and trope intro>` + `<normalized trope body>`:
 
@@ -50,7 +50,7 @@ The skill operates on the current working directory. No arguments are required.
     # Writing rules for this project
 
     <!-- maintainer: bump the version string below on every release (see README "Maintainer notes") -->
-    These rules apply to all prose in this repository. They were generated by `/ai-slop:init` from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) (skill version 2026-09_rev22) and combine the writing rules maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd) with a general AI-trope catalog from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is).
+    These rules apply to all prose in this repository. They were generated by `/ai-slop:init` from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) (skill version 2026-09_rev23) and combine the writing rules maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd) with a general AI trope catalog from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is).
 
     Edit this file freely to add project-specific conventions. The sections below are a starting point. Once you edit them, this file is yours.
 
@@ -103,14 +103,14 @@ The skill operates on the current working directory. No arguments are required.
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, and `../../shared/rules-ste.md` are the rule layers. The scope and the `--general` and `--ste` flags select which provide the rules section of WRITING.md.
-- `../../scripts/fetch_tropes.py` fetches the catalog from tropes.fyi. The inlined catalog is current at the moment of generation. A failed fetch stops the skill (step 3).
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, and `../../shared/rules-ste.md` are the rule layers. The scope and the `--general` and `--ste` flags select which layers provide the rules section of WRITING.md.
+- `../../scripts/fetch_tropes.py` fetches the catalog from tropes.fyi. The inlined catalog is current at the moment of generation. The skill stops when fetching the catalog fails (step 3).
 - `../../scripts/detect_scope.py` selects the rule layers (step 2), and `../../scripts/lint_markdown.py` lints the written files (step 8).
 
 ## Constraints
 
 - **Do not silently overwrite WRITING.md.** Always confirm before replacing an existing file. The user may have edited it.
 - **Idempotent CLAUDE.md updates.** If CLAUDE.md already references `WRITING.md`, do not append a duplicate section. Re-running this skill must be safe.
-- **Demote trope-catalog headings cleanly.** Inline the trope catalog under a single `## AI Writing Tropes to Avoid` section in WRITING.md, with all sub-headings shifted one level deeper than in the source. Do not produce two H1s or sibling H2 trees in the same document.
+- **Demote trope catalog headings cleanly.** Inline the trope catalog under a single `## AI Writing Tropes to Avoid` section in WRITING.md, with all sub-headings shifted one level deeper than in the source. Do not produce two H1s or sibling H2 trees in the same document.
 - **Do not modify the paper itself.** This mode writes only `WRITING.md` and `CLAUDE.md` in the target directory.
 - **No commits.** Leave the new files in the working tree. The user inspects the result with `git diff` and commits when satisfied.

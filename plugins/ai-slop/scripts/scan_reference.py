@@ -44,7 +44,7 @@ front, because they are never findings: LaTeX comment lines and trailing `%`
 comments in `.tex` files, fenced code blocks (nesting honored), LaTeX verbatim / lstlisting /
 minted / comment environments, and the common dummy-it frames ("It is possible
 that", "It is unclear whether", "It follows that", "It turns out", "It remains to
-be seen"; the cue list is DUMMY_IT_CUES). "That is," and "That said," are
+be seen", with the full cue list in DUMMY_IT_CUES). "That is," and "That said," are
 connectives, not references, and are skipped too.
 
 A one-line summary is always printed to stderr:

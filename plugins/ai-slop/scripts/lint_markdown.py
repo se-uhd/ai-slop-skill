@@ -2,12 +2,12 @@
 """lint_markdown.py [--fix] [--config PATH] <path>
 
 Lint a Markdown file against the GFM dialect using the vendored PyMarkdown
-tree under `_vendor/`. If a `schema_checks.py` module sits next to this
+tree under `_vendor/`. If a `schema_checks.py` module is next to this
 script, its `schema_findings(text, path)` function is invoked and its
 findings are merged into the output.
 
 The vendored tree is refreshed by `refresh_vendor.py` (maintainer-only).
-End users never need to install anything; the bundle is self-contained.
+The bundle is self-contained, so end users never need to install anything.
 
 Dialect
 -------
@@ -15,8 +15,8 @@ GitHub-Flavored Markdown via PyMarkdown's CommonMark base plus the
 `markdown-tables`, `markdown-task-list-items`, `markdown-strikethrough`,
 `markdown-extended-autolinks`, and `front-matter` extensions. Disabled
 plugins (`md013` line-length, `md033` no-inline-html, `md041`
-first-line-heading) are noisy or report-template-incompatible and add no
-value to the prose this linter targets.
+first-line-heading) are noisy or incompatible with the report template and
+add no value to the prose this linter targets.
 
 Pre-pass checks
 ---------------
@@ -29,7 +29,7 @@ on the raw bytes before pymarkdown is invoked:
                         nested inside lists or blockquotes are not
                         tracked.
   unclosed-frontmatter  a leading `---` frontmatter block is not closed
-                        before the first blank line (or EOF); pymarkdown
+                        before the first blank line (or EOF), so pymarkdown
                         abandons such a block and silently re-parses it
                         as body text. Emitted only when the config
                         enables the front-matter extension, and honors
@@ -37,13 +37,13 @@ on the raw bytes before pymarkdown is invoked:
                         thematic break (`---` followed directly by a
                         blank line) is not frontmatter and is not
                         flagged. Closed blocks are YAML-validated the
-                        same way pymarkdown validates them; a block that
+                        same way pymarkdown validates them. A block that
                         does not parse as YAML is treated as body text,
                         so fences inside it are tracked.
 
 Note: pymarkdown 0.9.37 crashes (internal assertion) on files that open
 with `---` but lack a final newline, and, when allow_blank_lines is enabled,
-on any unclosed frontmatter block; the wrapper exits 2 on such files and
+on any unclosed frontmatter block. The wrapper exits 2 on such files and
 still prints the pre-pass and schema findings it detected.
 
 Schema checks
@@ -127,11 +127,11 @@ def frontmatter_settings(config_path):
     where a truthy non-boolean leaves the setting at its default, and its
     defaults (the extension is disabled unless enabled
     explicitly). An unparseable config yields (False, False), which only
-    suppresses the frontmatter pre-pass, never adds findings.
+    suppresses the frontmatter pre-pass and never adds findings.
     """
     try:
         # Binary read: PyYAML auto-detects UTF-8/16/32 via BOM, matching
-        # how pymarkdown's own loader reads the same file; undecodable
+        # how pymarkdown's own loader reads the same file. Undecodable
         # bytes appear as a YAMLError, not a UnicodeDecodeError.
         doc = yaml.safe_load(config_path.read_bytes())
     except (OSError, yaml.YAMLError):
@@ -150,8 +150,8 @@ def frontmatter_settings(config_path):
 
 def frontmatter_yaml_valid(content_lines):
     """Mirror pymarkdown's front-matter YAML validation: the block counts
-    as frontmatter only if it loads as non-None, non-string YAML;
-    otherwise pymarkdown requeues the whole block as body text."""
+    as frontmatter only if it loads as non-None, non-string YAML.
+    Otherwise pymarkdown requeues the whole block as body text."""
     try:
         loaded = yaml.safe_load('\n'.join(content_lines))
     except yaml.YAMLError:
@@ -191,7 +191,7 @@ def pre_findings(raw_text, fm_enabled=False, fm_allow_blanks=False):
     # next `---` line, but abandons the block at the first blank line
     # (unless allow_blank_lines) or at EOF, silently re-parsing
     # everything as body text. Flag abandonment only when the block had
-    # content; a bare `---` followed by a blank line is a thematic break,
+    # content. A bare `---` followed by a blank line is a thematic break,
     # not frontmatter. A structurally closed block must also parse as
     # YAML, or pymarkdown likewise demotes it to body text.
     fence_scan_start = 0
@@ -209,12 +209,13 @@ def pre_findings(raw_text, fm_enabled=False, fm_allow_blanks=False):
             content_seen = True
         if closed_at is not None:
             if frontmatter_yaml_valid(lines[1:closed_at]):
-                # Valid frontmatter; keep the fence scan out of the YAML.
+                # The frontmatter is valid, so keep the fence scan out of
+                # the YAML.
                 fence_scan_start = closed_at + 1
         elif content_seen:
             if fm_allow_blanks:
                 # With allow_blank_lines pymarkdown never reaches its
-                # abandonment path: an unclosed block hits an internal
+                # abandonment path. An unclosed block hits an internal
                 # assertion at EOF instead (0.9.37).
                 detail = ('leading `---` has no matching close before '
                           'EOF; pymarkdown errors out on such files')
@@ -241,7 +242,7 @@ def pre_findings(raw_text, fm_enabled=False, fm_allow_blanks=False):
                 fence_open_line = None
             continue
         if marker[0] == '`' and '`' in rest:
-            # A backtick run whose info string contains a backtick is
+            # A backtick run with a backtick in its info string is
             # inline code, not a fence opener (CommonMark).
             continue
         fence_char = marker[0]
@@ -258,7 +259,7 @@ def pre_findings(raw_text, fm_enabled=False, fm_allow_blanks=False):
 
 
 def run_pymarkdown(subcommand, path, config):
-    """Invoke the vendored PyMarkdown CLI; return (rc, stdout, stderr).
+    """Invoke the vendored PyMarkdown CLI and return (rc, stdout, stderr).
 
     Uses the `explicit` return-code scheme, the only one in which every
     outcome is distinguishable: 0 success, 1 no files to scan, 2 command
@@ -343,8 +344,9 @@ def main():
 
     p = Path(args.path)
     try:
-        # read_bytes + decode preserves CR/CRLF so the pre-pass can flag them;
-        # read_text would silently normalize via universal newlines mode.
+        # read_bytes + decode preserves CR/CRLF so the pre-pass can flag
+        # them, whereas read_text would silently normalize via universal
+        # newlines mode.
         raw = p.read_bytes().decode('utf-8')
     except (OSError, UnicodeDecodeError) as e:
         sys.stderr.write(f"lint_markdown.py: cannot read {args.path}: {e}\n")
@@ -352,7 +354,7 @@ def main():
 
     if args.fix:
         # Under the explicit scheme 0 means nothing to fix and 3 means at
-        # least one file was fixed; anything else is worth a warning (the
+        # least one file was fixed. Anything else is worth a warning (the
         # scan below reports terminal conditions with a hard error).
         rc_fix, _, _ = run_pymarkdown('fix', p, config)
         if rc_fix not in (0, 3):
@@ -388,8 +390,9 @@ def main():
         )
         sys.exit(2)
     if rc_scan not in (0, 4):
-        # Print what the wrapper itself found before bailing; pymarkdown
-        # crashing must not suppress the pre-pass/schema diagnoses.
+        # Print what the wrapper itself found before bailing, because
+        # pymarkdown crashing must not suppress the pre-pass/schema
+        # diagnoses.
         emit(findings)
         sys.stderr.write(
             f"lint_markdown.py: pymarkdown scan exited {rc_scan}\n{stderr}\n"

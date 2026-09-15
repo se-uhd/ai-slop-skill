@@ -42,11 +42,12 @@ the authoritative lists):
                  in the bundle's own `% GROUNDING:` comments never counts.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like find_citation_issues.py.
-It flags every occurrence. The caller applies the documented exceptions before
-reporting: an en-dash inside a range, any glyph inside quoted source material or
-a code string/identifier, and a lone ASCII hyphen or minus sign, which is never
-matched. The glyph in a *code comment* is still a tell and is meant to be
-reported (the comment is prose).
+It flags every occurrence of the listed glyphs and of the ASCII dash sequences
+above. A lone ASCII hyphen or minus sign is never matched. The caller applies
+the documented exceptions before reporting: an en-dash inside a range and any
+glyph inside quoted source material or a code string/identifier. The glyph in a
+*code comment* is still a tell and is meant to be reported (the comment is
+prose).
 
 A one-line summary is always printed to stderr, with a per-category breakdown:
 
@@ -55,10 +56,10 @@ curly-quote=0 ellipsis=0 nbsp=0]
 
 Exits 0 when at least one input file was read, whether or not glyphs were found.
 Exits 2 on a usage error: no arguments, or none of the given paths could be read
-(nothing was scanned). The exit-2 case guards the same shell-quoting mishap as
-the citation scanner, namely a whole file list collapsed into one unreadable argument,
-which would otherwise look like a clean "no tells" run. Non-empty stdout signals
-findings, and empty stdout means none.
+(nothing was scanned). The exit-2 case guards against the same shell-quoting
+mistake as the citation scanner, namely a whole file list collapsed into one
+unreadable argument, which would otherwise look like a clean "no tells" run.
+Non-empty stdout signals findings, and empty stdout means none.
 
 Known limitations:
   - No format awareness for the Unicode glyphs. The scan does not parse Markdown
@@ -66,10 +67,10 @@ Known limitations:
     quoted string is still emitted. The `<context>` line lets the caller judge.
     (The omission is deliberate. A literal em-dash in a code *comment* must be
     caught, and distinguishing a comment from a string per language is the
-    extractor's job, not this scan's.) The ASCII dash pass is the exception. It
-    skips fenced blocks (nesting honored), inline code spans, and LaTeX
-    comments, because `--` is ordinary syntax there and false positives would
-    outnumber the real dashes.
+    job of the comment extractor in scan_repo.py, not of this scan.) The ASCII
+    dash pass is the exception. It skips fenced blocks (nesting honored), inline
+    code spans, and LaTeX comments, because `--` is ordinary syntax there and
+    false positives would outnumber the real dashes.
   - splitlines() consumes the Unicode line separators U+2028/U+2029 and U+0085, so
     a glyph that is itself a line separator is not reported as content.
 """

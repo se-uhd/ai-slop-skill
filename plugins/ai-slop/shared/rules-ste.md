@@ -43,7 +43,7 @@ load.
 
 - **Keep a sentence that a rewrite would weaken** (`T.keep-original`). When you edit existing text and the STE rewrite of a sentence loses meaning, precision, or force, keep the original sentence. Keep only the sentence at stake and rewrite its neighbors as usual. The other layers still apply to the kept sentence.
 
-## Self-Check Before Presenting Text (STE)
+## Self-check before presenting text (STE)
 
 Apply these in addition to the self-checks of the other layers in scope:
 

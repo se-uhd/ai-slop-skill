@@ -10,10 +10,10 @@ citation, see the same set of files and calls, and neither re-implements the
 parsing.
 
 The scanner (`scan_cite_calls` / `iter_cite_calls`) works on the
-comment-stripped lines joined with newlines, so a call whose key list spans
+comment-stripped lines joined with newlines, so a call with a key list that spans
 lines (`\cite{a,` / `  b}`) is found and reported with the line it starts on
 and the line it ends on. Grounding comments attach to the last line of the
-call, since that is where a comment below the cite sits.
+call, since that is where a comment below the citation sits.
 
 Grounding-comment forms recognized by has_grounding / is_grounding_comment:
   - `% GROUNDING: "<quote>"`            marker then quote
@@ -25,13 +25,14 @@ A grounding comment is any `%` comment with the GROUNDING marker as its first
 word. The key placement and the colon position do not matter.
 
 Quote-less grounding comments are TODO stubs: `% GROUNDING: TODO verify <key>`
-(planted by revise mode) or `% GROUNDING: <key> -- TODO verify -- <reason>`
+(left by revise mode) or `% GROUNDING: <key> -- TODO verify -- <reason>`
 (written by insert_grounding.py when a source could not be retrieved). They
-count as grounding comments for is_grounding_comment / has_grounding (the cite
-is marked, not missing), but grounding_quality classifies them 'todo' rather
-than 'quote', so a grounding run can still pick the site up and fill the quote.
+count as grounding comments for is_grounding_comment / has_grounding (the
+citation is marked, not missing), but grounding_quality classifies them 'todo'
+rather than 'quote', so a grounding run can still pick the site up and fill the
+quote.
 
-A comment "belongs" to a cite when it is on the cite's own line or in the
+A comment "belongs" to a citation when it is on the citation's own line or in the
 contiguous run of blank and `%`-comment lines directly below it. The first code
 line ends that block. iter_comment_block is the single walker for this block. The
 read side (has_grounding / grounding_quality, used by find_citation_issues.py
@@ -44,7 +45,7 @@ Recognized commands:
               \footcite, and their plural multi-cite forms (\cites,
               \parencites, \textcites, \autocites, \fullcites, \smartcites,
               \footcites).
-  - style-only helpers (typically paired with a grounded cite nearby):
+  - style-only helpers (typically paired with a grounded citation nearby):
               \citeauthor, \citeyear, \citeyearpar, \citenum.
   - \nocite is a BibTeX-only print marker, ignored entirely.
 
@@ -91,7 +92,7 @@ GROUNDED_COMMANDS = {
     'parencite', 'textcite', 'autocite', 'fullcite', 'smartcite', 'footcite',
     'parencites', 'textcites', 'autocites', 'fullcites', 'smartcites', 'footcites',
 }
-# Style-only helpers, typically paired with a grounded cite nearby. The cluster
+# Style-only helpers, typically paired with a grounded citation nearby. The cluster
 # and missing-grounding checks skip these, but they still name a source, so
 # extract_cites gathers the claims around them.
 SKIPPED_COMMANDS = {'citeauthor', 'citeyear', 'citeyearpar', 'citenum'}
@@ -133,18 +134,18 @@ def split_code_and_comment(line):
 
 
 def parse_keys(key_blob):
-    """Split a `{a, b, c}` cite payload into a list of keys, dropping empties."""
+    """Split a `{a, b, c}` citation payload into a list of keys, dropping empties."""
     return [k.strip() for k in key_blob.split(',') if k.strip()]
 
 
 def iter_comment_block(lines, idx, same_line_comment):
-    """Yield (line_index, comment_text) for every comment attached to the cite
-    on line `idx`: the same-line comment portion first (with index `idx`), then
-    each `%` comment line in the contiguous run of blank or comment lines that
-    follows. The first non-blank, non-comment line ends the block, so a
-    grounding comment beyond intervening code or prose is not associated with
-    the cite. This function is the single definition of "attached" shared by the read
-    side (has_grounding / grounding_quality) and the write side
+    """Yield (line_index, comment_text) for every comment attached to the
+    citation on line `idx`: the same-line comment portion first (with index
+    `idx`), then each `%` comment line in the contiguous run of blank or comment
+    lines that follows. The first non-blank, non-comment line ends the block, so
+    a grounding comment beyond intervening code or prose is not associated with
+    the citation. This function is the single definition of "attached" shared by
+    the read side (has_grounding / grounding_quality) and the write side
     (insert_grounding.already_grounded), so the two cannot drift."""
     if same_line_comment and same_line_comment.strip():
         yield idx, same_line_comment
@@ -168,7 +169,7 @@ def is_quote_grounding(comment):
 
 
 def grounding_quality(lines, idx, same_line_comment):
-    """Classify the grounding state of the cite on line `idx`:
+    """Classify the grounding state of the citation on line `idx`:
     'quote': a grounding comment carrying a quote is attached;
     'todo':  only quote-less grounding comments (TODO stubs) are attached;
     'none':  no grounding comment at all."""
@@ -183,7 +184,7 @@ def grounding_quality(lines, idx, same_line_comment):
 
 def has_grounding(lines, idx, same_line_comment):
     """Return True if a grounding comment (quote-backed or TODO stub, any form
-    recognized by is_grounding_comment) is attached to the cite on line `idx`,
+    recognized by is_grounding_comment) is attached to the citation on line `idx`,
     either on its own line or in the contiguous blank/comment block below it.
     Other `%` comments in between do not break the association, but the first
     code line does."""
@@ -205,11 +206,11 @@ def joined_code(lines):
 
 def scan_cite_calls(lines, commands=GROUNDED_COMMANDS):
     """Return (joined, calls): the joined code text (for sentence splitting) and
-    a CiteCall per recognized cite call whose command is in `commands` and that
+    a CiteCall per recognized cite call with a command in `commands` that
     resolves to at least one key. The scan runs over the comment-stripped,
-    line-joined text, so a cite inside a `%` comment does not count and a call
-    whose braces span lines is found. With the default `commands`, the calls
-    are exactly find_citation_issues' "considered" set: GROUNDED_COMMANDS
+    line-joined text, so a citation inside a `%` comment does not count and a
+    call with braces that span lines is found. With the default `commands`, the
+    calls are exactly find_citation_issues' "considered" set: GROUNDED_COMMANDS
     resolving to at least one key, with the style-only helpers
     (SKIPPED_COMMANDS) and \\nocite (IGNORED_COMMANDS) left out."""
     joined, starts = joined_code(lines)

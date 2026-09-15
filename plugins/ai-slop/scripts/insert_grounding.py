@@ -2,9 +2,9 @@
 r"""insert_grounding.py <extract.json> <quotes.json> [--dry-run]
 
 Write grounding comments back into a LaTeX source at the citation sites that
-extract_cites.py collected. It takes the extract JSON (citation sites) and a quotes
-JSON (one result per cited key, produced by a grounding workflow) and inserts,
-after each groundable cite line, a comment of the form
+extract_cites.py collected. This script takes the extract JSON (citation sites)
+and a quotes JSON (one result per cited key, produced by a grounding workflow)
+and inserts, after the line of each groundable citation, a comment of the form
 
     % GROUNDING: <key> -- "<verbatim supporting quote>"
 
@@ -30,25 +30,26 @@ A key absent from the quotes JSON is left untouched, so a run can ground a
 subset and later runs can fill the rest (resumable over the still-TODO keys).
 
 Behavior:
-  - Only `groundable` sites (the cite macros find_citation_issues.py flags) are
-    annotated, and style-only \citeauthor / \citeyear sites are skipped.
+  - Only `groundable` sites (the citation macros find_citation_issues.py
+    flags) are annotated, and style-only \citeauthor / \citeyear sites are
+    skipped.
   - Idempotent: a (line, key) that already has a quote-backed `% GROUNDING:`
     comment naming that key is left alone, so re-running is safe.
-  - A quote-less `TODO verify` stub naming the key, planted by revise mode
+  - A quote-less `TODO verify` stub naming the key, left by revise mode
     (`% GROUNDING: TODO verify <key>`) or by an earlier run of this script,
     does NOT count as grounded. The run replaces the stub line in place with
     the new comment. Replacing a stub with identical content is a no-op. A
-    stub on the cite's own line is never edited, because an edit in the middle
-    of a line could damage the LaTeX before the `%`. The new comment is
+    stub on the citation's own line is never edited, because an edit in the
+    middle of a line could damage the LaTeX before the `%`. The new comment is
     inserted below, and the author removes the inline stub.
-  - Each comment matches the cite line's indentation and is inserted on its own
-    line directly after the line the call ends on (`end_line` in the extract,
-    the same line as `line` unless the key list spans lines). A `%` comment's
-    trailing newline is consumed by LaTeX, so the surrounding markup still
-    renders unchanged.
-  - The cite lines are re-checked against the file before editing. If the
-    source changed since extraction (the lines no longer hold a call with that
-    key), the site is skipped with a warning and not edited.
+  - Each comment matches the indentation of the line the call starts on and is
+    inserted on its own line directly after the line the call ends on
+    (`end_line` in the extract, the same line as `line` unless the key list
+    spans lines). A `%` comment's trailing newline is consumed by LaTeX, so the
+    surrounding markup still renders unchanged.
+  - The lines of each citation are re-checked against the file before editing.
+    If the source changed since extraction (the lines no longer hold a call
+    with that key), the site is skipped with a warning and not edited.
   - --dry-run prints what would change without writing.
 
 A one-line summary is printed to stderr. When the run has TODOs, a second line
@@ -117,7 +118,7 @@ def grounds_key(text, key):
 
 
 def already_grounded(lines, idx, key):
-    """True if the cite on line `idx` already has a quote-backed GROUNDING
+    """True if the citation on line `idx` already has a quote-backed GROUNDING
     comment for `key`, either inline or in the attached comment block. A
     quote-less `TODO verify` stub for the key does NOT count. Stubs are
     placeholders that this script upgrades in place (see find_todo_stub), so
@@ -129,9 +130,9 @@ def already_grounded(lines, idx, key):
 
 def find_todo_stub(lines, idx, key):
     """Return the index of the first quote-less GROUNDING comment line for
-    `key` attached to the cite on line `idx`, or None. The cite's own line is
-    excluded, since an inline stub is never edited and the replacement logic
-    only rewrites whole comment lines."""
+    `key` attached to the citation on line `idx`, or None. The citation's own
+    line is excluded, since an inline stub is never edited and the replacement
+    logic only rewrites whole comment lines."""
     _, same_comment = split_code_and_comment(lines[idx])
     for j, text in iter_comment_block(lines, idx, same_comment):
         if j == idx:
@@ -142,8 +143,8 @@ def find_todo_stub(lines, idx, key):
 
 
 def lines_have_key(window, key):
-    """True if a cite call within the lines of `window` (code portions, joined
-    so a call spanning lines is seen whole) lists `key`."""
+    """True if a call to a citation macro within the lines of `window` (code
+    portions, joined so a call spanning lines is seen whole) lists `key`."""
     code = '\n'.join(split_code_and_comment(line)[0] for line in window)
     for m in CITE_PATTERN.finditer(code):
         if key in parse_keys(m.group(2)):
@@ -157,7 +158,8 @@ def leading_ws(line):
 
 def plan_file(lines, sites, quotes, stats):
     """Return (inserts, replacements) for one file, updating `stats` in place:
-    {line_index: [comment lines]} of new comments to insert after a cite line,
+    {line_index: [comment lines]} of new comments to insert after the line a
+    citation ends on,
     and {line_index: new line} of TODO-stub lines to rewrite in place.
     Each site is a dict with line/end_line/keys/groundable/file."""
     inserts = {}

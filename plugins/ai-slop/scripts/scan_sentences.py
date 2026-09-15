@@ -35,9 +35,10 @@ Kinds:
 
 The word count leaves out what the STE layer protects. A quotation counts as
 one word, and so does an inline code span, a URL, and, in a `.tex` file, a
-math span. A LaTeX command that carries no prose (a citation, a reference, a
-label) or prose outside the sentence (a footnote, a to-do note) counts as
-nothing, and any other command keeps only the text of its brace arguments.
+math span. A LaTeX command that carries no prose (e.g., a citation, a
+reference, or a label) or prose outside the sentence (a footnote, a to-do note)
+counts as nothing, and any other command keeps only the text of its brace
+arguments.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like
 scan_reference.py. The caller applies each rule's test before reporting. A
@@ -62,9 +63,10 @@ be read. Non-empty stdout signals candidates, and empty stdout means none.
 Known limitations:
   - Sentence splitting is a heuristic. A period, question mark, or exclamation
     mark followed by whitespace and a capital letter or digit ends a sentence,
-    unless the word before the period is a listed abbreviation (e.g., i.e., et
-    al., Fig.) or a single capital initial. "etc." ends a sentence, so an
-    "etc." in mid-sentence before a capitalized word splits the sentence.
+    unless the word before the period is a listed abbreviation such as "e.g.",
+    "i.e.", "et al.", or "Fig.", or a single capital initial. "etc." ends a
+    sentence, so an "etc." in mid-sentence before a capitalized word splits the
+    sentence.
   - A paragraph is a run of non-blank lines, and a list item starts a new one.
     An indented code block outside a fence is read as prose.
   - A quotation is found by its marks within one paragraph, so a stray

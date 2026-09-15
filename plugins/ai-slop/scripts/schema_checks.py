@@ -1,6 +1,6 @@
 """schema_checks.py: ai-slop schema rules consumed by lint_markdown.py.
 
-Two checks against `ai-slop-report.md` and `WRITING.md`:
+The checks against `ai-slop-report.md` and `WRITING.md`:
 
   finding-block-missing-label   `ai-slop-report.md`: a `#### Finding N`
                                 block is missing one of the four labels

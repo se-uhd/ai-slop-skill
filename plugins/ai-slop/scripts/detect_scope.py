@@ -22,8 +22,8 @@ Detection:
     decides), and `general` otherwise.
 
 The directory check shells out to find_latex_root.py so the two agree on what
-counts as a root (commented-out markers, main.tex/paper.tex preference, and the
-recursive-fallback search).
+counts as a root (e.g., commented-out markers, main.tex/paper.tex preference,
+and the recursive-fallback search).
 """
 import subprocess
 import sys

@@ -3,7 +3,7 @@
 
 Verify that a skill's `lint_markdown.yaml` carries the baseline rules
 shipped by pymarkdown-skill. The yaml itself is per-skill and may
-include extra plugin tuning; this check only asserts the baseline is
+include extra plugin tuning. This check only asserts the baseline is
 present and matches.
 
 Defaults to the `lint_markdown.yaml` next to this script.
@@ -58,8 +58,8 @@ def check(yaml_path):
     if doc is None:
         doc = {}
     if not isinstance(doc, dict):
-        # No `or {}` shortcuts here or below: they would coerce falsy
-        # non-mappings ([], "", false) past the shape check.
+        # No `or {}` shortcuts here or below, because they would coerce
+        # falsy non-mappings (e.g., [], "", false) past the shape check.
         sys.stderr.write(
             f"check_baseline.py: top level of {yaml_path} must be a "
             f"mapping, not {type(doc).__name__}\n"
@@ -85,7 +85,7 @@ def check(yaml_path):
 
     problems = []
     for name in REQUIRED_EXTENSIONS:
-        # PyMarkdown requires a real boolean here; a truthy non-boolean
+        # PyMarkdown requires a real boolean here. A truthy non-boolean
         # such as the string "true" leaves the extension disabled.
         entry = entry_for(sections["extensions"], name)
         if entry.get("enabled") is not True:

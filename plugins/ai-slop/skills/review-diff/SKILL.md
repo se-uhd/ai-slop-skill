@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev22"
+  version: "2026-09_rev23"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -20,7 +20,7 @@ Invoke this skill when the user:
 1. Has a paper repo with uncommitted edits (or a feature branch) and asks to check just the changes, for example, "review my edits before I commit", "audit what I just changed", "check this branch's prose".
 2. Runs `/ai-slop:review-diff` with or without a base ref.
 
-Do **not** invoke for a full-paper pass (use `/ai-slop:review`) or when the working directory is not a git repository (tell the user and suggest `/ai-slop:review` instead).
+Do not invoke for a full-paper pass (use `/ai-slop:review`) or when the working directory is not a git repository (tell the user and suggest `/ai-slop:review` instead).
 
 ## Inputs
 
@@ -33,9 +33,9 @@ The skill auto-detects the paper and the diff in the current working directory.
 
 If the working directory is not inside a git repository (`git rev-parse --is-inside-work-tree` returns non-zero), stop and tell the user, e.g., "Not a git repository; use `/ai-slop:review` for a full-paper review."
 
-**Paper detection.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py` to learn whether a LaTeX root exists, which step 10 needs for following `\input` / `\include`. Exit 0 means the printed path is the root. Exit 2 means multiple candidates were printed, so ask the user. Exit 1 means no `.tex` root, which is not an error in diff mode. Which layers apply is decided per changed file in step 6, so a code repository with one paper under a subdirectory still gets its Markdown changes reviewed. PDF input is never reviewed in diff mode because no diff is available for it.
+**Paper detection.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py` to learn whether a LaTeX root exists, which step 10 needs for following `\input` / `\include`. Exit 0 means that the printed path is the root. Exit 2 means that multiple candidates were printed, so ask the user. Exit 1 means no `.tex` root, which is not an error in diff mode. Which layers apply is decided per changed file in step 6, so a code repository with one paper under a subdirectory still gets its Markdown changes reviewed. PDF input is never reviewed in diff mode because no diff is available for it.
 
-**Trope catalog override.** `--tropes=<path>` (repeatable) replaces the default fetch with one or more user-supplied files. Contents are concatenated in the order given. When `--tropes` is not passed (the common case), the catalog is fetched live (see step 7).
+**Trope catalog override.** `--tropes=<path>` (repeatable) replaces the catalog download with one or more user-supplied files. Contents are concatenated in the order given. When `--tropes` is not passed (the common case), the catalog is fetched live (see step 7).
 
 **STE mode.** `--ste` adds the Simplified Technical English layer to every changed file, as in `/ai-slop:review`.
 
@@ -53,11 +53,11 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 5. **Identify sections.** For each changed paragraph, walk backward in the new file to the nearest preceding `\section{}` or `\subsection{}` (for Markdown, the nearest preceding `#` / `##` heading) to map the paragraph to its section. The section mapping selects the section-aware rules (e.g., verb tense, threats-to-validity specificity), which apply only when the scientific layer is in scope.
 
-6. **Determine which rule layers to load.** Same layers as `/ai-slop:review` under `../../shared/`. Decide per changed file: run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <file>` on each. A `latex` file (any `.tex`) gets all three layers. A `general` file gets `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research manuscript). With `--ste`, every changed file also gets `rules-ste.md`, which sets the limit wherever it and the general layer disagree (`T.precedence`). Read each selected layer file. Each adds its own rules and self-check section. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name and its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
+6. **Determine which rule layers to load.** Same layers as `/ai-slop:review` under `../../shared/`. Decide per changed file. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <file>` on each. A `latex` file (any `.tex`) gets the general, scientific, and LaTeX layers. A `general` file gets `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research manuscript). With `--ste`, every changed file also gets `rules-ste.md`, which sets the limit wherever it and the general layer disagree (`T.precedence`). Read each selected layer file. Each adds its own rules and self-check section. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name and its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
 
-7. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py` and read its stdout. tropes.fyi is the only source and there is no bundled fallback, so a failed fetch exits 1 with an empty stdout. Stop there and tell the user the catalog could not be fetched, naming `--tropes=<path>` as the way to review against a local copy.
+7. **Load the AI trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py` and read its stdout. tropes.fyi is the only source and there is no bundled fallback, so the script exits 1 with an empty stdout when it cannot fetch the catalog. Stop there and tell the user that the catalog could not be fetched, naming `--tropes=<path>` as the way to review against a local copy.
 
-8. **Per-paragraph pass.** For each changed paragraph, scan the prose against the rules and the trope catalog. **A finding is in scope only if at least one line of the offending quote falls inside the changed-line set.** A pre-existing violation on an unchanged line is out of scope, even when adjacent to a change. For each in-scope violation, record:
+8. **Per-paragraph pass.** For each changed paragraph, scan the prose against the rules and the trope catalog. A finding is in scope only if at least one line of the offending quote falls inside the changed-line set. A pre-existing violation on an unchanged line is out of scope, even when adjacent to a change. For each in-scope violation, record:
    - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name with its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
    - The location (`file:line` in the new file).
    - A short verbatim quote of the offending text, with enough surrounding context to be unique within the paper.
@@ -69,28 +69,28 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
    - Dash count and locations in changed lines. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py` over the changed files and keep the rows inside the changed-line set, as `/ai-slop:review` step 5 does.
    - Reference candidates on changed lines, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_reference.py` over the changed files, filtered the same way and tested per the **Reference** rules.
    - Restricted-word occurrences in changed lines.
-   - Verb-tense compliance for changed paragraphs (against the section table in the scientific layer; only when that layer is in scope).
+   - Verb-tense compliance for changed paragraphs (against the section table in the scientific layer, and only when that layer is in scope).
    - American-vs-British spelling in changed lines.
    - "Significant" audit on changed lines.
    - STE sentence candidates on changed lines (STE mode only), from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_sentences.py` over the changed files. A `long-sentence` or `uniform-run` row names the line on which its first sentence starts, and a `passive` or `nominalization` row names the line of the matched words. Read the whole sentence and keep the row when any of its lines is in the changed-line set. Keep a `uniform-run` row when the run includes a changed line. Test the rows as `/ai-slop:review` step 5 does.
 
    Skip metrics that need full-paper context (e.g., em-dash *density* per page, sentence-length variance over runs of three sentences spanning untouched prose, restricted-word density per paragraph when the diff touched only a fraction of the paragraph). Note the scoping in the report's Summary.
 
-   Density needs full-paper context, but a single mark that is the wrong choice does not. On a changed line, treat a semicolon joining two independent clauses a period would separate (especially when the second opens with we, it, this, they, or these), an em-dash standing in for a period, or a colon used as a generic mid-sentence pause as a per-section finding, with the corrected punctuation as the suggested revision.
+   Density needs full-paper context, but a single mark that is the wrong choice does not. On a changed line, treat a semicolon joining two independent clauses that a period would separate (especially when the second opens with we, it, this, they, or these), an em-dash standing in for a period, or a colon used as a generic mid-sentence pause as a per-section finding, with the corrected punctuation as the suggested revision.
 
-10. **Citations and BibTeX, scoped to the diff.** On changed lines, scan for newly added or modified `\cite{}` calls. Apply the same checks as `/ai-slop:review` step 6 (citation clusters with three or more entries lacking per-work explanation; missing grounding comments, with `% GROUNDING <key>:` counted as grounded like `% GROUNDING:`; and spelled-out author names that should use `\citeauthor{}`). For BibTeX field checks scoped to newly cited keys: identify the `.bib` files via `\bibliography{...}` / `\addbibresource{...}` directives, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfiles>`, and report only entries cited in newly added `\cite{}` calls. Do not flag pre-existing citations the diff did not touch. Standard BibTeX semantics apply (no `crossref` inheritance), so sanity-check flagged entries. Always list changed `\cite{}` calls that lack a grounding comment under **Grounding to-do** (the same always-on list as `/ai-slop:review`, restricted to changed cites). For newly cited keys, also run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/verify_references.py <bibfiles> [--mailto you@example.org]` and report flagged entries cited in newly added `\cite{}` calls under **Reference verification** (advisory and online-first, exactly as in `/ai-slop:review` step 6).
+10. **Citations and BibTeX, scoped to the diff.** On changed lines, scan for newly added or modified `\cite{}` calls. Apply the same checks as `/ai-slop:review` step 6 (citation clusters with three or more entries lacking per-work explanation; missing grounding comments, with `% GROUNDING <key>:` counted as grounded like `% GROUNDING:`; and spelled-out author names that should use `\citeauthor{}`). For BibTeX field checks scoped to newly cited keys, identify the `.bib` files via `\bibliography{...}` / `\addbibresource{...}` directives, run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_bib_fields.py <bibfiles>`, and report only entries cited in newly added `\cite{}` calls. Do not flag pre-existing citations that the diff did not touch. Standard BibTeX semantics apply (no `crossref` inheritance), so sanity-check flagged entries. Always list changed `\cite{}` calls that lack a grounding comment under **Grounding to-do** (the same always-on list as `/ai-slop:review`, restricted to changed citations). For newly cited keys, also run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/verify_references.py <bibfiles> [--mailto you@example.org]` and report flagged entries cited in newly added `\cite{}` calls under **Reference verification** (advisory and dependent on network access, exactly as in `/ai-slop:review` step 6).
 
 11. **Write the report.** Save `ai-slop-report.md` in the working directory. As in `/ai-slop:review`, the report must never be committed. Resolve the repository root with `git rev-parse --show-toplevel` and, when the root's `.gitignore` does not already list `ai-slop-report.md`, append that line (creating the file if absent).
 
     Then run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/lint_markdown.py --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations. After the third pass, proceed regardless of the linter's state. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
-    Then Read the file back and quote its contents verbatim in your reply. Do **not** regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
+    Then Read the file back and quote its contents verbatim in your reply. Do not regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
 
     ```text
     **Diff scope:** base=<base ref>, files=<list of changed files in the diff pathspec>
     ```
 
-    Place this line under `**Reviewed:**`. The Summary should explicitly note that the review only covered changed lines, so a reader of the report does not assume the rest of the paper was checked.
+    Place this line under `**Reviewed:**`. The Summary should explicitly note that the review only covered changed lines, so a reader of the report does not assume that the rest of the paper was checked.
 
 12. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`. The schema is identical, so revise mode works without changes.
 
@@ -100,8 +100,8 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers, and `../../shared/rules-ste.md` is the optional STE layer. Load the subset each changed file calls for (step 6).
-- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_sentences.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch, the glyph, reference, and sentence scans, citation issues, BibTeX field and reference verification, report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers, and `../../shared/rules-ste.md` is the optional STE layer. Load the subset that each changed file calls for (step 6).
+- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_sentences.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection; the catalog download; the glyph, reference, and sentence scans; citation issues; BibTeX field and reference verification; and report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 
