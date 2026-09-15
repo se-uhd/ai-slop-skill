@@ -28,7 +28,8 @@ have been broken before:
    `refs/original` that the trees are unchanged and that no tag is left off
    `main`. Force-push `main` and `--tags` together, because a forced branch
    push alone leaves every tag on a commit that the branch no longer reaches. The
-   September 2026 commit-message cleanup is the precedent.
+   commit message cleanups recorded in the 2026-09_rev15 and 2026-09_rev23
+   changelog entries are the precedent.
 3. **Keep the 10 version callsites in sync.** The version string is in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
    `.claude-plugin/marketplace.json`, the `version:` frontmatter of each
@@ -58,44 +59,42 @@ have been broken before:
   `shared/rules-general.md`, `shared/rules-scientific.md`,
   `shared/rules-latex.md`, or `shared/rules-ste.md` also needs its numbered
   item in that layer's self-check section, and an entry in
-  `shared/rules-rationale.md` whenever a reader could push back on it. Every rule carries a stable key
-  (`G.`/`S.`/`L.`/`T.` plus a slug) that reports and cross-references cite.
-  `test_rule_keys_unique_and_resolvable` in the smoke suite enforces the key
-  invariants: one key per rule bullet, unique across the layers, a key in
-  every self-check item, and no dangling key in the layers, the rationale, or
-  a `SKILL.md`.
+  `shared/rules-rationale.md` whenever a reader could push back on it. Every
+  rule carries a stable key (`G.`/`S.`/`L.`/`T.` plus a slug) that reports and
+  cross-references cite. `test_rule_keys_unique_and_resolvable` in the smoke
+  suite enforces the key invariants: one key per rule bullet, unique across the
+  layers, a key in every self-check item, and no dangling key in the layers,
+  the rationale, or a `SKILL.md`.
 - **Commit messages follow the general layer.** They are prose, and
   `/ai-slop:review-repo` scans them with every other file. Correcting a pushed
   message means rewriting history, which rule 2 above allows only as a
   deliberate repair, so the check happens before `git commit`. The September
   2026 cleanup rewrote the whole history and fixed the recurring failures: a
-  semicolon joining two independent clauses (100 uses across 50 of the 76
-  messages, among them the boilerplate "Version bumped to X at all ten
-  callsites; the tropes snapshot was already up to date", which is two
-  sentences), a literal em-dash glyph (U+2014) in 8 messages, one British
-  spelling, and one comma splice. A semicolon in a parenthetical list,
-  in quoted output, or in a code span stays.
+  semicolon joining two independent clauses (in 50 of the 76 messages, among
+  them the boilerplate "Version bumped to X at all ten callsites; the tropes
+  snapshot was already up to date", which is two sentences), a literal em-dash
+  glyph (U+2014) in 8 messages, one British spelling, and one comma splice. A
+  semicolon in a parenthetical list, in quoted output, or in a code span stays.
   Write the subject line as an imperative ending in `; release YYYY-MM_revN` on
   a release commit. That suffix is the one semicolon that the convention keeps,
   and the rest of the subject takes commas.
 - **The trope catalog has one source and no bundled copy.** `fetch_tropes.py`
   reads tropes.fyi and exits non-zero when it cannot. A stale copy that
-  outranks the live catalog is worse than a failed fetch, which is why the
-  gist mirror and the bundled snapshot were both dropped in 2026-09_rev16.
-  `--tropes=<path>` supplies the catalog for an offline or pinned run.
+  outranks the live catalog is worse than failing to fetch the catalog, which
+  is why the gist mirror and the bundled snapshot were both dropped in
+  2026-09_rev16. `--tropes=<path>` supplies the catalog for an offline or
+  pinned run.
 - **The bundle follows its own rules.** When a rule is added or tightened,
   sweep the repository's own prose for the pattern in the same rev: the
   Markdown files, the skill and command files, and the Python docstrings and
   comments. The opt-in STE layer is the exception. The bundle's prose does not
-  follow it, so an STE rule change needs no sweep. Between sweeps, one smoke
-  test checks a single pattern.
+  follow it, so an STE rule change needs no sweep. Between sweeps,
   `test_first_party_prose_avoids_the_plain_words_seeds` runs `scan_repo.py`
   over the repository and fails on "lives in" outside a quoted example.
-  Clause-joining semicolons are what `/ai-slop:review-repo` finds on the next
-  sweep, since a count cannot tell them from list separators. Released
-  `CHANGELOG.md` entries are edited only to correct or complete the record,
-  never to restate it. Upstream-owned files are left
-  to their own repo.
+  `/ai-slop:review-repo` finds clause-joining semicolons on the next sweep,
+  since a count cannot tell them from list separators. Released `CHANGELOG.md`
+  entries are edited only to correct or complete the record, never to restate
+  it. Upstream-owned files are left to their own repo.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
   `grounding-quotes.json`) are never committed. The skills add them to the
   target repo's `.gitignore`.

@@ -3,13 +3,13 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev22"
+  version: "2026-09_rev23"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
 # AI Slop Review: Revise Mode
 
-This skill applies a previous `/ai-slop:review` report to the document it reviewed, whether LaTeX, Markdown, or plain text. For each finding, it locates the quoted text in the document and replaces it with the suggested revision. A repo-mode report is applied one file at a time.
+This skill applies a previous `/ai-slop:review` report to the document that the review read, whether LaTeX, Markdown, or plain text. For each finding, it locates the quoted text in the document and replaces it with the suggested revision. A repo-mode report is applied one file at a time.
 
 **Audience and tone.** The user has already reviewed the report and wants it applied. Trust the report's `Suggested revision` fields. Do not second-guess them unless the surrounding context makes the suggestion unsafe (e.g., the suggestion would break LaTeX syntax or change the meaning of a result).
 
@@ -20,22 +20,22 @@ Invoke this skill when the user:
 1. Has a generated `ai-slop-report.md` (or similarly structured report) and wants the findings applied to the paper.
 2. Asks to "apply the review", "revise according to the report", or "fix the slop".
 
-Do **not** invoke when the user wants a fresh review (use `/ai-slop:review` instead), or when no report file exists.
+Do not invoke when the user wants a fresh review (use `/ai-slop:review` instead), or when no report file exists.
 
 ## Inputs
 
 Both inputs default to the current working directory. No arguments are required.
 
 - **Report.** Defaults to `ai-slop-report.md` in the working directory. If that file does not exist, ask the user to point to the report (or to run `/ai-slop:review` first). The report must match the schema produced by `/ai-slop:review` (i.e., Findings by section or, for a repo-mode report, Findings by file, then Cross-cutting metrics and Items requiring author judgment).
-- **Document.** The report's `**Paper:**` header names the file the review read. Use that path when it exists. Otherwise auto-detect a LaTeX root by running `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 means the printed path is the paper. Exit 2 means multiple candidates were printed, so ask the user. Exit 1 with no path in the report means there is nothing to edit, so stop. A Markdown or plain-text document is edited the same way as LaTeX, minus the LaTeX-only steps (following `\input`, the syntax check in step 3, and the grounding stubs in step 4). PDF input is not supported, since revise mode edits source text.
+- **Document.** The report's `**Paper:**` header names the file that the review read. Use that path when it exists. Otherwise auto-detect a LaTeX root by running `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 means that the printed path is the paper. Exit 2 means that multiple candidates were printed, so ask the user. Exit 1 with no path in the report means there is nothing to edit, so stop. A Markdown or plain-text document is edited the same way as LaTeX, minus the LaTeX-only steps (following `\input`, the syntax check in step 3, and the grounding stubs in step 4). PDF input is not supported, since revise mode edits source text.
 
-**Optional path overrides.** Paths can still be passed as arguments. The first argument is the report path, and the second is the document path. For a repo-mode report, the second argument selects the file whose `### <relpath>` findings to apply.
+**Optional path overrides.** Paths can still be passed as arguments. The first argument is the report path, and the second is the document path. For a repo-mode report, the second argument selects which file's `### <relpath>` findings to apply.
 
 ## Workflow
 
 1. **Read the report.** Parse the finding blocks under `Findings by section` (or, in a repo-mode report, under `Findings by file`, taking only the blocks under the `### <relpath>` heading that matches the document being edited). Each block has `Rule`, `Location`, `Quote`, and `Suggested revision`. Skip blocks under "Items requiring author judgment". Those blocks need human input. Blocks under a `### commit <sha>` heading name no file and are listed as skipped.
 
-2. **Read the document.** For LaTeX, open the source root and follow `\input{}` / `\include{}` to gather the full text, and note the file each section is in if the paper is multi-file. For Markdown or plain text, open the file named in the report header or on the command line.
+2. **Read the document.** For LaTeX, open the source root and follow `\input{}` / `\include{}` to gather the full text, and note which file contains each section if the paper is multi-file. For Markdown or plain text, open the file named in the report header or on the command line.
 
 3. **Apply each finding.** For each finding, in document order:
    - Locate the `Quote` text in the paper. Use the `Location` hint (`file:line`) to disambiguate if the same text appears multiple times.
@@ -44,11 +44,11 @@ Both inputs default to the current working directory. No arguments are required.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one, prefer the location closest to the hint and log the ambiguity in the summary.
    - For a LaTeX document, if the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys), log it as skipped with the reason rather than apply it.
 
-4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment on its own line directly below the line on which that `\cite{}` call ends (one Edit per cite, matching the indentation of the cite line). A stub placed inside the line would comment out the rest of it, and `/ai-slop:ground` never edits a stub on the cite's own line. These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any cite if its location cannot be matched.
+4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment on its own line directly below the line on which that `\cite{}` call ends (one Edit per citation, matching the indentation of the `\cite{}` line). A stub placed inside the line would comment out the rest of it, and `/ai-slop:ground` never edits a stub on the citation's own line. These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any citation if its location cannot be matched.
 
 5. **Cross-cutting metrics.** These metrics are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section" (or "Findings by file" in a repo-mode report). Do not invent new edits to balance a metric.
 
-6. **Summarize.** Print a summary to the console with three lists:
+6. **Summarize.** Print a summary to the console with the following lists:
    - **Applied:** findings with the `Quote` located and replaced, plus grounding stubs inserted.
    - **Skipped:** findings with a `Quote` that could not be uniquely located or a suggestion that was unsafe to apply, with reasons.
    - **Author judgment required:** findings copied from the "Items requiring author judgment" section, so the user knows what still needs manual attention.

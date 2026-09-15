@@ -2,7 +2,7 @@
 """scan_repo.py [REPO_ROOT] [--commits=<N|all|RANGE>] [--no-commits]
 
 Extract the natural-language text from a whole code repository so the ai-slop
-review can scan prose that sits outside a single document or a diff: Markdown and
+review can scan prose outside a single document or a diff: Markdown and
 plain-text files in full, the comments and doc-comments of source and config
 files, and the repository's commit messages. This script drives `/ai-slop:review-repo`,
 the repo-wide counterpart to `/ai-slop:review` (one document) and
@@ -86,9 +86,10 @@ What is scanned:
 Known limitations (this is a heuristic extractor, not a lexer for every language):
     - Comment-opener detection is string-aware for the common quote characters
       (" ' `) so a `//` or `#` inside a string literal is not mistaken for a
-      comment, but it does not model every language's string rules (heredocs, raw
-      strings, regex literals). A stray false positive is harmless noise that
-      the reviewer ignores. A missed comment is a missed finding.
+      comment, but it does not model every language's string rules (e.g.,
+      heredocs, raw strings, regex literals). A stray false positive is harmless
+      noise that the reviewer ignores, while a comment that the extractor misses
+      is never reviewed.
     - LaTeX (`.tex`) is reviewed as prose (its body and `%` comments, with markup
       the reviewer ignores) against the layers repo mode loads, which never
       include the LaTeX layer. `/ai-slop:review` with that layer remains the tool

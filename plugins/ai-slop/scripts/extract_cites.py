@@ -32,15 +32,15 @@ Output is one JSON object on stdout:
                            "eprint","howpublished"} }
     }
 
-`line` is the line the cite call starts on and `end_line` the line it ends on
-(the same line except for a key list that spans lines). insert_grounding.py
-places the comment after `end_line`.
+`line` is the line the `\cite{}` call starts on and `end_line` the line it
+ends on (the same line except for a key list that spans lines).
+insert_grounding.py places the comment after `end_line`.
 
-`groundable` is True for the cite macros that require a grounding comment
+`groundable` is True for the citation macros that require a grounding comment
 (e.g., \cite, \citep, \parencite). Style-only helpers (e.g., \citeauthor,
 \citeyear) are recorded with groundable=False, so their claims add to `by_key`
 without becoming insertion targets. `grounded` is True only when the site has a
-grounding comment carrying a quote. A quote-less `TODO verify` stub (planted by
+grounding comment carrying a quote. A quote-less `TODO verify` stub (left by
 revise mode or by an earlier grounding run) counts as ungrounded, so a
 grounding workflow picks the site up and insert_grounding.py replaces the stub
 with the quote. A one-line summary is printed to stderr.
@@ -50,13 +50,13 @@ Exit codes:
   2  no LaTeX root could be resolved, multiple ambiguous roots were found, or
      the resolved root could not be read (nothing was scanned).
 
-Recognized cite macros, the comment-stripping, the key parsing, the cite-call
-scanner, and the \input / \include walker are shared with
+Recognized citation macros, the comment-stripping, the key parsing, the
+scanner for `\cite{}` calls, and the \input / \include walker are shared with
 find_citation_issues.py via cite_scan.py, so both tools see the same files and
 calls. The `.bib` parsing is shared with check_bib_fields.py /
-verify_references.py via bib_parse.py. The limitations of the cite scan are
-inherited from there. It reads only the first {key} group of a multi-cite
-biblatex form, and it strips no construct other than a `%` comment.
+verify_references.py via bib_parse.py. The limitations of the citation scan
+are inherited from cite_scan.py. It reads only the first {key} group of a
+multi-cite biblatex form, and it strips no construct other than a `%` comment.
 """
 import bisect
 import json
@@ -93,8 +93,8 @@ ABBREV = {
 _SENT_PUNCT = re.compile(r'[.!?]')
 
 # A claim also begins after a paragraph break (blank line or \par) and after a
-# structural / sectioning command, so the enclosing sentence of the first cite
-# in a section does not swallow the preamble or the section heading.
+# structural / sectioning command, so the enclosing sentence of the first
+# citation in a section does not include the preamble or the section heading.
 _PARA_BREAK = re.compile(r'\n[ \t]*\n|\\par\b')
 _STRUCTURAL = re.compile(
     r'\\(?:section|subsection|subsubsection|paragraph|subparagraph|chapter|part'
@@ -141,7 +141,7 @@ def resolve_root(target):
         listing = "\n  ".join(str(r) for r in roots)
         raise RootError("multiple candidate roots; pass one explicitly:\n  " + listing)
     if p.suffix.lower() == '.tex':
-        return p  # nonexistent .tex: let the read fail loudly downstream
+        return p  # nonexistent .tex: let reading the file fail loudly downstream
     raise RootError(f"{target}: not a .tex file or directory")
 
 
@@ -149,15 +149,15 @@ def sentence_boundaries(text):
     """Return a sorted list of offsets at which a new claim begins: after a
     sentence-ending `.`/`!`/`?` (abbreviation- and decimal-aware), after a
     blank-line / `\\par` paragraph break, and after a structural or sectioning
-    command. The structural and paragraph boundaries keep the first cite in a
-    section from swallowing the preamble or the heading."""
+    command. The structural and paragraph boundaries keep the first citation in
+    a section from including the preamble or the heading."""
     bounds = set()
     n = len(text)
     for m in _SENT_PUNCT.finditer(text):
         i = m.start()
         if text[i] == '.':
             if 0 < i < n - 1 and text[i - 1].isdigit() and text[i + 1].isdigit():
-                continue  # decimal like 3.14
+                continue  # decimal such as 3.14
             j = i - 1
             while j >= 0 and (text[j].isalpha() or text[j] == '.'):
                 j -= 1
@@ -181,10 +181,10 @@ def sentence_boundaries(text):
 
 
 def clean_claim(text):
-    """Reduce the enclosing sentence to plain prose: drop cite macros, reference
-    and structural macros (with their arguments), and remaining control words
-    (keeping their braced text); resolve common escapes and the `~` tie; collapse
-    whitespace; and cap length."""
+    """Reduce the enclosing sentence to plain prose: drop citation macros,
+    reference and structural macros (with their arguments), and remaining
+    control words (keeping their braced text); resolve common escapes and the
+    `~` tie; collapse whitespace; and cap length."""
     text = CITE_PATTERN.sub(' ', text)
     text = _DROP_WITH_ARG.sub(' ', text)
     text = _CONTROL_WORD.sub(' ', text)
@@ -207,8 +207,8 @@ def enclosing_sentence(text, pos, bounds):
 
 
 def scan_text(path, text):
-    """Yield a site dict per citation in one file's text. Cites are matched on
-    the comment-stripped, line-joined body (so multi-line calls are caught) by
+    """Yield a site dict per citation in one file's text. Citations are matched
+    on the comment-stripped, line-joined body (so multi-line calls are caught) by
     the scanner shared with find_citation_issues.py, and each site carries the
     line the call starts on and the line it ends on."""
     raw_lines = text.splitlines()

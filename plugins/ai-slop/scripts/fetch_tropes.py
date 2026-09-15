@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """fetch_tropes.py
 
-Fetch the AI-trope catalog from tropes.fyi and emit it on stdout.
+Fetch the AI trope catalog from tropes.fyi and emit it on stdout.
 
-One source, no fallback: <https://tropes.fyi/tropes-md>. When the fetch fails
-the script says so and exits non-zero, and the caller stops rather than
-reviewing against a catalog that is missing or out of date. To review without
-the network, pass an explicit catalog file to the skill with `--tropes=<path>`.
+One source, no fallback: <https://tropes.fyi/tropes-md>. When fetching the
+catalog fails, the script says so and exits non-zero, and the caller stops
+rather than reviewing against a catalog that is missing or out of date. To
+review without the network, pass an explicit catalog file to the skill with
+`--tropes=<path>`.
 
 The site serves the catalog inside a rendered HTML page rather than as raw
 markdown, so `extract_markdown` unwraps it: first from the download link's

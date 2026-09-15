@@ -1,6 +1,6 @@
 # Rationale for the writing rules
 
-This file records the *why* behind the rules in the four rule layers
+This file records the *why* behind the rules in the rule layers
 (`rules-general.md`, `rules-scientific.md`, `rules-latex.md`, and the optional
 `rules-ste.md`). It is
 documentation only. The `ai-slop:review`, `ai-slop:review-diff`,
@@ -24,7 +24,7 @@ principle in a lower layer and its mechanics in the LaTeX layer.
 
 ## Sources
 
-The rules draw on four bodies of evidence:
+The rules draw on these bodies of evidence:
 
 - Empirical studies of AI-to-human word-frequency ratios, which identify the
   vocabulary, transitions, and punctuation marks that large language models
@@ -38,7 +38,7 @@ The rules draw on four bodies of evidence:
   layer adapts its rules on sentences, voice, paragraphs, word meanings, and
   articles, and leaves out its dictionary of approved words.
 
-The general AI-trope catalog (named patterns such as negative parallelism and
+The general AI trope catalog (named patterns such as negative parallelism and
 em-dash addiction, each tagged with a status) is fetched at runtime from
 tropes.fyi. The rule layers add patterns beyond that catalog and state the exceptions where the
 two overlap (see **Precedence over the trope catalog** (`G.catalog-precedence`)).
@@ -51,14 +51,11 @@ two overlap (see **Precedence over the trope catalog** (`G.catalog-precedence`))
 - **"Data" as singular** (`G.data-singular`). Both the singular and plural agreement are accepted in
   style guides. The project fixes one form so the manuscript reads consistently.
   The choice is conventional, not grammatical.
-- **"Such as" over "like."** (`G.such-as`). `Like` is colloquial when introducing examples.
-  `Such as` is the more formal register. `Like` stays correct as a verb and in
-  deliberate similes.
 
 ## Restricted words
 
 The listed words (`G.restricted-words`) are legitimate in formal writing but appear far more often
-in AI-generated text than in human prose, which is what makes a paragraph read
+in AI-generated text than in human prose, and the excess makes a paragraph read
 as machine-written even when no single word is wrong. The table gives plainer
 substitutes so each remaining use is a deliberate choice.
 
@@ -67,37 +64,36 @@ statistical meaning. Used as a generic intensifier it creates ambiguity about
 whether a statistical test was actually run, so it is reserved for reporting
 statistical results.
 
-"Navigate" is restricted only in its metaphorical sense (navigating complexity, challenges, or a landscape), the pattern that reads as AI prose. Its literal sense, moving through a UI, website, menu, or file tree, is precise and not flagged. "Worked example" is in the phrases-to-avoid list because the "worked" qualifier is usually empty padding that "example" already carries, with the lone exception of a fully solved problem presented step by step.
+"Navigate" is restricted only in its metaphorical sense (e.g., navigating complexity, challenges, or a landscape), because that sense reads as AI prose. Its literal sense, moving through a UI, website, menu, or file tree, is precise and not flagged. "Worked example" is listed under **Phrases to avoid** (`G.phrases-to-avoid`) because the "worked" qualifier is usually empty padding that "example" already carries, with the lone exception of a fully solved problem presented step by step.
 
-The **Use plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to three classes the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision the plain form loses) and carry a short seed list for recall. The seed list also catches words that a reviewer with the writer's habit would miss. A literal match flags a known word even when the prose reads fine to a model with the same habit.
+The **Use plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to classes that the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision that the plain form loses) and carry a short seed list for recall. The seed list also catches words that a reviewer with the writer's habit would miss. A literal match flags a known word even when the prose reads fine to a model with the same habit.
 
 ## Terminology consistency
 
-What reads as elegant variation in literary writing creates ambiguity in
-technical writing. A reader who sees "code review," "code inspection," and
+A reader who sees "code review," "code inspection," and
 "review process" cannot tell whether these name one concept or three. One term
 per concept (`G.one-term`) removes the doubt.
 
 ## Reference and clause boundaries
 
-Both rule sections target one asymmetry. A model resolves a pronoun, a
+Both rule sections target an asymmetry between a model and a reader. A model resolves a pronoun, a
 summarizing noun, a definite article, a stand-in word, or a dropped *that*
 against its whole context, where every candidate antecedent and the intended
 category are equally present. A reader has the surface text and a window of one
 or two sentences. Function words and head nouns are redundancy for the reader's
 benefit, and a generator tuned for fluency and concision strips redundancy.
 
-- **Reference** (`G.anchor-pronouns`, `G.summarizing-nouns`, `G.definite-article`). Bare *This* is what joins a claim to the comment on it ("This
+- **Reference** (`G.anchor-pronouns`, `G.summarizing-nouns`, `G.definite-article`). Bare *This* joins a claim to the comment on it ("This
   highlights..."). The head noun requires an editorial choice that the bare
   form defers. *It* over the repeated noun follows general anti-repetition advice
-  that the terminology rule already rejects. Distance costs attention nothing, so an
-  antecedent three sentences back is as available to the model as the previous
-  clause. The mismatched summarizing noun ("such tools" after a list of tasks)
+  that the terminology rule already rejects. The model weighs an antecedent three
+  sentences back as easily as a noun in the previous clause. The mismatched
+  summarizing noun ("such tools" after a list of tasks)
   is the same mechanism one level up. The noun names the category that the writer
   had in mind, not the category that the text introduced. The first-mention
   *the* is the same mechanism applied to articles. *The* claims that the reader
   can already identify the thing, and the generator treats as already known whatever is fixed in its own
-  plan. Two habits from the training data add to it, "the" before any noun
+  plan. Habits from the training data add to this tendency: "the" before any noun
   followed by a purpose phrase ("the tools needed to ...") and the high rate of
   "the" in academic prose generally.
 - **Stand-in words** (`G.stand-ins`). By the time the model reaches "among the ___" in "detect
@@ -106,9 +102,9 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   left to avoid repeating *tests* is a stand-in at the current position. The
   advice not to repeat a word is enforced one token at a time, and "among the
   [adjective] ones" is itself a frequent chunk. A human editor rewrites the
-  clause instead. The reader of the unedited version has to fetch the noun and
+  clause instead. The reader of the unedited version has to find the noun and
   work out the relation.
-- **Explicit *that*** (`G.keep-that`). The zero form is standard in conversation and fiction and
+- **Explicit *that*** (`G.keep-that`). Leaving out *that* is standard in conversation and fiction and
   rare in academic prose (Biber et al., *Longman Grammar of Spoken and Written
   English*). Its appearance in formal text is a conversational default imported
   by the model, reinforced by the copyediting advice to cut *that*. In "the results
@@ -121,7 +117,7 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   "report only entries", the condition has to follow *entries*, and *whose* is
   the one form in that position that fits any property and any predicate, so
   it is selected for the same reason as a stand-in word above.
-  Specifications, standards, and legal prose, all dense in the training data,
+  Specifications, standards, and legal prose, all common in the training data,
   use it the same way. Usage guides have accepted *whose* for things since
   Fowler, and the Longman Grammar's corpus counts (Biber et al.) show it as rare
   in every register, academic prose included, so the rule is a test per instance and a
@@ -132,30 +128,30 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
 
 The tense table (`S.tense-by-section`, `S.paper-vs-study`) follows APA conventions and standard SE practice. The
 paper-versus-study distinction (present tense for what the paper *is* and does,
-past tense for empirical actions performed during the study) is what lets a
+past tense for empirical actions performed during the study) lets a
 contributions list mix "we document" and "we analyzed" without inconsistency.
-The paper exists in the reader's hands now, while the study happened in the past.
+The paper exists at the time of reading, while the study happened in the past.
 A single-author paper takes "I" (`S.we`) because "we" with one author
 misstates who did the work, and a venue that wants "we" regardless says so in
 its guidelines, which then take precedence.
 
 ## Punctuation
 
-Most punctuation rules target the same underlying phenomenon. AI text uses
-mid-sentence pause marks (em dashes, colons, semicolons) far more than human
+Most punctuation rules exist because AI text uses
+mid-sentence pause marks (em-dashes, colons, semicolons) far more than human
 text, and restricting one mark merely displaces the load onto the others. The
-primary test is per mark, asking whether each pause is genuinely the right choice, and the
+primary test is per mark, asking whether each pause is the right choice, and the
 per-page counts are a secondary signal of over-reliance, since a raw count
-cannot tell a well-placed dash from a lazy one.
+cannot tell a well-placed dash from a misplaced one.
 
-- **Em dashes** (`G.em-dashes`). An em dash (and the parenthesis it is often swapped for) usually
+- **Em-dashes** (`G.em-dashes`). An em-dash (and the parenthesis that it is often swapped for) usually
   signals a sentence that carries too much. Splitting into two sentences is the
   fix. The exceptions (comma-bearing appositives, nested-parenthesis avoidance,
   quoted material) are cases where commas or parentheses would be ambiguous or
   nested, or where the dash belongs to a quotation, so they do not count as
   over-reliance.
 - **Literal em-dash glyphs in source** (`G.em-dash-glyphs`). Word processors autocorrect `--` into `—`.
-  Code editors don't. So a literal `—` in Markdown, source, or `.tex` (where the
+  Code editors do not, so a literal `—` in Markdown, source, or `.tex` (where the
   em-dash is `---`) rarely comes from a human and usually marks pasted or
   generated text. The rule says explicitly that swapping the glyph is not a fix
   for the dash, because a reviewer can otherwise close the finding by rewriting
@@ -163,10 +159,10 @@ cannot tell a well-placed dash from a lazy one.
   catalog now lists `--` as the substitute that AI text uses, so the density signal
   counts the dash rather than the character.
 - **Colons** (`G.colons`). AI text defaults to colons for a generic mid-sentence pause and
-  uses the colon-then-list shape reflexively, which is why both are flagged
+  reflexively puts a colon before a list, which is why both are flagged
   even when each individual colon is defensible.
-- **Colon before a list or continuation** (`G.introducer-colon`). AI text systematically ends a list- or
-  continuation-introducing clause with a period, for reinforcing reasons.
+- **Colon before a list or continuation** (`G.introducer-colon`). AI text systematically puts a period at the end of a
+  clause that introduces a list or a continuation, for reasons that reinforce one another.
   Periods vastly outnumber colons after clause-final tokens in the training data.
   The visual break of a blank line or list markers makes a period look complete
   and takes the place of the colon. With a period, the writer states nothing
@@ -174,13 +170,13 @@ cannot tell a well-placed dash from a lazy one.
   test in the introducer-punctuation rule resolves each case without relying on
   this background.
 - **Caption punctuation** (`L.caption-punctuation`). The run-in caption default (`.`, switching to `:` before
-  a list or grammatical continuation) follows the same training-data bias toward
-  the period.
-- **Capitalization after a colon** (`G.colon-capitalization`). AI-generated prose reliably lowercases the first
+  a list or grammatical continuation) follows the same bias toward
+  the period in the training data.
+- **Capitalization after a colon** (`G.colon-capitalization`). AI text reliably lowercases the first
   word after a colon regardless of whether a full sentence follows, so the
-  project convention to capitalize after a sentence-completing colon catches a
+  project convention to capitalize after a colon followed by a complete sentence catches a
   frequent tic.
-- **Semicolons** (`G.semicolons`). Like colons and em dashes, semicolons become filler punctuation
+- **Semicolons** (`G.semicolons`). Like colons and em-dashes, semicolons become filler punctuation
   in AI text. Two sentences usually read more clearly.
 - **Example/restatement connectives** (`G.connectives`). The pause-mark rules above tell the reviewer
   which marks to remove. This rule supplies the connective that those marks
@@ -191,7 +187,7 @@ cannot tell a well-placed dash from a lazy one.
   a restatement therefore removes an over-used pause and restores
   a construction that AI text under-uses, and the under-use is itself a tell. The rule is deliberately
   dependent on meaning (illustrates vs. renames vs. sets up a payoff clause) so it does not
-  become a mechanical dash-to-`e.g.` swap that merely shifts the load onto a new formula.
+  become a mechanical swap of each dash for `e.g.` that merely shifts the load onto a new formula.
 - **Sentence length** (`G.sentence-length`). AI text is detectable by its uniformity (roughly 15 to 25
   words per sentence, low burstiness), so deliberate variation is itself a signal
   of human editing.
@@ -202,9 +198,9 @@ cannot tell a well-placed dash from a lazy one.
 
 ## Structure
 
-- **Formulaic openings and closings** (`G.no-formulaic-openings`, `G.no-formulaic-closings`). "In today's...", "In summary," and their
-  kin are high-frequency AI scaffolding that adds no content. They are allowed
-  only where they do genuine consolidating work.
+- **Formulaic openings and closings** (`G.no-formulaic-openings`, `G.no-formulaic-closings`). "In today's...", "In summary," and similar
+  stock phrases appear often in AI text and add no content. They are allowed
+  only where they consolidate content.
 - **Rule-of-three defaults** (`G.no-rule-of-three`). AI text groups items in threes by habit. The rule
   forces the count to match the actual number of items.
 - **Announced counts** (`G.no-announced-counts`). Models open with the number of
@@ -215,44 +211,40 @@ cannot tell a well-placed dash from a lazy one.
   designs, and contribution lists, and removes it from running prose. The
   back-reference test ("the third of these") is the mechanical form of that
   distinction, so the reviewer does not have to judge the writer's intent.
-- **Prose listicles** (`G.no-prose-listicle`). The ordinal-opened paragraph chain
-  ("The first wall is... The second wall is...") is what a model produces when it
-  is told to stop emitting bullet lists, so banning lists alone displaces the
-  shape instead of removing it. The rule has to name the scale, because the
+- **Prose listicles** (`G.no-prose-listicle`). A model that is told to stop
+  emitting bullet lists produces a chain of paragraphs opened by ordinals ("The
+  first wall is... The second wall is..."), so banning lists alone displaces
+  the shape instead of removing it. The rule has to name the scale, because the
   list-cramming rule prescribes `First, ... Second, ...` as the fix for a
-  clause pile-up inside one sentence. A short ordinal sequence that the reader
-  holds in view is structure. The same markers opening consecutive paragraphs are an
-  unmarked list.
+  clause pile-up inside one sentence.
 - **No list-cramming in a single sentence** (`G.no-list-cramming`). AI text maximizes information per
   sentence, flattening what should be several sentences into one colon- or
   dash-led chain of semicolon-joined clauses. The pile-up reads as machine prose
-  and hurts the reader. Splitting restores burstiness and lets each claim carry
-  its own citation cleanly. It also resolves the capitalization-after-a-colon
-  edge case, where a colon introducing a series of independent clauses falls
+  and makes the reader hold several claims in one sentence. Splitting restores
+  burstiness and lets each claim carry its own citation cleanly. It also
+  resolves an edge case of the rule on capitalization after a colon, where a
+  colon introducing a series of independent clauses falls
   between the two halves of that rule (capitalize a sentence, lowercase a list).
   Once the clauses are separate sentences, the question does not arise.
 - **One-sentence paragraphs** (`G.paragraph-length`). AI text breaks prose into one-sentence paragraphs
   for manufactured emphasis. They are kept only where a single sentence has a
-  structural purpose (opening a section, introducing a list or figure, marking a
+  structural purpose (e.g., opening a section, introducing a list or figure, marking a
   transition).
-- **Concision** (`G.sentence-padding`, `G.paragraph-padding`). Sentence- and paragraph-level padding is a distinct failure from
-  vagueness, inflated vocabulary, and cross-section redundancy. A phrase can be
-  concrete, plainly worded, and unique to its location yet still spend more words
-  than its content needs. The subtractive test (delete anything that can be
-  removed at no cost to meaning, emphasis, or precision) is the shared diagnostic.
 - **Section openers, generic truths, and evaluative sentences** (`G.paragraph-padding`). The windup rule
   targets a sentence that announces what its own paragraph then does. Read at
-  section level it would remove every orienting paragraph, and style guides
-  treat a heading followed directly by a subheading as poor form, so the rule
-  names the section-opening paragraph as legitimate when it states the section's
-  claim ("The two analyses for RQ2 disagree. This section explains why.") or
-  carries what the headings do not. Generic-truth sentences, aphorisms, and
-  evaluative sentences get the same density treatment as restricted words,
-  hedges, and one-sentence paragraphs, a signal rather than a ban. One such
-  sentence can open a section or mark that a result matters. Accumulation is the filler.
+  section level, it would remove every orienting paragraph and leave a heading
+  followed directly by a subheading, so the reader would reach the first
+  subsection without learning what the section claims or how its parts relate.
+  The rule therefore names the section-opening paragraph as legitimate when it
+  states the section's claim ("The two analyses for RQ2 disagree. This section
+  explains why.") or carries what the headings do not. Generic-truth sentences,
+  aphorisms, and evaluative sentences are handled like restricted words,
+  hedges, and one-sentence paragraphs. In each case, density is a signal, and a
+  single use is not banned. One such sentence can open a section or mark that
+  a result matters. Several in one paragraph are filler.
 - **Reformulate, do not delete** (`G.reformulate`). The concision and hedging rules license
   deletion, which a model can over-apply by resolving any flagged statement
-  through removal. This rule bounds that. Deletion is for content that says
+  through removal. This rule limits deletion. Deletion is for content that says
   nothing, while substantive claims, examples, and qualifications are rewritten
   so the author's meaning survives the fix. Deleting a substantive statement is
   appropriate only on explicit author request.
@@ -269,19 +261,19 @@ cannot tell a well-placed dash from a lazy one.
 - **No citations in the abstract** (`S.no-abstract-citations`). Many ACM, EMSE, and IEEE author guidelines
   require the abstract to stand alone, so references move to the introduction.
 - **The body must stand independent of the abstract** (`S.body-independent`). The abstract is read
-  independently by readers, indexers, and search engines, and a body reader may
+  independently by readers, indexers, and search engines, and a reader of the body may
   skip it, so no section of the body can depend on it. Anything that the abstract
   introduces, whether an acronym, term, definition, or notation, must be introduced
-  again at its first occurrence in the body. The re-introduction is required, not
-  duplication, which is also why the abstract is exempt from the cross-section
-  restatement rule. (Acronyms are the common case.)
+  again at its first occurrence in the body. The re-introduction is a requirement
+  rather than a duplicate. For the same reason, the abstract is exempt from the
+  cross-section restatement rule. (Acronyms are the common case.)
 
 ## Numbers, statistics, figures, threats, and BibTeX
 
 These sections are largely mechanical applications of APA 7th edition and
 IEEE/ACM house style. The justification is conformance to those guidelines rather
-than an AI-specific tic. Two exceptions: leading zeros before
-decimals follow IEEE/ACM rather than APA, and BibTeX verification exists because
+than an AI-specific tic. The exceptions are leading zeros before decimals, which
+follow IEEE/ACM rather than APA, and BibTeX verification, which exists because
 AI-generated entries frequently carry wrong years, venues, page numbers, or
 hallucinated DOIs.
 
@@ -316,8 +308,8 @@ layer.
   STE target.
 - **Active voice** (`T.active-voice`). A passive sentence can leave out its
   actor, and in technical text the actor is often what the reader needs to
-  know. The layer keeps one exception, the unknown actor, because an active
-  sentence would then have to invent one. The general layer's other exceptions,
+  know. The layer keeps one exception, the unknown actor, because the writer of
+  an active sentence would then have to invent an actor. The general layer's other exceptions,
   an irrelevant actor and a passive that reads better, are the judgments under
   which a writer leaves out an actor that the reader needs.
 - **Nominalizations** (`T.verbs-not-nouns`). "Make a decision" spends three
@@ -345,5 +337,5 @@ layer.
   that an argument needs. Forcing the rewrite would make the text less
   accurate, while STE exists to make technical text less ambiguous. The layer
   leaves no marker on a kept sentence. A marker in the source goes stale once
-  someone edits the sentence, and a review already lists a sentence that it will not
-  rewrite as an item for author judgment.
+  someone edits the sentence, and each sentence that a review will not rewrite
+  already appears in the review as an item for author judgment.

@@ -7,8 +7,8 @@ lookups), and extract_cites.py (per-key metadata for grounding) all split a
 and the two field parsers, one returning field *names* (for the presence check)
 and one returning field *values*, are defined here so the three tools share
 one parser instead of re-implementing brace handling. Values may be brace-,
-quote-, or bare-delimited, a quoted value may contain backslash-escaped quotes,
-and the `#` concatenation of several parts is joined. Common TeX accent
+quote-, or bare-delimited. A quoted value may contain backslash-escaped quotes,
+and the parts of a `#` concatenation are joined. Common TeX accent
 commands (\\"u, \\'e, \\c{c}, \\ss, ...) are resolved to their Unicode letters so
 a title compares cleanly against a database record.
 

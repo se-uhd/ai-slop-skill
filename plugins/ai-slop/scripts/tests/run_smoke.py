@@ -125,7 +125,7 @@ def _run_fetch(argv, fetched):
     """Call fetch_tropes.main with try_fetch stubbed, capturing both streams.
 
     `fetched` is the body try_fetch should return (None models a failed
-    fetch), so the test never touches the network.
+    catalog download), so the test never touches the network.
     """
     import contextlib
     import io
@@ -272,11 +272,11 @@ def test_check_bib_fields_flags_only_missing():
         joined = '\n'.join(lines)
         assert 'bad-article' in joined and 'journal' in joined, f"bib: bad-article missing journal not flagged: {lines!r}"
         assert 'bad-inproc' in joined and 'booktitle' in joined, f"bib: bad-inproc missing booktitle not flagged: {lines!r}"
-        # @misc has no required fields → must NOT be flagged
+        # @misc has no required fields -> must NOT be flagged
         assert 'some-misc' not in joined, f"bib: @misc was flagged but has no required fields: {lines!r}"
-        # @book with editor satisfies author requirement → must NOT be flagged
+        # @book with editor satisfies author requirement -> must NOT be flagged
         assert 'good-book-with-editor' not in joined, f"bib: @book with editor was flagged: {lines!r}"
-        # @online is BibLaTeX, unknown to standard BibTeX → must be silently skipped
+        # @online is BibLaTeX, unknown to standard BibTeX -> must be silently skipped
         assert 'biblatex-only' not in joined, f"bib: unknown @online was flagged: {lines!r}"
         # Fixture has 5 standard-BibTeX entries (article good/bad, inproceedings bad,
         # misc, book), and @online and @string are skipped. Of the 5, 2 are flagged.
@@ -387,10 +387,10 @@ def test_find_citation_issues_basic():
             assert any(missing_key in m for m in missing), \
                 f"cite: missing-grounding {missing_key} not flagged: {missing!r}"
 
-        # Considered: every cite call in GROUNDED_COMMANDS that resolved to >=1 key.
+        # Considered: every call to a GROUNDED_COMMANDS macro that resolved to >=1 key.
         # ok2024, (a,b), (x,y,z), follow2025, (textcite-cluster,more,three), styleonly,
         # (bib1,bib2,bib3), biblatex-grounded, (cap1,cap2,cap3), (star1,star2,star3) = 10.
-        # Missing-grounding: every considered cite without a grounding comment.
+        # Missing-grounding: every considered citation without a grounding comment.
         # (a,b), (x,y,z), (textcite-cluster,more,three), (bib1,bib2,bib3),
         # (cap1,cap2,cap3), (star1,star2,star3) = 6.
         assert ('considered 10 cite call(s) across 1 file(s); 5 cluster(s), '
@@ -553,7 +553,7 @@ def test_check_baseline_passes_on_bundled_yaml():
     # check_baseline.py is synced from the upstream pymarkdown-skill repo
     # (alongside lint_markdown.py and refresh_vendor.py) and asserts that
     # lint_markdown.yaml still carries the upstream baseline lint config.
-    # Run it here so the sync-owned guard stays exercised and a yaml edit
+    # Run it here so the upstream-owned guard stays exercised and a yaml edit
     # that drops the baseline fails the suite.
     rc, out, err = run('check_baseline.py')
     assert rc == 0, f"check_baseline: rc={rc} out={out!r} err={err!r}"
@@ -732,7 +732,7 @@ def test_detect_scope_file_tex():
 
 def test_detect_scope_file_pdf():
     # A PDF is not LaTeX source, so it detects as general. The --scientific flag
-    # adds the research-article rules for a non-LaTeX paper.
+    # adds the research article rules for a non-LaTeX paper.
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / 'paper.pdf'
         write(p, 'pdf')
@@ -812,7 +812,7 @@ def test_scan_repo_prose_markdown_skips_code_fences():
 
 
 def test_scan_repo_markdown_prose_fences_are_scanned():
-    # A ````markdown fence quotes a template: its prose is content, a bare
+    # A ````markdown fence quotes a template, and its prose is content. A bare
     # code fence nested inside it is still skipped, and a ```python fence
     # stays skipped entirely.
     with tempfile.TemporaryDirectory() as d:
@@ -1067,7 +1067,8 @@ def test_scan_repo_no_commits_flag_suppresses():
 
 def test_scan_repo_commits_count_selector():
     rc, out, err = run('scan_repo.py', '/nonexistent/zz', '--commits=5')
-    # a count spec is accepted (the dir error, not a usage error, is what trips)
+    # a count spec is accepted (the run stops on the missing directory, not on
+    # a usage error)
     assert rc == 2 and 'not a directory' in err, f"count selector: rc={rc} err={err!r}"
 
 
@@ -1147,7 +1148,7 @@ def test_verify_references_subprocess_unchecked_no_network():
 
 
 def test_verify_references_all_unreadable_exits_2():
-    # An unreadable bib file is distinct from "offline": there is nothing to
+    # An unreadable bib file is distinct from "offline". There is nothing to
     # verify, so the run exits 2 rather than the offline-tolerant 0.
     with tempfile.TemporaryDirectory() as d:
         rc, out, err = run('verify_references.py', str(Path(d) / 'missing.bib'))
@@ -1322,7 +1323,7 @@ def test_extract_cites_basic():
         assert rc == 0, f"extract: rc={rc} err={err!r}"
         data = json.loads(out)
         sites = data['sites']
-        # 5 sites: smith cite, jones citet, a/b/c cluster, citeauthor, done2021. ghost excluded.
+        # 5 sites: smith \cite, jones \citet, a/b/c cluster, \citeauthor, done2021. ghost excluded.
         assert len(sites) == 5, f"extract: expected 5 sites, got {len(sites)}: {sites!r}"
         assert not any('ghost' in s['keys'] for s in sites), f"extract: commented cite leaked: {sites!r}"
         cluster = [s for s in sites if s['keys'] == ['a', 'b', 'c']]
@@ -1332,7 +1333,7 @@ def test_extract_cites_basic():
             f"extract: citeauthor should be non-groundable: {sites!r}"
         done = [s for s in sites if s['keys'] == ['done2021']]
         assert done and done[0]['grounded'] is True, f"extract: existing grounding not detected: {sites!r}"
-        # by_key aggregates smith2020 across its cite + citeauthor sites
+        # by_key aggregates smith2020 across its \cite and \citeauthor sites
         assert len(data['by_key']['smith2020']['sites']) == 2, \
             f"extract: smith2020 should have 2 sites: {data['by_key']['smith2020']!r}"
         # metadata pulled from the .bib for used keys
@@ -1389,7 +1390,7 @@ def test_extract_cites_claim_excludes_preamble_and_structure():
         rc, out, err = run('extract_cites.py', d)
         assert rc == 0, f"claim: rc={rc} err={err!r}"
         claim = json.loads(out)['sites'][0]['claim']
-        # The first cite of the section must NOT swallow the preamble or heading.
+        # The first citation of the section must NOT include the preamble or heading.
         assert claim == 'Recent advances in deep learning have transformed the field.', \
             f"claim leaked preamble/structural markup: {claim!r}"
 
@@ -1747,9 +1748,9 @@ def test_insert_grounding_replaces_todo_stubs():
 
 def test_grounding_comment_block_read_write_agree():
     # The read side (find_citation_issues / extract_cites) and the write side
-    # (insert_grounding) share one definition of the cite's attached comment
-    # block. An unrelated % comment between the cite and its grounding comment
-    # does not hide the grounding. A TODO stub marks the cite as not-missing
+    # (insert_grounding) share one definition of the citation's attached comment
+    # block. An unrelated % comment between the citation and its grounding comment
+    # does not hide the grounding. A TODO stub marks the citation as not-missing
     # but still fillable. A comment beyond intervening code is not credited.
     import json
     fixture = (
@@ -2111,19 +2112,20 @@ LAYER_PREFIX = {'rules-general.md': 'G', 'rules-scientific.md': 'S', 'rules-late
 KEY_DEF_RE = re.compile(r'^[ \t]*(?:- |\d+\. )?\*\*(?P<name>(?:[^*\n]|\*(?!\*))+?)\*\* \(`(?P<key>[GSLT]\.[a-z0-9-]+)`\)', re.M)
 KEY_REF_RE = re.compile(r'`([GSLT]\.[a-z0-9-]+)`')
 RULE_BULLET_RE = re.compile(r'^[ \t]*- \*\*(?P<bold>[^"*](?:[^*\n]|\*(?!\*))*)\*\*', re.M)
-SELF_CHECK_HEADING = '## Self-Check'
+SELF_CHECK_HEADING_RE = re.compile(r'^## Self-check', re.I | re.M)
 
 
 def test_rule_keys_unique_and_resolvable():
     """Every rule bullet in the four layers defines one key with its layer's
-    prefix, keys are unique across the layers, every self-check item cites a
-    key, and every key cited in the layers, the rationale, or a SKILL.md is
+    prefix, and keys are unique across the layers. Every self-check item cites
+    a key, and every key cited in the layers, the rationale, or a SKILL.md is
     defined. Keys are the stable handle that survives renames and insertions."""
     shared = SCRIPTS.parent / 'shared'
     defined = {}
     for name in LAYERS:
         text = (shared / name).read_text(encoding='utf-8')
-        rules, _, checks = text.partition(SELF_CHECK_HEADING)
+        heading = SELF_CHECK_HEADING_RE.search(text)
+        rules, checks = (text[:heading.start()], text[heading.end():]) if heading else (text, '')
         assert checks, f"keys: {name} has no self-check section"
         for m in KEY_DEF_RE.finditer(rules):
             key = m.group('key')
@@ -2146,8 +2148,9 @@ def test_rule_keys_unique_and_resolvable():
 # ---------- rev17 regressions ----------
 
 def test_scan_repo_generated_marker_needs_a_comment_line():
-    # A prose file that merely mentions the phrase is scanned. A generated
-    # header on a comment line is skipped and named on stderr.
+    # A prose file that merely mentions a generated-file marker phrase is
+    # scanned. A generated header on a comment line is skipped and named on
+    # stderr.
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'WRITING.md',
               '# Writing rules for this project\n\nThey were generated by `/ai-slop:init` from the skill.\n')

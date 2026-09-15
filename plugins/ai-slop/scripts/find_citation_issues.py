@@ -21,8 +21,9 @@ Issues:
                        (`% GROUNDING: "..."`, `% GROUNDING: <key> -- "..."`, or
                        `% GROUNDING <key>: "..."`, as defined in cite_scan.py).
                        A quote-less `TODO verify` stub also counts as attached
-                       (the cite is marked, not missing). Filling stubs is
-                       insert_grounding's job, not a finding here.
+                       (the citation is marked, not missing).
+                       insert_grounding.py fills stubs, so this script does not
+                       report them.
 
 Recognized commands (cluster + grounding checks apply):
   - natbib:   \\cite, \\citep, \\citet, \\citealp, \\citealt, \\citetext.
@@ -34,7 +35,7 @@ Recognized commands (cluster + grounding checks apply):
     also matched.
 
 Recognized but skipped (style-only helpers, typically paired with a grounded
-cite nearby): \\citeauthor, \\citeyear, \\citeyearpar, \\citenum. Their
+citation nearby): \\citeauthor, \\citeyear, \\citeyearpar, \\citenum. Their
 sentence-start capitalized variants (\\Citeauthor, \\Citeyear, ...) are
 also matched and skipped.
 
@@ -42,13 +43,13 @@ Recognized and ignored entirely: \\nocite (BibTeX-only marker, not textual).
 
 Other commands are not flagged. The recognized list is an allowlist.
 
-Comment handling: the code portion of each line (before the first unescaped
-`%`) is what gets scanned, so cite calls inside comments do not count. The
-scan runs over the lines joined, so a call whose key list spans lines is
-found and reported at the line it starts on. Its grounding comment is looked
-for below the line it ends on, where a comment under the cite sits. The
-scanner and the \\input walker are shared with extract_cites.py (cite_scan.py),
-so the two tools see the same files and the same calls.
+Comment handling: only the code portion of each line (before the first
+unescaped `%`) is scanned, so \\cite-style calls inside comments do not count.
+The scan runs over the lines joined, so a call with a key list that spans
+lines is found and reported at the line it starts on. Its grounding comment is
+looked for below the line it ends on, where a comment under the citation is
+placed. The scanner and the \\input walker are shared with extract_cites.py
+(cite_scan.py), so the two tools see the same files and the same calls.
 
 Exits 0 when at least one input file was read, whether or not findings were
 emitted. Exits 2 on a usage error: no arguments, or none of the given paths
@@ -58,31 +59,30 @@ would otherwise look like a clean "no findings" run. (In zsh, an unquoted
 variable is not word-split.) Stdout is empty exactly when there are no
 findings. A one-line summary is always
 printed to stderr (e.g. `considered 41 cite call(s) across 1 file(s);
-1 cluster(s), 41 missing-grounding`). "Considered" counts cite calls in
+1 cluster(s), 41 missing-grounding`). "Considered" counts \\cite-style calls in
 GROUNDED_COMMANDS that resolved to at least one parsed key. Calls in
 SKIPPED_COMMANDS, IGNORED_COMMANDS, or with empty `{}` are excluded.
 
-The `cluster` and `missing-grounding` counts are not disjoint. A cite with
+The `cluster` and `missing-grounding` counts are not disjoint. A citation with
 three or more keys and no nearby grounding comment emits two stdout rows
-(one of each kind) and increments both counters. The two should not be
-summed. Both are subsets of `considered`, but a clean cite (one or two
+(one of each kind) and increments both counters. The two counts should not be
+summed. Both are subsets of `considered`, but a clean citation (one or two
 keys, has grounding) still counts toward `considered` while contributing
 to neither subset.
 
 Known limitations:
-  - Cite calls inside \\verb, listings, or other non-`%`-comment LaTeX
+  - \\cite-style calls inside \\verb, listings, or other non-`%`-comment LaTeX
     constructs are still scanned. See find_latex_root.py for the same
     limitation.
   - Multi-cite biblatex forms \\textcites / \\autocites / \\fullcites use
     multiple {key} groups. This script reads only the first group and
     undercounts keys.
-  - "Nearby grounding" is the cite's attached comment block: the same line
-    plus the contiguous run of blank and `%`-comment lines below it. The
+  - "Nearby grounding" is the citation's attached comment block: the same
+    line plus the contiguous run of blank and `%`-comment lines below it. The
     first code line ends the block, so a grounding comment placed after
     intervening code or prose is not credited. Blank lines and unrelated
     `%` comments inside the block are skipped over. The marker is matched
-    in any key-placement form (`% GROUNDING:`, `% GROUNDING: <key>`, or
-    `% GROUNDING <key>:`).
+    in any of the key-placement forms listed under `missing-grounding` above.
 """
 import sys
 from pathlib import Path
@@ -90,7 +90,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cite_scan import gather_files, has_grounding, iter_cite_calls, split_code_and_comment  # noqa: E402
 
-# The cite regex, command-classification sets, the comment/key/grounding
+# The citation regex, command-classification sets, the comment/key/grounding
 # helpers, and the \input walker are in cite_scan.py, shared with extract_cites.py.
 
 CLUSTER_THRESHOLD = 3
@@ -104,7 +104,7 @@ def truncate(text, limit=120):
 
 
 def scan_text(path, text, stats):
-    """Scan one file's text for cite-cluster and missing-grounding findings,
+    """Scan one file's text for cluster and missing-grounding findings,
     print one TSV row per finding to stdout, and update `stats` in place."""
     stats['files'] += 1
     lines = text.splitlines()

@@ -4,7 +4,7 @@
 Best-effort check that each BibTeX entry refers to a real publication, by
 looking it up in academic databases. Every lookup is online. An entry with a
 DOI is resolved at CrossRef, and its title is then looked up at DBLP so that
-DBLP's curated year and venue take part in the comparison (the rule layers
+DBLP's curated year and venue count in the comparison (the rule layers
 name DBLP as the canonical record for CS/SE venues). An entry without a DOI is
 looked up by title at DBLP and then CrossRef. When a required lookup fails, the
 entry is reported `unchecked-offline` and the run still exits 0. A failed DBLP
@@ -14,8 +14,8 @@ The year and venue comparisons are deliberately lenient, because the strict
 forms flagged correct entries. The year matches when it equals any year the databases record
 for the work (CrossRef's online-first and print dates, DBLP's year), since a
 journal paper legitimately carries either. The venue matches on shared words of
-four or more letters, where a common SE venue abbreviation (TOSEM, EMSE, ICSE,
-...) is expanded first (VENUE_ABBREVIATIONS), a database abbreviation such as
+four or more letters. A common SE venue abbreviation (TOSEM, EMSE, ICSE, ...)
+is expanded first (VENUE_ABBREVIATIONS). A database abbreviation such as
 "Empir. Softw. Eng." matches by word prefix, and an initialism of the long
 form's words (TOSEM for "ACM Transactions on Software Engineering and
 Methodology") also counts.
@@ -46,12 +46,11 @@ non-LLM audit of someone else's submission, use the `hallucite` skill instead.
 
 Canonical metadata: where DBLP and CrossRef disagree, prefer DBLP's curated
 record for CS/SE venues, except when DBLP holds only a preprint and the
-published version is available via the DOI. For an entry with a DOI, the code
-accepts the years of both records and lets both venue strings take part in the
-venue comparison. For an entry without a DOI, a DBLP title match is used
-whenever one exists, so the preprint exception is not applied.
+published version is available via the DOI. For an entry without a DOI, a DBLP
+title match is used whenever one exists, so the preprint exception is not
+applied.
 
-Future (not yet wired): an optional local DBLP dump ($AI_SLOP_DBLP) for offline
+Not yet implemented: an optional local DBLP dump ($AI_SLOP_DBLP) for offline
 and faster bulk checks, and richer venue-abbreviation matching.
 """
 import argparse
@@ -289,8 +288,8 @@ def dblp_by_title(title):
 # ---------- checking entries ----------
 
 def _merge_curated(rec, curated):
-    """Fold DBLP's curated record into a CrossRef one: both years are accepted
-    and both venue strings take part in the venue comparison."""
+    """Fold DBLP's curated record into a CrossRef one: Both years are accepted
+    and both venue strings count in the venue comparison."""
     merged = dict(rec)
     merged['years'] = _record_years(rec) | _record_years(curated)
     venues = [v for v in (rec.get('venue', ''), curated.get('venue', '')) if v]

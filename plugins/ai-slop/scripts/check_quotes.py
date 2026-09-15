@@ -43,7 +43,7 @@ are left as they are. A one-line summary is printed to stderr. Exits 0 after a
 run, whatever the verdicts, and 2 when the quotes JSON cannot be read or is not
 an object.
 
-The script never adds or edits a quote. It only removes one it could not find.
+The script never adds or edits a quote. It only removes a quote it could not find.
 """
 import argparse
 import html
