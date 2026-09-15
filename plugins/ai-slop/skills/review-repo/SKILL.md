@@ -1,9 +1,9 @@
 ---
 name: review-repo
-description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research-article layer. Writes a structured Markdown report grouped by file.
+description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research-article layer, and `--ste` adds the Simplified Technical English layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev18"
+  version: "2026-09_rev19"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -18,7 +18,7 @@ This skill reviews the natural-language text spread across a whole repository, r
 Invoke this skill when the user:
 
 1. Asks to scan or audit the prose across a whole repository, for example, "check the repo for slop", "audit the comments and docs", or "find British spellings and tropes across the codebase".
-2. Runs `/ai-slop:review-repo`, optionally with a path to the repo root, `--scientific`, and/or a commit-scanning flag (`--commits=<spec>` or `--no-commits`).
+2. Runs `/ai-slop:review-repo`, optionally with a path to the repo root, `--scientific`, `--ste`, and/or a commit-scanning flag (`--commits=<spec>` or `--no-commits`).
 
 Do **not** invoke for a single document (use `/ai-slop:review`) or for only the changed lines (use `/ai-slop:review-diff`). Repo mode does scan a repository's `.tex` files (as prose, against the general rules), but for the LaTeX-specific checks (citations, BibTeX, section-aware rules) a single paper is still better served by `/ai-slop:review` with the dedicated LaTeX layer.
 
@@ -32,7 +32,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
 **Commit-message scope.** By default the scan covers the most recent 200 commits. Pass `--commits=<N>` for a different count, `--commits=all` for the full history, `--commits=<range>` for a git revision range (for example `--commits=main..HEAD` to review just a branch's commits before they are pushed), or `--no-commits` to skip commit messages entirely. Pushed commit history is rewritten only by a deliberate repair, so commit-message findings are mostly advisory: a guide for future messages, or for rewording a branch's not-yet-pushed commits with an interactive rebase. `/ai-slop:revise` does not touch commit messages.
 
-**Rule layers.** The general layer always loads. Pass `--scientific` to also load the research-article layer when the repository's prose is research writing (a thesis, or a paper repo's Markdown or LaTeX). `.tex` files are scanned as prose (their body and `%` comments) against the general (and, with `--scientific`, the research-article) layer. Repo mode does not load the dedicated LaTeX layer.
+**Rule layers.** The general layer always loads. Pass `--scientific` to also load the research-article layer when the repository's prose is research writing (a thesis, or a paper repo's Markdown or LaTeX). `.tex` files are scanned as prose (their body and `%` comments) against the general (and, with `--scientific`, the research-article) layer. Repo mode does not load the dedicated LaTeX layer. Pass `--ste` to also load the Simplified Technical English layer (`rules-ste.md`) for a repository that writes its prose in STE.
 
 **Trope catalog override.** `--tropes=<path>` (repeatable) replaces the live fetch with one or more user-supplied files, concatenated in the order given, exactly as in `/ai-slop:review`.
 
@@ -42,7 +42,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
 2. **Extract the repository's prose.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_repo.py <repo-root>`, appending the user's commit-scanning flag (`--commits=<spec>` or `--no-commits`) when one was given. Each stdout line is `<relpath>:<line>:<text>`: a Markdown or plain-text line, an extracted comment, or a commit-message line. File lines come first, grouped by file and sorted. Commit messages follow under a `commit <short-sha>` pseudo-path, newest first. The script prints a one-line summary to stderr (files scanned, prose vs comment-bearing, commit messages, total lines). If stdout is empty, write an empty report (Summary: "No natural-language text found to review.") and stop. A `--commits` range that git cannot resolve stops the script with exit 2 and git's message, so report that to the user instead of writing a report with an empty commit section. The stderr summary also names each file skipped as generated. The script's module docstring documents what is scanned and its heuristic limits (string-aware comment detection, first-comment-per-line, the generated-file skip, the commit-message selection and trailer drop).
 
-3. **Determine which rule layers to load.** Read `../../shared/rules-general.md` always. Read `../../shared/rules-scientific.md` too when the user passed `--scientific`. Repo mode never loads the dedicated LaTeX layer. It reviews any `.tex` files as prose against the general layer. Each layer contributes its own rules and self-check. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
+3. **Determine which rule layers to load.** Read `../../shared/rules-general.md` always. Read `../../shared/rules-scientific.md` too when the user passed `--scientific`, and `../../shared/rules-ste.md` when the user passed `--ste`. Repo mode never loads the dedicated LaTeX layer. It reviews any `.tex` files as prose against the general layer. Each layer contributes its own rules and self-check. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
 
 4. **Load the AI-trope catalog.** Same as `/ai-slop:review` step 3. If `--tropes=<path>` was passed, read each named file and concatenate them in order. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py` and read its stdout, stopping as review does when the fetch fails.
 
@@ -54,7 +54,9 @@ The skill scans the repository rooted at the current working directory by defaul
 
    When unsure whether a flagged line is prose or code the extractor surfaced by accident, open the file for context and drop the finding if it is not natural language.
 
-6. **Cross-cutting metrics, repo-wide.** Compute over the extracted text and report raw counts with locations (per-page densities do not apply to a repository): dashes, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py` run over the Markdown, plain-text, and LaTeX files the scan listed (do not eyeball them, and treat the rows as `/ai-slop:review` step 5 does); American-vs-British spelling (a frequent source of drift in code comments); restricted-word occurrences; and, when the scientific layer is in scope, the "significant" audit and verb tense. A single punctuation mark that is the wrong choice (a semicolon joining two independent clauses, an em-dash standing in for a period, a colon used as a generic mid-sentence pause) is a per-file finding under step 5.
+   In STE mode, handle kept sentences as `/ai-slop:review` step 4 does. Do not report a sentence under an STE rule when it carries a `[KEPT: reason]` marker, and list a sentence that an STE rewrite would weaken under **Kept sentences** instead of reporting it. List no kept sentences for a commit message, since revise mode never edits one.
+
+6. **Cross-cutting metrics, repo-wide.** Compute over the extracted text and report raw counts with locations (per-page densities do not apply to a repository): dashes, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py` run over the Markdown, plain-text, and LaTeX files the scan listed (do not eyeball them, and treat the rows as `/ai-slop:review` step 5 does); American-vs-British spelling (a frequent source of drift in code comments); restricted-word occurrences; and, when the scientific layer is in scope, the "significant" audit and verb tense. A single punctuation mark that is the wrong choice (a semicolon joining two independent clauses, an em-dash standing in for a period, a colon used as a generic mid-sentence pause) is a per-file finding under step 5. In STE mode, also run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_sentences.py` over the same Markdown, plain-text, and LaTeX files and test its rows as `/ai-slop:review` step 5 does. Read comments and commit messages for the same rules without the scan.
 
 7. **Write the report.** Save `ai-slop-report.md` in the working directory. It is a generated artifact and must never be committed, so resolve the repository root with `git rev-parse --show-toplevel` and add the report's name to the root's `.gitignore` if that file does not already list it. Then run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/lint_markdown.py --fix ai-slop-report.md` and iterate up to three times exactly as in `/ai-slop:review` step 7, then read the file back and echo it verbatim. Use the report template from `../review/SKILL.md` "Report template" with `### <relpath>` headings under "Findings by file" in place of section names, and one extra header line under `**Reviewed:**`:
 
@@ -72,8 +74,8 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 
 ## Bundled files
 
-- `../../shared/rules-general.md` and `../../shared/rules-scientific.md` are the rule layers repo mode can load (the LaTeX layer never applies here).
-- `../../scripts/scan_repo.py` extracts the repository's natural-language text. `../../scripts/fetch_tropes.py` and `../../scripts/lint_markdown.py` implement the catalog fetch and report linting. Their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-ste.md` are the rule layers repo mode can load (the LaTeX layer never applies here).
+- `../../scripts/scan_repo.py` extracts the repository's natural-language text. `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_sentences.py`, and `../../scripts/lint_markdown.py` implement the catalog fetch, the glyph scan, the sentence scan for STE mode, and report linting. Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 

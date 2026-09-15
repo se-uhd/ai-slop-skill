@@ -2,6 +2,14 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`); see the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev19] - 2026-09-15
+
+- **Added:** an STE mode. `--ste` loads a fourth rule layer, `shared/rules-ste.md`, on top of the layers the scope selects, in `/ai-slop:review`, `/ai-slop:review-diff`, `/ai-slop:review-repo`, and `/ai-slop:init`. The layer adapts part of ASD-STE100 Simplified Technical English: short sentences with the subject and verb near the start, active voice, one topic per paragraph, one meaning per word, verbs instead of nominalizations, and no dropped articles. It changes the STE rules on sentence length and style. Sentence length varies within a 25-word limit, and each reply, headed section, or text without headings carries one stylistic device at most. Quotations and literal strings stay as written. The rules carry `T.` keys, and `rules-rationale.md` records where the layer departs from full STE and how it fits with the general layer.
+- **Added:** the `[KEPT: reason]` marker (`T.keep-and-mark`) for a sentence that an STE rewrite would weaken. A review lists such a sentence under a new **Kept sentences** report section instead of reporting it. `/ai-slop:revise` inserts the marker in the form the format takes, inside a comment in LaTeX and Markdown, and a later STE review skips a marked sentence.
+- **Added:** `scan_sentences.py`, which splits a Markdown, plain-text, or LaTeX file into sentences and lists the candidates for the STE rules that a count or a word pattern can find: sentences over 25 words, runs of three or more sentences within 5 words of each other in length, passive verbs, and a light verb followed by an action noun. A quotation, a code span, a URL, or a math span counts as one word, and a citation counts as none. The review skills run it in STE mode, and four smoke tests cover it.
+- **Fixed:** the Bundled files list of `/ai-slop:review-repo` names `scan_glyphs.py`, which its metrics step already ran.
+- **Unchanged:** the bundle's own prose. The STE layer is opt-in, so the sweep that `CLAUDE.md` asks for after a rule change does not apply to it.
+
 ## [2026-09_rev18] - 2026-09-09
 
 - **Removed:** the semicolon ratchet test added in rev17. It counted the prose semicolons in the first-party Markdown against a hard-coded number, which cannot tell a list separator from a clause joiner, so a legitimate list failed it and the remedy was editing the number. Clause-joining semicolons are left to the `/ai-slop:review-repo` sweep. The "lives in" test stays, since it has no such ambiguity.

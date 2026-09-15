@@ -55,11 +55,12 @@ have been broken before:
 - All first-party Markdown must lint clean:
   `python3 plugins/ai-slop/scripts/lint_markdown.py <file>`.
 - **Changing the rules is a three-file edit.** A new or reworded rule in
-  `shared/rules-general.md`, `shared/rules-scientific.md`, or
-  `shared/rules-latex.md` also needs its numbered item in that layer's
+  `shared/rules-general.md`, `shared/rules-scientific.md`,
+  `shared/rules-latex.md`, or `shared/rules-ste.md` also needs its numbered
+  item in that layer's
   self-check section, and an entry in `shared/rules-rationale.md` whenever a
   reader could push back on it. Every rule carries a stable key
-  (`G.`/`S.`/`L.` plus a slug) that reports and cross-references cite.
+  (`G.`/`S.`/`L.`/`T.` plus a slug) that reports and cross-references cite.
   `test_rule_keys_unique_and_resolvable` in the smoke suite enforces the key
   invariants: one key per rule bullet, unique across the layers, a key in
   every self-check item, and no dangling key in the layers, the rationale, or
@@ -85,7 +86,8 @@ have been broken before:
 - **The bundle follows its own rules.** When a rule is added or tightened,
   sweep the repository's own prose for the pattern in the same rev: the
   Markdown files, the skill and command files, and the Python docstrings and
-  comments. One smoke test holds a line between sweeps:
+  comments. The opt-in STE layer is the exception. The bundle's prose does not
+  follow it, so an STE rule change needs no sweep. One smoke test holds a line between sweeps:
   `test_first_party_prose_avoids_the_plain_words_seeds` runs `scan_repo.py`
   over the repository and fails on "lives in" outside a quoted example.
   Clause-joining semicolons are what `/ai-slop:review-repo` finds on the next

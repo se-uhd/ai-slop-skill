@@ -1,9 +1,9 @@
 ---
 name: review
-description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, and LaTeX source loads all three. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
+description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, LaTeX source loads all three, and `--ste` adds a Simplified Technical English (STE) layer to any input. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev18"
+  version: "2026-09_rev19"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -40,18 +40,22 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 **Trope catalog override.** `--tropes=<path>` (repeatable) replaces the default fetch with one or more user-supplied files. Paths can be absolute or relative to the working directory. Each file is read as-is and the contents are concatenated in the order given to form the catalog for this run. When `--tropes` is not passed (the common case), the catalog is fetched live (see step 3).
 
+**STE mode.** `--ste` adds the Simplified Technical English layer (`rules-ste.md`) on top of the layers the scope selects (see step 2). It works with every input type.
+
 ## Workflow
 
 1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path the user supplied). Parse any `--tropes=<path>` arguments from the user's message. Collect them as a list. Open the paper file (or extract text from PDF) and identify its sections (e.g., Abstract, Introduction, Related Work, Method, Results, Discussion, Threats to Validity, Conclusion, Future Work). For LaTeX, follow `\section{}` and `\subsection{}` markers.
 
-2. **Determine which rule layers to load.** Three layers are under `../../shared/`:
+2. **Determine which rule layers to load.** Four layers are under `../../shared/`:
    - `rules-general.md`: always loaded (language, restricted vocabulary, terminology, active voice, punctuation, structure, tone, prose self-check).
    - `rules-scientific.md`: research-article conventions (research-coded phrases, the "significant" caveat, verb tense by section, citations, numbers and statistics, figures and tables, threats to validity).
    - `rules-latex.md`: LaTeX-source mechanics (LaTeX quotes, run-in caption punctuation, cross-reference and `\citeauthor` macros, `% GROUNDING` comments, BibTeX).
+   - `rules-ste.md`: the optional Simplified Technical English layer (sentence length and variation, active voice, one topic per paragraph, one meaning per word, verbs instead of nominalizations, articles, one stylistic device per unit, and the `[KEPT: reason]` marker).
 
    Decide as follows:
    - **Is it LaTeX?** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <resolved-paper-path>`. Output `latex` means LaTeX source. Load all three layers (a LaTeX paper is a research article, so the scientific layer loads automatically). Output `general` means anything else, that is, Markdown, plain text, or PDF.
    - **Research article?** For `general` input, also load `rules-scientific.md` when the user passed `--scientific`, to treat a non-LaTeX manuscript (a Markdown or PDF paper) as a research article. Without the flag, load `rules-general.md` only.
+   - **STE mode?** When the user passed `--ste`, also load `rules-ste.md`, whatever the two decisions above chose. Where it and the general layer set different limits for the same thing (sentence length, the exceptions for passive voice), apply the STE limit (`T.precedence`).
 
    Read each selected layer file. Each contributes its own rules and its own self-check section. Apply them together. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
 
@@ -65,9 +69,12 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so revise mode does not insert a guessed noun.
 
+   In STE mode, do not report a sentence under an STE rule when it already carries a `[KEPT: reason]` marker (`T.keep-and-mark`), although the other layers still apply to it. When the STE rewrite of a sentence would lose meaning, precision, or force, record no STE finding for it. List it under **Kept sentences** in the report instead, with a short reason, so revise mode marks it in the source. No suggested revision changes a quotation or a literal string (`T.quotations`, `T.literals`).
+
 5. **Cross-cutting metrics.** Compute and record the metrics for the layers in scope (skip the scientific metrics, verb-tense compliance and the "significant" audit, when only the general layer is loaded). Run the deterministic glyph recheck first, because the per-section reading pass reliably undercounts these:
    - **Glyph and dash tells (run `scan_glyphs.py`; do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py <paper-file> [<input.tex> ...]` over the paper file(s). Each stdout line is `<file>:<line>:<col>\t<glyph-name>\t<context>` for one tell, with `em-dash`, `ascii-dash`, `en-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` as the categories, and the stderr summary gives the per-category totals (e.g. `15 tell(s) [em-dash=15 ascii-dash=0 ...]`). Take the dash-density count below from this output, not an eyeball, adding the `em-dash` and `ascii-dash` rows. Report every `em-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` row as a per-section finding with its ASCII replacement. For `en-dash`, keep the dashes in numeric or page ranges (`pp. 12–18`). For any glyph, skip the occurrences inside quoted source material or a code string. A glyph inside a code *comment* is still a finding (the comment is prose). An `ascii-dash` row is a candidate for the per-mark judgment in **Em-dashes** (`G.em-dashes`), not an automatic finding: `---` is the correct em-dash in LaTeX and `--` is a normal ASCII dash in Markdown, so report one only when the dash itself is the wrong mark. The scan already skips flags, numeric ranges, fenced blocks, inline code, `%` comments in `.tex` (so the bundle's own grounding comments never count), and runs of four or more dashes. The script exits 0 once it read a file (with or without findings) and 2 on a usage error.
    - **Reference candidates (run `scan_reference.py`; do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_reference.py <paper-file> [<input.tex> ...]`. Each stdout line is `<file>:<line>:<col>\t<kind>\t<context>` for one candidate: `bare-demonstrative` (a sentence-initial *This*, *These*, *That*, or *It* followed directly by a verb) `such-noun` (*such* + noun), or `stand-in` (*ones*, *the former / the latter*, *respectively*, *do so*, *those of / that / which / with*). The stderr summary gives the per-kind totals. The rows are candidates, not findings. Apply the **Reference** rules' tests to each ("[noun] just mentioned" for the first two kinds; put the noun back for `stand-in`), report the confirmed rows as per-section findings under that rule (or under author judgment when the referent cannot be determined, per step 4), and clear a dummy *it* the script did not filter. First-mention definites are not scanned. Check them in the per-section pass. The script exits 0 once it read a file and 2 on a usage error.
+   - **Sentence candidates (STE mode only; run `scan_sentences.py`, do not eyeball).** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_sentences.py <paper-file> [<input.tex> ...]`, or, for a PDF, run it on the extracted text saved as a `.txt` file in a temporary directory. Each stdout line is `<file>:<line>:<col>\t<kind>\t<context>` for one candidate, and the context opens with the word count or the matched words. The kinds are `long-sentence` (more than 25 words, with a quotation, code span, or URL counted as one word), `uniform-run` (three or more consecutive sentences within 5 words of each other in length), `passive`, and `nominalization` (a light verb followed by an action noun). The stderr summary gives the sentence count and the per-kind totals. The rows are candidates. Apply the STE rules' tests to each: split a long sentence or list it under Kept sentences, vary a run, keep a passive only when its actor is unknown, and keep a noun that names a thing rather than an action. Report the confirmed rows as per-section findings. The scan gives no long-sentence, passive, or nominalization row for a sentence that carries a `[KEPT: ...]` marker. In STE mode, take the sentence-length variance count below from the `uniform-run` rows. The script exits 0 once it read a file and 2 on a usage error.
    - Dash density, counting `em-dash` and `ascii-dash` rows together (target: ≤ 2 to 3 per page-equivalent of ~350 words, matching the general layer's em-dash ceiling; take the count from `scan_glyphs.py`).
    - Colon density in running prose (target: ≤ 2 per page-equivalent).
    - Capitalization after a colon in running prose (flag a colon when the clause after it is a complete sentence beginning lowercase, except the first item of an enumerated series of independent clauses, which the capitalization rule treats as a list and keeps lowercase, and flag a colon when the text after it is a fragment or list beginning uppercase).
@@ -78,6 +85,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - Verb-tense compliance, checked per clause, not per section (only when the scientific layer is in scope). Do not certify a section from its dominant tense. A present-tense prior-work clause can hide inside an otherwise-correct section. Inspect every sentence with a citation or author name as its subject (`\citeauthor{...}`, "X et al.", "the authors"). An empirical action that the cited study performed takes past or present perfect (compare against the table in the scientific layer).
    - American-vs-British spelling (flag British variants).
    - "Significant" audit (flag non-statistical uses).
+   - STE metrics (only in STE mode): sentences over 25 words, runs of similar length, passives with a known actor, nominalizations, and units with more than one stylistic device (`T.one-device`).
 
    These counts are secondary signals, not the findings. A page can sit within every target above and still contain an individual mark that is the wrong choice. When a specific em-dash, colon, or semicolon should be a different mark, record it as a per-section finding under step 4 (with the corrected punctuation as the suggested revision), regardless of the per-page count. The most common case is a semicolon joining two independent clauses that a period would separate, especially when the second clause opens with we, it, this, they, or these. An em-dash standing in for a period, and a colon used as a generic mid-sentence pause, are promoted the same way.
 
@@ -95,19 +103,19 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    Then run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/lint_markdown.py --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations. After the third pass, proceed regardless of the linter's state. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
-   Then Read the file back and quote its contents verbatim in your reply. Do **not** regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template below.
+   Then Read the file back and quote its contents verbatim in your reply. Do **not** regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template below. In STE mode, write the report's own prose (the Summary, the reasons under Kept sentences, and every suggested revision) under the STE layer too (`T.scope`).
 
 8. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
 
 ## Report template
 
-The report's schema is stable so revise mode can parse it. Each finding has `Rule`, `Location`, `Quote`, and `Suggested revision`. Revise mode locates the `Quote` in the paper and replaces it with `Suggested revision`.
+The report's schema is stable so revise mode can parse it. Each finding has `Rule`, `Location`, `Quote`, and `Suggested revision`. Revise mode locates the `Quote` in the paper and replaces it with `Suggested revision`. A kept sentence in an STE report has `Location`, `Quote`, and `Reason`, and revise mode marks it without rewriting it.
 
 ````markdown
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-09_rev18 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
+**Skill version:** 2026-09_rev19 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -183,6 +191,23 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 - Entries flagged by `verify_references.py`, with verdict and detail: <list>
 - Entries returned `unchecked-offline` (no network at review time): <list>
 
+### STE metrics (STE mode only)
+- Sentences over 25 words: <N>, at <list>
+- Runs of three or more sentences within 5 words of each other in length: <list>
+- Passive verbs with a known actor: <list>
+- Light verb + action noun: <list>
+- Units with more than one stylistic device: <list>
+
+## Kept sentences (STE mode only)
+
+<Sentences that an STE rewrite would weaken. Revise mode marks each one with `[KEPT: reason]` and does not rewrite it.>
+
+#### Kept <N>
+
+- **Location:** `<file:line>` or `Section: <name>` if line not available
+- **Quote:** `<verbatim sentence>`
+- **Reason:** <short explanation, used as the reason in the marker>
+
 ## Items requiring author judgment
 
 <Findings the skill cannot resolve automatically: terminology choices, threats-to-validity specificity,
@@ -192,8 +217,8 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers (general prose; research-article conventions; LaTeX mechanics). Load the subset the scope calls for (step 2).
-- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch, citation issues, BibTeX field and reference verification, the Unicode-glyph recheck, the reference-candidate scan, report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers the scope selects from (general prose; research-article conventions; LaTeX mechanics), and `../../shared/rules-ste.md` is the optional STE layer that `--ste` adds. Load the subset step 2 calls for.
+- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_sentences.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch, citation issues, BibTeX field and reference verification, the Unicode-glyph recheck, the reference-candidate scan, the sentence scan for STE mode, report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 

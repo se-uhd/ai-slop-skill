@@ -1,9 +1,9 @@
 ---
 name: revise
-description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
+description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision, inserting `% GROUNDING` TODO stubs for ungrounded citations, and marking each sentence that an STE review kept. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev18"
+  version: "2026-09_rev19"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -26,14 +26,14 @@ Do **not** invoke when the user wants a fresh review (use `/ai-slop:review` inst
 
 Both inputs default to the current working directory. No arguments are required.
 
-- **Report.** Defaults to `ai-slop-report.md` in the working directory. If that file does not exist, ask the user to point to the report (or to run `/ai-slop:review` first). The report must match the schema produced by `/ai-slop:review` (i.e., Findings by section or, for a repo-mode report, Findings by file, then Cross-cutting metrics and Items requiring author judgment).
+- **Report.** Defaults to `ai-slop-report.md` in the working directory. If that file does not exist, ask the user to point to the report (or to run `/ai-slop:review` first). The report must match the schema produced by `/ai-slop:review` (i.e., Findings by section or, for a repo-mode report, Findings by file, then Cross-cutting metrics, Kept sentences in an STE report, and Items requiring author judgment).
 - **Document.** The report's `**Paper:**` header names the file the review read. Use that path when it exists. Otherwise auto-detect a LaTeX root by running `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 means the printed path is the paper. Exit 2 means multiple candidates were printed, so ask the user. Exit 1 with no path in the report means there is nothing to edit, so stop. A Markdown or plain-text document is edited the same way as LaTeX, minus the LaTeX-only steps (following `\input`, the syntax check in step 3, and the grounding stubs in step 4). PDF input is not supported, since revise mode edits source text.
 
 **Optional path overrides.** Paths can still be passed as arguments. The first argument is the report path, and the second is the document path. For a repo-mode report, the second argument selects the file whose `### <relpath>` findings to apply.
 
 ## Workflow
 
-1. **Read the report.** Parse the finding blocks under `Findings by section` (or, in a repo-mode report, under `Findings by file`, taking only the blocks under the `### <relpath>` heading that matches the document being edited). Each block has `Rule`, `Location`, `Quote`, and `Suggested revision`. Skip blocks under "Items requiring author judgment". Those blocks need human input. Blocks under a `### commit <sha>` heading name no file and are listed as skipped.
+1. **Read the report.** Parse the finding blocks under `Findings by section` (or, in a repo-mode report, under `Findings by file`, taking only the blocks under the `### <relpath>` heading that matches the document being edited). Each block has `Rule`, `Location`, `Quote`, and `Suggested revision`. Skip blocks under "Items requiring author judgment". Those blocks need human input. Blocks under a `### commit <sha>` heading name no file and are listed as skipped. An STE report also has a **Kept sentences** section with `Location`, `Quote`, and `Reason` in each block, which step 5 applies.
 
 2. **Read the document.** For LaTeX, open the source root and follow `\input{}` / `\include{}` to gather the full text, and note the file each section is in if the paper is multi-file. For Markdown or plain text, open the file named in the report header or on the command line.
 
@@ -46,18 +46,20 @@ Both inputs default to the current working directory. No arguments are required.
 
 4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment immediately after that `\cite{}` call (one Edit per cite, matching the surrounding indentation and comment placement). These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any cite if its location cannot be matched.
 
-5. **Cross-cutting metrics.** These metrics are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section". Do not invent new edits to balance a metric.
+5. **Mark kept sentences (STE reports only).** For each block under the report's **Kept sentences** section (in a repo-mode report, only the blocks with a `Location` in the document being edited), locate the `Quote` and insert the marker that **Keep a sentence that a rewrite would weaken** (`T.keep-and-mark`) prescribes, with the block's `Reason` as the reason. In Markdown, put `<!-- [KEPT: <reason>] -->` directly after the sentence. In LaTeX, put `% [KEPT: <reason>]` on its own line after the line on which the sentence ends, matching the indentation. In plain text and in a code comment, put `[KEPT: <reason>]` directly after the sentence. Use one Edit per sentence and leave the sentence itself unchanged. Skip a sentence that already carries a marker, and log a `Quote` that cannot be located as skipped.
 
-6. **Summarize.** Print a summary to the console with three lists:
-   - **Applied:** findings with the `Quote` located and replaced, plus grounding stubs inserted.
+6. **Cross-cutting metrics.** These metrics are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section". Do not invent new edits to balance a metric.
+
+7. **Summarize.** Print a summary to the console with three lists:
+   - **Applied:** findings with the `Quote` located and replaced, plus the grounding stubs and `[KEPT: ...]` markers inserted.
    - **Skipped:** findings with a `Quote` that could not be uniquely located or a suggestion that was unsafe to apply, with reasons.
    - **Author judgment required:** findings copied from the "Items requiring author judgment" section, so the user knows what still needs manual attention.
 
-7. **Stop.** Do not regenerate the report. Do not commit the changes. The user runs `git diff` to inspect and `git commit` when satisfied.
+8. **Stop.** Do not regenerate the report. Do not commit the changes. The user runs `git diff` to inspect and `git commit` when satisfied.
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`: the rule layers, referenced only as a fallback when the user asks *why* a finding was flagged. Revise mode trusts the report's suggested revisions and does not re-derive them from the rules.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, `../../shared/rules-ste.md`: the rule layers, referenced only as a fallback when the user asks *why* a finding was flagged. Revise mode trusts the report's suggested revisions and does not re-derive them from the rules.
 - `../../scripts/find_latex_root.py`: used by the Inputs section to locate the LaTeX root.
 
 Revise mode does not load the trope catalog at runtime. The report already contains every suggested revision, so no trope source is needed.

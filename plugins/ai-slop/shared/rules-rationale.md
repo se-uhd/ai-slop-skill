@@ -1,7 +1,8 @@
 # Rationale for the writing rules
 
-This file records the *why* behind the rules in the three rule layers
-(`rules-general.md`, `rules-scientific.md`, `rules-latex.md`). It is
+This file records the *why* behind the rules in the four rule layers
+(`rules-general.md`, `rules-scientific.md`, `rules-latex.md`, and the optional
+`rules-ste.md`). It is
 documentation only. The `ai-slop:review`, `ai-slop:review-diff`,
 `ai-slop:review-repo`, and `ai-slop:init` skills load the layers that their scope calls for plus the trope
 catalog by explicit path. `ai-slop:revise` and `ai-slop:ground` reference only
@@ -16,13 +17,14 @@ Not every rule has an entry. The mechanical rules carry their own short
 justification in the layer or need none. When a rule with an entry here
 changes, update both: the directive in the relevant layer and the
 justification here. The sections below are grouped by topic. Each topic belongs to
-the general layer (any prose), the scientific layer (research articles), or the
-LaTeX layer (markup mechanics), and several cross-cutting topics state a
+the general layer (any prose), the scientific layer (research articles), the
+LaTeX layer (markup mechanics), or the STE layer (Simplified Technical English,
+on request), and several cross-cutting topics state a
 principle in a lower layer and its mechanics in the LaTeX layer.
 
 ## Sources
 
-The rules draw on three bodies of evidence:
+The rules draw on four bodies of evidence:
 
 - Empirical studies of AI-to-human word-frequency ratios, which identify the
   vocabulary, transitions, and punctuation marks that large language models
@@ -32,6 +34,9 @@ The rules draw on three bodies of evidence:
 - IEEE and ACM author conventions for software-engineering venues, which take
   precedence over APA wherever the two diverge (most visibly on leading zeros
   before decimals).
+- ASD-STE100 Simplified Technical English, for the optional STE layer. The
+  layer adapts its rules on sentences, voice, paragraphs, word meanings, and
+  articles, and leaves out its dictionary of approved words.
 
 The general AI-trope catalog (named patterns such as negative parallelism and
 em-dash addiction, each tagged with a status) is fetched at runtime from
@@ -277,3 +282,61 @@ than an AI-specific tic. Two exceptions: leading zeros before
 decimals follow IEEE/ACM rather than APA, and BibTeX verification exists because
 AI-generated entries frequently carry wrong years, venues, page numbers, or
 hallucinated DOIs.
+
+## STE layer
+
+The STE layer (`rules-ste.md`) loads only on request. Its rules come from
+ASD-STE100, a specification that makes technical documentation easier to
+understand for readers whose first language is not English. The entries below
+explain where the layer departs from full STE and how it fits with the general
+layer.
+
+- **Sentence limit** (`T.short-sentences`). ASD-STE100 limits a sentence in
+  procedural text to 20 words and a sentence in descriptive text to 25. The
+  layer applies 25 to all text, because most prose that the skills review is
+  descriptive and because **Vary sentence length** (`T.vary-length`) needs room
+  for a long sentence. A quotation or a literal string counts as one word
+  (`T.quotations`, `T.literals`). The writer cannot shorten either one, so
+  counting their words would flag sentences that have no fix.
+- **Varied length** (`T.vary-length`). A strict STE rewrite yields runs of short
+  sentences of similar length. Uniform length is the low burstiness that the
+  general layer names as a mark of machine-written text (`G.sentence-length`),
+  so a strict rewrite makes prose plainer and more obviously generated at the
+  same time. The changed rule keeps the STE maximum and asks for contrast below
+  it. Its example pairs a five-word sentence with a 24-word one, which stays
+  under the maximum.
+- **Active voice** (`T.active-voice`). A passive sentence can leave out its
+  actor, and in technical text the actor is often what the reader needs to
+  know. The layer keeps one exception, the unknown actor, because an active
+  sentence would then have to invent one. The general layer's other exceptions,
+  an irrelevant actor and a passive that reads better, are the judgments under
+  which a writer leaves out an actor the reader needs.
+- **Nominalizations** (`T.verbs-not-nouns`). "Make a decision" spends three
+  words on what "decide" says in one, and "validation of the input is
+  performed" drops the actor along with the verb. `scan_sentences.py` lists a
+  light verb followed by an action noun because a reviewer reading for fluency
+  passes over the pattern.
+- **Articles** (`T.keep-articles`). STE does not let a writer drop articles to
+  shorten a sentence. The rule covers commit messages and code comments too,
+  although the general layer exempts that informal text from **Keep *that* in
+  formal prose** (`G.keep-that`). A dropped *that* costs the reader a re-read. A
+  dropped article can remove the information whether a noun is new, generic, or
+  already known, and the reader cannot recover it from word order.
+- **One stylistic device per unit** (`T.one-device`). STE approves each word in
+  one literal meaning and leaves little room for a stylistic device. A cap
+  instead of a ban keeps one analogy or aside where it helps a reader, and it
+  still rules out the stacked metaphors, asides, and vivid sentences common in
+  AI prose. The cap narrows **No figurative language**
+  (`G.no-figurative-language`) instead of overriding it, so STE mode never
+  allows an idiom that the general layer removes. The units (a reply, a headed
+  section, a text without headings) are the spans a reader takes in as one
+  piece.
+- **Kept sentences** (`T.keep-and-mark`). An STE rewrite can drop a
+  qualification that depends on two clauses at once, or flatten the emphasis
+  that an argument needs. Forcing the rewrite would make the text less
+  accurate, while STE exists to make technical text less ambiguous. Keeping the
+  sentence without a marker would hide the decision, and the next review would
+  flag the sentence again. The marker records the reason next to the sentence.
+  In LaTeX and Markdown it goes in a comment, so the published output never
+  shows it, the same placement that **Keep metacommentary in comment-commands**
+  (`L.editorial-comments`) gives an author's note.

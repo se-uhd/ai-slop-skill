@@ -11,6 +11,7 @@ The repo root is positional and defaults to the current working directory. Examp
 - `/ai-slop:review-repo`: scan the repository in the current directory.
 - `/ai-slop:review-repo path/to/repo`: scan another repository.
 - `/ai-slop:review-repo --scientific`: also apply the research-article rules (for a thesis or paper repo's prose).
+- `/ai-slop:review-repo --ste`: also apply the Simplified Technical English layer.
 - `/ai-slop:review-repo --commits=main..HEAD`: scan the files plus only a branch's commit messages.
 - `/ai-slop:review-repo --no-commits`: skip commit messages and scan only the files.
 

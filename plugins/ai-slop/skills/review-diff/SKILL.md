@@ -1,9 +1,9 @@
 ---
 name: review-diff
-description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
+description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev18"
+  version: "2026-09_rev19"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -37,6 +37,8 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 **Trope catalog override.** `--tropes=<path>` (repeatable) replaces the default fetch with one or more user-supplied files. Contents are concatenated in the order given. When `--tropes` is not passed (the common case), the catalog is fetched live (see step 7).
 
+**STE mode.** `--ste` adds the Simplified Technical English layer to every changed file, as in `/ai-slop:review`.
+
 ## Workflow
 
 1. **Verify git context.** Run `git rev-parse --is-inside-work-tree`. If not in a git repo, stop with the message above. Otherwise capture the repo root for later path resolution.
@@ -51,7 +53,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 5. **Identify sections.** For each changed paragraph, walk backward in the new file to the nearest preceding `\section{}` or `\subsection{}` (for Markdown, the nearest preceding `#` / `##` heading) to map the paragraph to its section. This drives section-aware rules (e.g., verb tense, threats-to-validity specificity), which apply only when the scientific layer is in scope.
 
-6. **Determine which rule layers to load.** Same three layers as `/ai-slop:review` under `../../shared/`. Decide per changed file: run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <file>` on each. A `latex` file (any `.tex`) gets all three layers. A `general` file gets `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research manuscript). Read each selected layer file. Each adds its own rules and self-check section. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
+6. **Determine which rule layers to load.** Same layers as `/ai-slop:review` under `../../shared/`. Decide per changed file: run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <file>` on each. A `latex` file (any `.tex`) gets all three layers. A `general` file gets `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research manuscript). With `--ste`, every changed file also gets `rules-ste.md`, which sets the limit wherever it and the general layer disagree (`T.precedence`). Read each selected layer file. Each adds its own rules and self-check section. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name alone.
 
 7. **Load the AI-trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py` and read its stdout. tropes.fyi is the only source and there is no bundled fallback, so a failed fetch exits 1 with an empty stdout. Stop there and tell the user the catalog could not be fetched, naming `--tropes=<path>` as the way to review against a local copy.
 
@@ -61,6 +63,8 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
    - A short verbatim quote of the offending text, with enough surrounding context to be unique within the paper.
    - A concrete suggested replacement.
 
+   In STE mode, handle kept sentences as `/ai-slop:review` step 4 does. Do not report a sentence under an STE rule when it carries a `[KEPT: reason]` marker, and list a changed sentence that an STE rewrite would weaken under **Kept sentences** instead of reporting it.
+
 9. **Cross-cutting metrics, scoped to the diff.** Compute on changed lines only:
    - Dash count and locations in changed lines. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py` over the changed files and keep the rows inside the changed-line set, as `/ai-slop:review` step 5 does.
    - Reference candidates on changed lines, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_reference.py` over the changed files, filtered the same way and tested per the **Reference** rules.
@@ -68,6 +72,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
    - Verb-tense compliance for changed paragraphs (against the section table in the scientific layer; only when that layer is in scope).
    - American-vs-British spelling in changed lines.
    - "Significant" audit on changed lines.
+   - STE sentence candidates on changed lines (STE mode only), from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_sentences.py` over the changed files. A row names the line on which its sentence starts, so read to the end of the sentence and keep the row when any of its lines is in the changed-line set. Keep a `uniform-run` row when the run includes a changed line. Test the rows as `/ai-slop:review` step 5 does.
 
    Skip metrics that need full-paper context (e.g., em-dash *density* per page, sentence-length variance over runs of three sentences spanning untouched prose, paragraph-restricted-word density when the diff touched only a fraction of the paragraph). Note the scoping in the report's Summary.
 
@@ -95,8 +100,8 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers. Load the subset each changed file calls for (step 6).
-- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch, the glyph and reference scans, citation issues, BibTeX field and reference verification, report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers, and `../../shared/rules-ste.md` is the optional STE layer. Load the subset each changed file calls for (step 6).
+- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_sentences.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog fetch, the glyph, reference, and sentence scans, citation issues, BibTeX field and reference verification, report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 
