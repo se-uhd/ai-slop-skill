@@ -21,7 +21,7 @@ Exit codes:
     main.tex / paper.tex when multiple candidates exist.
   1 (silent stdout): no root found anywhere in the tree.
   2 + newline-separated paths on stdout: multiple roots and none is named
-    main.tex or paper.tex; caller must disambiguate.
+    main.tex or paper.tex. The caller must disambiguate.
 
 Known limitation: matches \\documentclass / \\begin{document} that appear
 inside \\verb, listings, or other non-`%`-comment LaTeX constructs. Rare in

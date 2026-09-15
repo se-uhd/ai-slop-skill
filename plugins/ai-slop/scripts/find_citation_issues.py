@@ -28,7 +28,8 @@ Recognized commands (cluster + grounding checks apply):
   - natbib:   \\cite, \\citep, \\citet, \\citealp, \\citealt, \\citetext.
   - biblatex: \\parencite, \\textcite, \\autocite, \\fullcite, \\smartcite,
               \\footcite, and their plural multi-cite forms (\\cites,
-              \\parencites, \\textcites, ...; only the first key group is read).
+              \\parencites, \\textcites, ..., of which only the first key group
+              is read).
   - Capitalized variants of all of the above (\\Cite, \\Textcite, ...) are
     also matched.
 

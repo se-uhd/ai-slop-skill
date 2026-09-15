@@ -134,7 +134,7 @@ The init skill is a one-shot setup command for new (or existing) project reposit
 
 ## Repository layout
 
-The plugin is under `plugins/ai-slop/`: `commands/` holds the six slash commands, `skills/` the six `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, init), `shared/` the four rule layers plus the rationale doc, and `scripts/` the stdlib Python helpers: scope and LaTeX root detection, the repository prose extractor (`scan_repo.py`), the glyph, reference, and sentence scans (`scan_glyphs.py`, `scan_reference.py`, `scan_sentences.py`), the trope-catalog fetch, citation, BibTeX, and reference checks, citation extraction, the grounding-quote check, and grounding-comment insertion, and the vendored Markdown linter under `_vendor/`. The marketplace manifest sits at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
+The plugin is under `plugins/ai-slop/`: `commands/` holds the six slash commands, `skills/` the six `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, init), `shared/` the four rule layers plus the rationale doc, and `scripts/` the stdlib Python helpers: scope and LaTeX root detection, the repository prose extractor (`scan_repo.py`), the glyph, reference, and sentence scans (`scan_glyphs.py`, `scan_reference.py`, `scan_sentences.py`), the trope-catalog fetch, citation, BibTeX, and reference checks, citation extraction, the grounding-quote check, and grounding-comment insertion, and the vendored Markdown linter under `_vendor/`. The marketplace manifest is at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
 
 ## Maintainer notes
 

@@ -80,7 +80,7 @@ from scan_io import FenceTracker, report_unreadable  # noqa: E402
 KINDS = ('bare-demonstrative', 'such-noun', 'stand-in')
 
 # Verbs that follow a bare demonstrative, by form. Third-person singular forms
-# follow This / That / It; base forms follow These; past forms follow any.
+# follow This / That / It, base forms follow These, and past forms follow any.
 VERBS_3SG = frozenset("""
 shows suggests indicates means makes allows enables leads highlights underscores
 reflects raises implies demonstrates confirms matters holds follows requires

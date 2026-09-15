@@ -151,7 +151,7 @@ def test_fetch_tropes_writes_catalog_to_stdout():
 
 
 def test_fetch_tropes_fails_when_the_site_is_unreachable():
-    # One source, no fallback: the caller must stop rather than review against
+    # One source, no fallback. The caller must stop rather than review against
     # a catalog it does not have.
     rc, out, err = _run_fetch(['fetch_tropes.py'], None)
     assert rc == 1, f"offline: rc={rc} err={err!r}"
@@ -1583,7 +1583,7 @@ def test_insert_grounding_key_match_ignores_quote_body():
         write(Path(d) / 'q1.json', json.dumps({'bar2021': {'quote': 'Following foo2020 we extend it.'}}))
         rc, out, err = run('insert_grounding.py', str(extract), str(Path(d) / 'q1.json'))
         assert rc == 0, f"key-body/1: rc={rc} err={err!r}"
-        # Re-extract, then ground foo2020: it must NOT be treated as already grounded.
+        # Re-extract, then ground foo2020. It must NOT be treated as already grounded.
         rc, out, err = run('extract_cites.py', d)
         write(extract, out)
         write(Path(d) / 'q2.json', json.dumps({'foo2020': {'quote': 'foo2020 reports a gain.'}}))
@@ -1846,7 +1846,7 @@ def test_scan_glyphs_clean_ascii_file():
 
 
 def test_scan_glyphs_ascii_dash_counts_as_a_dash():
-    # Since the glyph rule was tightened, `--` and `---` doing a dash's work
+    # Since the glyph rule was tightened, `--` and `---` used in place of a dash
     # count toward the same density signal as a literal em-dash.
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / 'doc.md'

@@ -37,7 +37,7 @@ carry their own short justification or none.
 | underscore | emphasize, highlight, stress | n/a |
 | harness | use, apply, employ | n/a |
 | encompass | include, cover, span | n/a |
-| navigate | handle, manage, deal with | Only for literal movement through a UI, website, menu, or file tree (e.g., "navigate the codebook"); never as a metaphor for handling difficulty ("navigate the challenges") |
+| navigate | handle, manage, deal with | Only for literal movement through a UI, website, menu, or file tree (e.g., "navigate the codebook"), never as a metaphor for handling difficulty ("navigate the challenges") |
 | landscape | field, area, environment, situation | n/a |
 | nuanced | detailed, subtle, qualified | n/a |
 | multifaceted | complex, varied, many-sided | n/a |

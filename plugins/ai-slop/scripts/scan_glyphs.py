@@ -30,7 +30,7 @@ the authoritative lists):
   - ellipsis:    U+2026 (…). Typed as `...`.
   - nbsp:        U+00A0, a non-breaking space. Typed as a normal space (or `~` in
                  LaTeX). A literal one is a paste artifact.
-  - ascii-dash:  `--` and `---` doing a dash's work: spaced (` -- `), unspaced
+  - ascii-dash:  `--` and `---` used in place of a dash: spaced (` -- `), unspaced
                  between letters (`word--word`), or LaTeX's `---`. The general
                  layer counts the dash, not the character, so rewriting `—` as
                  `--` is not a fix and these count toward the same density
@@ -95,7 +95,7 @@ GLYPHS = {
     ' ': 'nbsp',
 }
 
-# ASCII sequences doing a dash's work. A command-line flag (`--fix`) fails both
+# ASCII sequences used in place of a dash. A command-line flag (`--fix`) fails both
 # the spaced and the letter-letter test, a numeric range (`12--18`) fails the
 # letter-letter test, and a run of four or more dashes is a banner or rule, so
 # none of those is matched.

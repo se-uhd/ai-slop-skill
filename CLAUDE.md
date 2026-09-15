@@ -73,8 +73,8 @@ have been broken before:
   messages, among them the boilerplate "Version bumped to X at all ten
   callsites; the tropes snapshot was already up to date", which is two
   sentences), a literal em-dash glyph (U+2014) in 8 messages, one British
-  spelling, and one comma splice. A semicolon separating items in a
-  parenthetical list, or sitting inside quoted output or a code span, stays.
+  spelling, and one comma splice. A semicolon in a parenthetical list,
+  in quoted output, or in a code span stays.
   Write the subject line as an imperative ending in `; release YYYY-MM_revN` on
   a release commit. That suffix is the one semicolon that the convention keeps,
   and the rest of the subject takes commas.

@@ -52,7 +52,7 @@ venue comparison. For an entry without a DOI, a DBLP title match is used
 whenever one exists, so the preprint exception is not applied.
 
 Future (not yet wired): an optional local DBLP dump ($AI_SLOP_DBLP) for offline
-and faster bulk checks; richer venue-abbreviation matching.
+and faster bulk checks, and richer venue-abbreviation matching.
 """
 import argparse
 import json
@@ -286,7 +286,7 @@ def dblp_by_title(title):
     return out
 
 
-# ---------- orchestration ----------
+# ---------- checking entries ----------
 
 def _merge_curated(rec, curated):
     """Fold DBLP's curated record into a CrossRef one: both years are accepted

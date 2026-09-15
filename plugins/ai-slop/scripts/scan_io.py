@@ -23,7 +23,7 @@ import sys
 
 class FenceTracker:
     """Track open Markdown fences. Call `feed(line)` for every line in order.
-    It returns True when the line is a fence marker or sits inside a fence,
+    It returns True when the line is a fence marker or is inside a fence,
     that is, when the line is not prose."""
 
     FENCE_RE = re.compile(r'^\s*(?P<fence>`{3,}|~{3,})\s*(?P<info>[^`]*)$')

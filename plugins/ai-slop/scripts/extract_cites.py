@@ -54,9 +54,9 @@ Recognized cite macros, the comment-stripping, the key parsing, the cite-call
 scanner, and the \input / \include walker are shared with
 find_citation_issues.py via cite_scan.py, so both tools see the same files and
 calls. The `.bib` parsing is shared with check_bib_fields.py /
-verify_references.py via bib_parse.py. Limitations of the cite scan (only the
-first {key} group of multi-cite biblatex forms is read; constructs other than
-`%` comments are not stripped) are inherited from there.
+verify_references.py via bib_parse.py. The limitations of the cite scan are
+inherited from there. It reads only the first {key} group of a multi-cite
+biblatex form, and it strips no construct other than a `%` comment.
 """
 import bisect
 import json
