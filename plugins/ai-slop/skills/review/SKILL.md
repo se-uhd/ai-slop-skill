@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, LaTeX source loads all three, and `--ste` adds a Simplified Technical English (STE) layer to any input. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev25"
+  version: "2026-09_rev26"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -55,7 +55,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    Decide as follows:
    - **Is it LaTeX?** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <resolved-paper-path>`. Output `latex` means LaTeX source. Load the general, scientific, and LaTeX layers (a LaTeX paper is a research article, so the scientific layer loads automatically). Output `general` means anything else, that is, Markdown, plain text, or PDF.
    - **Research article?** For `general` input, also load `rules-scientific.md` when the user passed `--scientific`, to treat a non-LaTeX manuscript (a Markdown or PDF paper) as a research article. Without the flag, load `rules-general.md` only.
-   - **STE mode?** When the user passed `--ste`, also load `rules-ste.md`, whatever the two decisions above chose. Where it and the general layer set different limits for the same thing, such as the exceptions for passive voice, apply the STE limit (`T.precedence`).
+   - **STE mode?** When the user passed `--ste`, also load `rules-ste.md`, whatever the two decisions above chose. Where it and the general layer set different limits for the same construction, such as the exceptions for passive voice, apply the STE limit (`T.precedence`).
 
    Read each selected layer file. Each contributes its own rules and its own self-check section. Apply them together. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name and its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
 
@@ -67,7 +67,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - A short verbatim quote of the offending text, with enough surrounding context to make the quote unique within the paper.
    - A concrete suggested replacement that follows the rules.
 
-   For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so revise mode does not insert a guessed noun.
+   For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite) and for an empty head noun (`G.be-concrete`), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so revise mode does not insert a guessed noun.
 
    In STE mode, when the STE rewrite of a sentence would lose meaning, precision, or force (`T.keep-original`), record no STE finding for it. List it under **Items requiring author judgment** instead, with the STE rule and a short reason, so revise mode leaves it alone. No suggested revision changes a quotation or a literal string (`T.quotations`, `T.literals`).
 
@@ -115,7 +115,7 @@ The report's schema is stable so revise mode can parse it. Each finding has `Rul
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-09_rev25 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
+**Skill version:** 2026-09_rev26 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
