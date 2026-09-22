@@ -45,8 +45,8 @@ Other commands are not flagged. The recognized list is an allowlist.
 
 Comment handling: only the code portion of each line (before the first
 unescaped `%`) is scanned, so \\cite-style calls inside comments do not count.
-The scan runs over the lines joined, so a call with a key list that spans
-lines is found and reported at the line it starts on. Its grounding comment is
+The scan runs over the lines joined, which finds a call with a key list that
+spans lines and reports it at the line it starts on. Its grounding comment is
 looked for below the line it ends on, where a comment under the citation is
 placed. The scanner and the \\input walker are shared with extract_cites.py
 (cite_scan.py), so the two tools see the same files and the same calls.

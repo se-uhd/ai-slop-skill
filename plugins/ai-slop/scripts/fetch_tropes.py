@@ -10,7 +10,7 @@ review without the network, pass an explicit catalog file to the skill with
 `--tropes=<path>`.
 
 The site serves the catalog inside a rendered HTML page rather than as raw
-markdown, so `extract_markdown` unwraps it: first from the download link's
+markdown. `extract_markdown` therefore unwraps it: first from the download link's
 `data:text/markdown` URI (percent-encoded or base64), then from the `<pre>`
 block that renders the same text. Both come from the site's own generator and
 carry the same bytes. Whatever is extracted, and a body that arrives as plain
@@ -22,10 +22,10 @@ redesign or an outage stops the run with an error instead of returning other
 text as the catalog. A body over MAX_BYTES is rejected too.
 
 What was accepted is described on stderr (byte count, heading count, and a
-content hash), so a changed catalog is visible in the run's log and two runs
-can be compared. The content is third-party text that the skills hand to the
-model as rules to apply, so a paper repository that needs a reproducible
-review keeps its own copy and passes it with `--tropes=<path>`.
+content hash), which makes a changed catalog visible in the run's log and lets
+a reader compare two runs. Because the content is third-party text that the
+skills hand to the model as rules to apply, a paper repository that needs a
+reproducible review keeps its own copy and passes it with `--tropes=<path>`.
 
 The site answers the default urllib user agent with 403, so requests carry
 USER_AGENT (this skill and its repository URL).

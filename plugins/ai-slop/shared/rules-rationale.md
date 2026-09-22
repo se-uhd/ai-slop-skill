@@ -46,7 +46,7 @@ two overlap (see **Precedence over the trope catalog** (`G.catalog-precedence`))
 ## Language
 
 - **American English** (`G.american-english`). SE venues expect it. Co-authors and spell-checkers set to
-  the wrong locale are the usual source of British spellings, so the check
+  the wrong locale are the usual source of British spellings. The check
   targets spellings that others introduce rather than the author's own prose.
 - **"Data" as singular** (`G.data-singular`). Both the singular and plural agreement are accepted in
   style guides. The project fixes one form so the manuscript reads consistently.
@@ -65,6 +65,10 @@ whether a statistical test was actually run, so it is reserved for reporting
 statistical results.
 
 "Navigate" is restricted only in its metaphorical sense (e.g., navigating complexity, challenges, or a landscape), because that sense reads as AI prose. Its literal sense, moving through a UI, website, menu, or file tree, is precise and not flagged. "Worked example" is listed under **Phrases to avoid** (`G.phrases-to-avoid`) because the "worked" qualifier is usually empty padding that "example" already carries, with the lone exception of a fully solved problem presented step by step.
+
+Several pressures converge on one connective (`G.consequence-connectives`). In general English corpora "so" outnumbers therefore, hence, and thus by a wide margin, and those three concentrate in academic, legal, and mathematical prose, a thin slice of the training text. Preference tuning adds to the base rate, because raters comparing two answers favor the one that reads as approachable and "therefore" reads as stiff. Post-training also narrows the variety of the choice, which means the top-ranked option is selected almost every time, where a human writer uses several for the same relation without deciding to. "So" is also the loosest in meaning, covering strict entailment, loose consequence, and a plain change of topic, where "therefore" asserts that the conclusion follows and can be shown wrong. Because "so" is rarely wrong in any one position, training leaves it with high probability in many. Sentence-initial "So," has a separate source, the spoken answer opener of the interview transcripts and question-and-answer text that instruction tuning is trained on.
+
+Which word the concentration lands on follows the register that the prompt sets. A chat answer or a blog draft gets "so", and a prompt for a paper gets "therefore" and "thus", because the same preference for the locally most likely option operates inside whichever register the model has adopted. A rule that replaced every "so" would therefore replace one monotony with another in an academic draft. That is why the rule counts the family together, treats substitution as the last fix, and puts deleting the connective and recasting with because or since first.
 
 The **Use plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to classes that the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision that the plain form loses) and carry a short seed list for recall. The seed list also catches words that a reviewer with the writer's habit would miss. A literal match flags a known word even when the prose reads fine to a model with the same habit.
 
@@ -172,10 +176,10 @@ cannot tell a well-placed dash from a misplaced one.
 - **Caption punctuation** (`L.caption-punctuation`). The run-in caption default (`.`, switching to `:` before
   a list or grammatical continuation) follows the same bias toward
   the period in the training data.
-- **Capitalization after a colon** (`G.colon-capitalization`). AI text reliably lowercases the first
-  word after a colon regardless of whether a full sentence follows, so the
-  project convention to capitalize after a colon followed by a complete sentence catches a
-  frequent tic.
+- **Capitalization after a colon** (`G.colon-capitalization`). Because AI text reliably lowercases the
+  first word after a colon regardless of whether a full sentence follows, the
+  project convention to capitalize after a colon followed by a complete sentence
+  catches a frequent tic.
 - **Semicolons** (`G.semicolons`). Like colons and em-dashes, semicolons become filler punctuation
   in AI text. Two sentences usually read more clearly.
 - **Example/restatement connectives** (`G.connectives`). The pause-mark rules above tell the reviewer
@@ -188,9 +192,9 @@ cannot tell a well-placed dash from a misplaced one.
   a construction that AI text under-uses, and the under-use is itself a tell. The rule is deliberately
   dependent on meaning (illustrates vs. renames vs. sets up a payoff clause) so it does not
   become a mechanical swap of each dash for `e.g.` that merely shifts the load onto a new formula.
-- **Sentence length** (`G.sentence-length`). AI text is detectable by its uniformity (roughly 15 to 25
-  words per sentence, low burstiness), so deliberate variation is itself a signal
-  of human editing.
+- **Sentence length** (`G.sentence-length`). Because AI text is detectable by its uniformity (roughly
+  15 to 25 words per sentence, low burstiness), deliberate variation is itself a
+  signal of human editing.
 - **Hyphenation of compound modifiers** (`G.compound-hyphens`). AI text over-hyphenates noun-noun stacks
   placed before another noun ("code-generation benchmarks"). The hyphen is needed
   only when dropping it invites a real misread, typically when one element
@@ -210,7 +214,7 @@ cannot tell a well-placed dash from a misplaced one.
   it, which is why the rule keeps it for specifications, checklists, study
   designs, and contribution lists, and removes it from running prose. The
   back-reference test ("the third of these") is the mechanical form of that
-  distinction, so the reviewer does not have to judge the writer's intent.
+  distinction, and the reviewer does not have to judge the writer's intent.
 - **Prose listicles** (`G.no-prose-listicle`). A model that is told to stop
   emitting bullet lists produces a chain of paragraphs opened by ordinals ("The
   first wall is... The second wall is..."), so banning lists alone displaces
@@ -258,8 +262,9 @@ cannot tell a well-placed dash from a misplaced one.
   abstract. An abstract drops the caveats, scope conditions, and negative results
   that decide whether a claim is supported, so a sentence that matches the
   abstract can still misstate what the study found.
-- **No citations in the abstract** (`S.no-abstract-citations`). Many ACM, EMSE, and IEEE author guidelines
-  require the abstract to stand alone, so references move to the introduction.
+- **No citations in the abstract** (`S.no-abstract-citations`). Because many ACM, EMSE, and IEEE author
+  guidelines require the abstract to stand alone, references move to the
+  introduction.
 - **The body must stand independent of the abstract** (`S.body-independent`). The abstract is read
   independently by readers, indexers, and search engines, and a reader of the body may
   skip it, so no section of the body can depend on it. Anything that the abstract
