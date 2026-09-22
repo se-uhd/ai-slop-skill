@@ -96,7 +96,7 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   is the same mechanism one level up. The noun names the category that the writer
   had in mind, not the category that the text introduced. The first-mention
   *the* is the same mechanism applied to articles. *The* claims that the reader
-  can already identify the thing, and the generator treats as already known whatever is fixed in its own
+  can already identify the referent, and the generator treats as already known whatever is fixed in its own
   plan. Habits from the training data add to this tendency: "the" before any noun
   followed by a purpose phrase ("the tools needed to ...") and the high rate of
   "the" in academic prose generally.
@@ -127,6 +127,16 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   in every register, academic prose included, so the rule is a test per instance and a
   density signal rather than a ban. A human editor plans the sentence whole and
   makes the property the subject or uses a verb.
+
+- **Empty head nouns** (`G.be-concrete`). The generic noun is the referential form of the pressure that
+  **Consequence connectives** (`G.consequence-connectives`) describes. At the position where the noun is emitted,
+  "thing" fits every continuation and the specific noun commits to one, and an option that cannot be
+  wrong accumulates probability across many positions. Preference tuning sharpens it, because a rater
+  can mark a specific noun wrong and cannot mark "aspect" wrong. The rule treats the empty noun as a
+  symptom. Where the generator reached past what it had, the specific noun was never available, and
+  substituting one hides the gap instead of closing it, which is why an unfillable blank goes to
+  author judgment. No density signal applies, because thing, element, item, and factor are ordinary
+  technical vocabulary.
 
 ## Voice and verb tense
 

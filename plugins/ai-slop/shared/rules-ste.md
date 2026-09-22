@@ -12,7 +12,7 @@ load.
 ## Scope and precedence
 
 - **Apply the layer to all prose you write or edit** (`T.scope`). The rules cover every natural-language text written or edited in STE mode: documents, code comments, commit messages, reports, and the replies that an assistant writes while it works under these rules. Quotations and literal strings are the exception (see `T.quotations` and `T.literals`).
-- **Precedence over the other layers** (`T.precedence`). This layer adds to the general, scientific, and LaTeX layers and relaxes none of their rules. Where this layer and another layer set different limits for the same thing, the limit in this layer applies. **Use active voice** (`T.active-voice`) is such a case. It narrows the exceptions of **Prefer active voice** (`G.active-voice`).
+- **Precedence over the other layers** (`T.precedence`). This layer adds to the general, scientific, and LaTeX layers and relaxes none of their rules. Where this layer and another layer set different limits for the same construction, the limit in this layer applies. **Use active voice** (`T.active-voice`) is such a case. It narrows the exceptions of **Prefer active voice** (`G.active-voice`).
 
 ## Sentences
 
