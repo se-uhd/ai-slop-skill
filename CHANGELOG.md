@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev25] - 2026-09-22
+
+- **Changed:** the release protocol in `CLAUDE.md` opens with a rule on when to cut a rev at all. A rev is a published release, so it is cut once the work is settled and has been checked against the bundle's main use and the existing rule layers, rather than at the first version that passes the smoke suite. A correction to a release made in the same session is a squash into that rev instead of a new one, with the procedure spelled out, and rule 3 governs once the session has moved on or anyone may have pulled the tag. The rev24 squash is the recorded precedent. The remaining rules are renumbered and the one cross-reference to them follows.
+
 ## [2026-09_rev24] - 2026-09-22
 
 - **Added:** **Consequence connectives** (`G.consequence-connectives`) in the general layer, with its self-check item and a rationale entry. AI text uses one word for nearly every consequence, and which word it concentrates on follows the register: general prose lands on "so", and academic prose on "therefore" and "thus". The same test applies to whichever word a document uses most, because prescribing "therefore" as the fix would replace one monotony with another in a paper.
