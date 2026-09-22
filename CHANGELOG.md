@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev27] - 2026-09-22
+
+- **Changed:** the personification clause of **No figurative language** (`G.no-figurative-language`) covers any subject that is not a person or a group of people, where it had named code, models, tests, and data. The rule is stated on the predicate. A desire, feeling, belief, duty, or merit given to a document, a sentence, a punctuation mark, a tool, a method, a rule, or an abstract noun is the same finding as one given to a model ("the sentence wants a comma", "a period does the job", "the rule expects the reviewer to"), and the fix names the mechanism or the observable behavior. A verb that names a defined behavior (a parser expects a token, a socket listens, a model learns) and the author metonymy of academic prose (the paper argues) stay literal. Self-check item 21 follows, and the rationale gains an entry.
+- **Fixed:** one personification in the bundle's own prose. The revise skill applies the report's suggested revisions as written where it had trusted them.
+
 ## [2026-09_rev26] - 2026-09-22
 
 - **Changed:** **Be concrete** (`G.be-concrete`) grows from one sentence into a rule on empty head nouns, with a self-check item and a rationale entry. Thing, stuff, aspect, element, factor, area, item, component, piece, part, issue, concept, and entity name a category in place of the referent, as do the quantifiers behind them (a number of, various, certain, several). The test is to write the specific noun in the slot. Where the text cannot supply it, the blank is the finding rather than the word, and it goes to author judgment with the candidate readings instead of a guessed replacement, so `review/SKILL.md` routes an empty head noun the way it already routes a reference finding. A generic noun stays where the generality is the claim, and no density threshold applies, because the same words are ordinary technical vocabulary.
