@@ -80,7 +80,9 @@ bullet each that opens with its location in backticks. Current models rarely
 produce them, and a sign shows that its own paragraph was typed by a person. In
 a paragraph with a sign, the findings of the rules in WEAK_AI stop counting as
 AI-typical, since non-native and hurried writers produce figurative phrasing,
-padding, long sentences, and enumerations as readily as models do. The sign
+padding, long sentences, and enumerations as readily as models do. The same
+holds for the catalog tropes with the status `fading`, which describe habits of
+older models that overlap with human phrasing. The sign
 does not affect other paragraphs, which in a file with several writers may be
 someone else's. Where the script cannot read the file by paragraphs, the WEAK_AI
 findings stop counting when the file has at least MIN_HUMAN_SIGNS signs. <ai> counts the AI-typical findings that count,
@@ -242,7 +244,9 @@ PAPER_RE = re.compile(r'^\*\*Paper:\*\*\s*(.*?)\s*$')
 COMMIT_LOC_RE = re.compile(r'^commit\s+[0-9a-fA-F]{4,40}\b')
 PATH_LOC_RE = re.compile(r'^(.+?):(\d+)(?:[-:,]\d+)*\b')
 RULE_RE = re.compile(r'[^(),;]+?\s*\([^()]*\)')
-JOINER_RE = re.compile(r'^(?:and|or|plus)\s+', re.IGNORECASE)
+# Words that a model puts between two rules in one Rule field, as in
+# "Semicolons (G.semicolons), matching \"Self-echo\" (tropes.fyi, new)".
+JOINER_RE = re.compile(r'^(?:(?:and|or|plus|also|matching|via|see|as|with|i\.e\.|e\.g\.),?\s+)+', re.IGNORECASE)
 KEY_RE = re.compile(r'^\(\s*([GSLT]\.[a-z0-9-]+)')
 SIGNS_TITLE = 'Signs of unassisted writing'
 SIGN_RE = re.compile(r'^\s*[-*]\s+`([^`]+)`')
@@ -346,14 +350,18 @@ def split_rules(field):
 
 def is_ai_typical(rule, discount_weak=False):
     """True for a catalog trope outside EDITOR_TROPES or a rule in AI_TYPICAL.
-    With discount_weak, the rules in WEAK_AI do not count."""
+    With discount_weak, the weak evidence does not count: the rules in WEAK_AI
+    and the tropes with the catalog status `fading`, which describe habits of
+    older models that overlap with human phrasing."""
     paren = rule.rfind('(')
     tail = rule[paren:] if paren >= 0 else ''
     m = KEY_RE.match(tail)
     if m:
         return m.group(1) in AI_TYPICAL and not (discount_weak and m.group(1) in WEAK_AI)
     name = rule[:paren].strip().strip('"').strip().lower() if paren >= 0 else ''
-    return 'tropes.fyi' in tail and name not in EDITOR_TROPES
+    if 'tropes.fyi' not in tail or name in EDITOR_TROPES:
+        return False
+    return not (discount_weak and 'fading' in tail.lower())
 
 
 def rule_class(rule, catalog):

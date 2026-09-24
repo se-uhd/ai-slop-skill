@@ -14,7 +14,7 @@ Y. I am knowledgeable in this area.
 
 Paper summary
 -------------
-In today's fast-paced world of continuous deployment, database migrations have become a critical bottleneck. This paper introduces SchemaShift, a novel tool that checks migrations before they reach producton.
+In today's fast-paced world of continuous deployment, database migrations have become a critical bottleneck. This paper introduces SchemaShift, a groundbreaking tool that checks migrations before they reach producton.
 
 Strengths
 ---------

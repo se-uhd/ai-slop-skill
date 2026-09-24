@@ -22,7 +22,7 @@ The design is careful and the analysis leverages a large dataset of 210,000 pull
 
 Weaknesses
 ----------
-The bots differ in what they check — style, tests, or security — and the paper pools them in one model. A breakdown per bot type would make the findings more actionable for maintainers.
+The bots differ in what they check — style, tests, or security — and the paper pools them in one model. A breakdown per bot type would help maintainers harness the findings.
 
 Detailed comments for authors
 -----------------------------

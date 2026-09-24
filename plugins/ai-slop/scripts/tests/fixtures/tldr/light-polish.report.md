@@ -35,8 +35,15 @@ Synthetic fixture. A clean review polished by a tool, with restricted words and 
 
 - **Rule:** Restricted words (G.restricted-words)
 - **Location:** `light-polish.txt:25`
-- **Quote:** `more actionable for maintainers`
-- **Suggested revision:** `more useful to maintainers`
+- **Quote:** `harness the findings`
+- **Suggested revision:** `use the findings`
+
+#### Finding 5
+
+- **Rule:** Keep *that* in formal prose (G.keep-that)
+- **Location:** `light-polish.txt:17`
+- **Quote:** `around the date each bot was installed`
+- **Suggested revision:** `around the date that each bot was installed`
 
 ## Items requiring author judgment
 

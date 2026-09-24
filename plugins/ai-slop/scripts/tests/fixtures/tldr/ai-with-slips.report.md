@@ -19,10 +19,10 @@ Synthetic fixture. An AI-written review with two typos, whose AI-typical pattern
 
 #### Finding 2
 
-- **Rule:** Grandiose stakes inflation (tropes.fyi, rising)
+- **Rule:** Promotional language (tropes.fyi, new)
 - **Location:** `ai-with-slips.txt:17`
-- **Quote:** `a critical bottleneck`
-- **Suggested revision:** `a frequent cause of failed deployments`
+- **Quote:** `a groundbreaking tool`
+- **Suggested revision:** `a tool`
 
 #### Finding 3
 
@@ -40,14 +40,21 @@ Synthetic fixture. An AI-written review with two typos, whose AI-typical pattern
 
 #### Finding 5
 
+- **Rule:** No figurative language (G.no-figurative-language)
+- **Location:** `ai-with-slips.txt:21`
+- **Quote:** `a safety net for the entire deployment pipeline`
+- **Suggested revision:** `a check before deployment`
+
+#### Finding 6
+
 - **Rule:** Refer back instead of repeating (G.refer-back)
 - **Location:** `ai-with-slips.txt:25`
 - **Quote:** `As mentioned above, the tool is a safety net for deployments`
 - **Suggested revision:** ``
 
-#### Finding 6
+#### Finding 7
 
-- **Rule:** Phrases to avoid (G.phrases-to-avoid)
+- **Rule:** Cut padding at the sentence level (G.sentence-padding)
 - **Location:** `ai-with-slips.txt:25`
 - **Quote:** `it is important to note that`
 - **Suggested revision:** ``

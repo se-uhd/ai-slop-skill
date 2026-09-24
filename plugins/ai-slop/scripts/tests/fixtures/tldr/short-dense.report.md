@@ -33,7 +33,7 @@ Synthetic fixture. A short review of two paragraphs, both dense with AI-typical 
 
 #### Finding 4
 
-- **Rule:** Phrases to avoid (G.phrases-to-avoid)
+- **Rule:** Cut padding at the sentence level (G.sentence-padding)
 - **Location:** `short-dense.txt:21`
 - **Quote:** `it is worth noting that`
 - **Suggested revision:** ``

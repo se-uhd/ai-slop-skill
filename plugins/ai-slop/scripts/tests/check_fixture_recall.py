@@ -12,8 +12,9 @@ cannot run because the review is a model reading the text.
 To use it, review each fixture text with `/ai-slop:tldr` (or `/ai-slop:review`)
 and pass the reports that the runs wrote. A report is matched to its fixture by
 the file name in its `**Paper:**` header. A planted finding counts as found when
-the report has a finding on the same line that names the same rule key, or the
-same catalog trope. Running the reviews twice and comparing the two outputs
+the report has a finding on the same line that names the same rule key or
+catalog trope, or one that EQUIVALENT lists with it, such as `G.refer-back` and
+the catalog's "Self-echo", which name the same pattern. Running the reviews twice and comparing the two outputs
 shows how stable the review is.
 
 Output (stdout), tab-separated:
@@ -46,13 +47,34 @@ from scan_io import report_unreadable  # noqa: E402
 FIXTURES = Path(__file__).resolve().parent / 'fixtures' / 'tldr'
 KEY_RE = re.compile(r'\(\s*([GSLT]\.[a-z0-9-]+)')
 
+# Rules and catalog tropes (lowercase names) that name the same pattern.
+EQUIVALENT = [
+    {'G.refer-back', 'S.no-restatement', 'self-echo', 'content duplication'},
+    {'G.sentence-padding', "it's worth noting"},
+    {'G.no-figurative-language', 'forced figurative language'},
+    {'G.no-rule-of-three', 'rule of three pattern'},
+    {'G.em-dash-glyphs', 'G.em-dashes', 'em-dash addiction'},
+    {'G.restricted-words', '"delve" and friends', '"tapestry" and "landscape"'},
+    {'promotional language', 'grandiose stakes inflation'},
+    {'G.no-formulaic-closings', 'signposted conclusion', 'never-ending conclusion'},
+    {'G.no-announced-counts', 'compulsive counting'},
+    {'G.no-coinages', 'invented concept labels'},
+    {'G.one-term', 'synonym cycling'},
+    {'G.hedge-from-evidence', 'S.no-performative-hedging'},
+]
+CANON = {rule: min(group) for group in EQUIVALENT for rule in group}
+
 
 def rule_id(rule):
-    """Return a rule's key, or the lowercase name of a catalog trope."""
+    """Return a rule's key, or the lowercase name of a catalog trope, mapped
+    to the first member of its EQUIVALENT group."""
     m = KEY_RE.search(rule)
     if m:
-        return m.group(1)
-    return rule[:rule.rfind('(')].strip().strip('"').lower() if '(' in rule else rule.lower()
+        rid = m.group(1)
+    else:
+        rid = rule[:rule.rfind('(')].strip().lower() if '(' in rule else rule.lower()
+        rid = rid[1:-1] if rid.count('"') == 2 and rid.startswith('"') and rid.endswith('"') else rid
+    return CANON.get(rid, rid)
 
 
 def located(text):
