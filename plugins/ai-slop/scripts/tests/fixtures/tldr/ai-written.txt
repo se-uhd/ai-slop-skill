@@ -1,0 +1,33 @@
+ICSE 2027 (Synthetic Fixture) Paper #6 PipeGuard: Static Detection of Misconfigured CI Pipelines
+===========================================================================
+
+Review #6A [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+In today's rapidly evolving software landscape, continuous integration has become more important than ever. This paper presents PipeGuard, a static analysis of GitHub Actions workflow files that detects misconfigured pipelines. The paper makes three key contributions.
+
+Strengths
+---------
+The approach is not just a linter. It is a comprehensive framework for pipeline reliability. The evaluation is thorough, rigorous, and well executed.
+
+Weaknesses
+----------
+The evaluation does not report false positives, and the comparison with actionlint covers only 50 of the 1,200 workflows. The paper does not say how the rules were derived, which leaves open whether they cover the misconfigurations that developers actually make in practice.
+
+Detailed comments for authors
+-----------------------------
+The evaluation does not report false positives, which is a significant limitation. As mentioned above, the comparison with actionlint covers only 50 workflows. It is important to note that the rules were not derived systematically.
+
+Please add a precision estimate on a random sample of workflows, report how long the analysis takes per workflow, and describe how the rule set was built, for example from issue trackers or from a survey of maintainers who run large pipelines.
+
+Overall, PipeGuard represents a promising step toward more reliable CI pipelines, and the tool could help many projects once the evaluation covers more workflows and reports false positives.

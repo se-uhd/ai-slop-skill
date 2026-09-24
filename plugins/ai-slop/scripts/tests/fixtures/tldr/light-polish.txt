@@ -1,0 +1,29 @@
+ICSE 2027 (Synthetic Fixture) Paper #5 Review Bots and Time to Merge: A Regression Discontinuity Study
+===========================================================================
+
+Review #5A [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+The paper investigates how code review bots affect the time to merge in 80 GitHub projects — using a regression discontinuity design around the date each bot was installed.
+
+Strengths
+---------
+The design is careful and the analysis leverages a large dataset of 210,000 pull requests. The authors report effect sizes with confidence intervals throughout.
+
+Weaknesses
+----------
+The bots differ in what they check — style, tests, or security — and the paper pools them in one model. A breakdown per bot type would make the findings more actionable for maintainers.
+
+Detailed comments for authors
+-----------------------------
+Please add the list of bots and their configuration to the replication package, since the installation dates are the core of the design.

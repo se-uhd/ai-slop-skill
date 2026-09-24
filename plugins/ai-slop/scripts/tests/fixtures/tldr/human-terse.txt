@@ -1,0 +1,29 @@
+ICSE 2027 (Synthetic Fixture) Paper #1 FlakeLens: Detecting Flaky Tests from CI Logs
+===========================================================================
+
+Review #1A [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+The paper propose FlakeLens, a tool that detects flaky tests from CI logs by comparing reruns of the same commit. Authors evaluate it on 40 Java projects and report a precision of 0.81.
+
+Strengths
+---------
+Problem is relevant for practitioners, and the tool is available online together with the scripts for the evaluation.
+
+Weaknesses
+----------
+The baseline is weak; the comparison only uses a rerun heuristic from 2019. This makes the results hard to judge. The threats section do not discuss how the 40 projects were selected.
+
+Detailed comments for authors
+-----------------------------
+Please report recall and not only precision. The paper should also explain how many reruns are needed and what is the cost in CI minutes, time and money.

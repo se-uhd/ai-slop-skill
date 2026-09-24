@@ -5,7 +5,7 @@ This file records the *why* behind the rules in the rule layers
 `rules-ste.md`). It is
 documentation only. The `ai-slop:review`, `ai-slop:review-diff`,
 `ai-slop:review-repo`, and `ai-slop:init` skills load the layers that their scope calls for, plus the trope
-catalog, which `fetch_tropes.py` fetches from tropes.fyi. `ai-slop:revise` and `ai-slop:ground` reference only
+catalog, which `fetch_tropes.py` fetches from tropes.fyi, and `ai-slop:tldr` loads them through the review that it runs. `ai-slop:revise` and `ai-slop:ground` reference only
 the layers (revise applies a finished report, so it needs no trope source, and
 ground reads the LaTeX layer's grounding convention). None of them read this
 file. Keeping the

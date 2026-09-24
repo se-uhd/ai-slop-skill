@@ -1,0 +1,31 @@
+ICSE 2027 (Synthetic Fixture) Paper #3 BuildMedic: Repairing Broken Gradle Builds with an LLM Agent
+===========================================================================
+
+Review #3A [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+The paper presents an approach for repairing broken build scripts with an LLM agent that reads the error log and proposes a patch, evaluated on 300 failing Gradle builds.
+
+Strengths
+---------
+It can be noticed that the approach repairs 62% of the builds, which is a strong result. The replication package is complete and the scripts runs without problems on my machine.
+
+Weaknesses
+----------
+It is worth to mention that the agent is the brain of the whole pipeline, but the paper does not explain how the prompt was designed. Many researchers agree that prompts matter a lot, so the missing prompt is a big hole in the paper.
+
+Evaluation use only Gradle projects. The results for Maven builds can be different, and the paper should discuss the build tool in the threats section with more details.
+
+Detailed comments for authors
+-----------------------------
+As a suggestion, the authors could open the black box of the agent and show some traces of the reasoning. It would be also nice to see how the approach performs when the error log is very long and noisy.

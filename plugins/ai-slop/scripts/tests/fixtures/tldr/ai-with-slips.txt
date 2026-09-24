@@ -1,0 +1,25 @@
+ICSE 2027 (Synthetic Fixture) Paper #9 SchemaShift: Safe Database Migrations in Continuous Deployment
+===========================================================================
+
+Review #9A [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+In today's fast-paced world of continuous deployment, database migrations have become a critical bottleneck. This paper introduces SchemaShift, a novel tool that checks migrations before they reach producton.
+
+Strengths
+---------
+SchemaShift is not just a checker. It is a safety net for the entire deployment pipeline. The evaluation is comprehensive, rigorous, and insightful.
+
+Detailed comments for authors
+-----------------------------
+The evaluation uses only 30 migrations, which is a significant limitation. As mentioned above, the tool is a safety net for deployments, and it is important to note that the resuls on larger schemas remain unclear.

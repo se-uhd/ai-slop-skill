@@ -1,0 +1,47 @@
+{
+  "human-terse": {
+    "case": "A terse human review with grammar slips and a few mechanical findings.",
+    "level": "Minor",
+    "verdict": "Little sign of AI tools"
+  },
+  "curly-quotes": {
+    "case": "A clean human review whose only tells are the curly quotes of a word processor.",
+    "level": "None",
+    "verdict": "Little sign of AI tools"
+  },
+  "nonnative-idioms": {
+    "case": "A human review by a non-native writer, with idioms and padding phrases next to grammar slips.",
+    "level": "Moderate",
+    "verdict": "Little sign of AI tools"
+  },
+  "pasted-fields": {
+    "case": "A human review that pastes its weaknesses into the detailed comments.",
+    "level": "Minor",
+    "verdict": "Reasonable"
+  },
+  "light-polish": {
+    "case": "A clean review polished by a tool, with restricted words and em-dash glyphs.",
+    "level": "None",
+    "verdict": "Reasonable"
+  },
+  "ai-written": {
+    "case": "A review written with an AI tool: a formulaic opening, negative parallelism, restatement, and a formulaic closing.",
+    "level": "Major",
+    "verdict": "Harder to read"
+  },
+  "short-dense": {
+    "case": "A short review of two paragraphs, both dense with AI-typical patterns.",
+    "level": "Moderate",
+    "verdict": "Harder to read"
+  },
+  "mixed-reviewers": {
+    "case": "One submission with three reviews: a human review with slips, an AI-written review, and a clean human review.",
+    "level": "Moderate",
+    "verdict": "Harder to read"
+  },
+  "ai-with-slips": {
+    "case": "An AI-written review with two typos, whose AI-typical patterns outweigh the slips.",
+    "level": "Severe",
+    "verdict": "Harder to read"
+  }
+}
