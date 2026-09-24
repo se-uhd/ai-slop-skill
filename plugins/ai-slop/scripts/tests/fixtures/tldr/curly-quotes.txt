@@ -1,0 +1,29 @@
+ICSE 2027 (Synthetic Fixture) Paper #2 FlagLint: Consistent Names for Feature Flags
+===========================================================================
+
+Review #2A [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+The paper studies how developers name feature flags in 120 open-source services and proposes a naming checker called “FlagLint” that flags inconsistent prefixes.
+
+Strengths
+---------
+The dataset is large, the checker’s rules are documented in the appendix, and the survey with 54 developers supports the claim that consistent names matter.
+
+Weaknesses
+----------
+The survey questions are not included, so it is unclear how “consistency” was defined for the participants. The paper argues the checker reduces incidents but reports no incident data.
+
+Detailed comments for authors
+-----------------------------
+I would like to see the precision of the checker on a held-out set of services and a short discussion of false positives in the “legacy” category.

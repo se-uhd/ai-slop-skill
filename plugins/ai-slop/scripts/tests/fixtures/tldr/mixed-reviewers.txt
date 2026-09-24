@@ -1,0 +1,67 @@
+ICSE 2027 (Synthetic Fixture) Paper #8 LogLens: Summarizing Incident Logs for On-Call Engineers
+===========================================================================
+
+Review #8A [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+Paper present LogLens, a tool that summarize incident logs for on-call engineers with a small language model fine-tuned on 3,000 incidents from one company.
+
+Detailed comments for authors
+-----------------------------
+The user study has only 8 engineers and all from same company. I would like to see a comparison with the summaries that engineers write by hand today.
+
+Review #8B [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+In an era where software systems are increasingly complex, incident response has never been more critical. This paper introduces LogLens, a groundbreaking approach to log summarization.
+
+Strengths
+---------
+The approach is not merely a summarizer. It is a paradigm shift in how teams handle incidents. The writing is clear, concise, and compelling.
+
+Detailed comments for authors
+-----------------------------
+The user study includes only eight engineers, which is a significant limitation. As noted earlier, all participants come from a single company. It is worth noting that the generalizability of the findings remains an open question.
+
+The paper would benefit from a comparison with hand-written summaries and a discussion of the cost of fine-tuning the model for a new company with different log formats.
+
+Review #8C [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+LogLens fine-tunes a 1.3B model on 3,000 incidents and generates a summary of the first ten minutes of each incident log, which the authors compare with a keyword baseline and with GPT-4.
+
+Detailed comments for authors
+-----------------------------
+The ROUGE scores in Table 2 favor the fine-tuned model, but the user study shows no difference in time to diagnosis, and the paper should discuss what the ROUGE gains mean for the engineers.
+
+Please release the anonymized incidents or explain why this is not possible, and report the inference time on the hardware that an on-call engineer would have available. It would also help to state whether the model runs on a laptop without a GPU, since many teams cannot send incident logs to a cloud service.

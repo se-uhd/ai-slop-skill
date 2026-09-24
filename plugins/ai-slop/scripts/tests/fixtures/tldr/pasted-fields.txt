@@ -1,0 +1,29 @@
+ICSE 2027 (Synthetic Fixture) Paper #4 TestWeaver: Fuzzing Meets LLM Assertions for Rust
+===========================================================================
+
+Review #4A [r2]
+===========================================================================
+
+Overall merit
+-------------
+2. Weak reject
+
+Reviewer expertise
+------------------
+Y. I am knowledgeable in this area.
+
+Paper summary
+-------------
+The paper proposes TestWeaver, which generates unit tests for Rust crates by combining fuzzing with an LLM that writes assertions. The evaluation covers 25 crates and compares coverage with cargo-fuzz.
+
+Weaknesses
+----------
+The comparison with cargo-fuzz is not fair because TestWeaver gets more time budget. The assertions are not checked by any human, so we dont know if they are meaningful. Only 25 crates is small sample.
+
+Detailed comments for authors
+-----------------------------
+The comparison with cargo-fuzz is not fair because TestWeaver gets more time budget. Please rerun the baseline with the same budget and report the numbers again.
+
+The assertions are not checked by any human, so we dont know if they are meaningful. A small manual study on a random sample of assertions would help here.
+
+Only 25 crates is small sample. The authors should add more crates or explain why these 25 are representative for the Rust ecosystem.

@@ -2394,6 +2394,190 @@ def test_first_party_prose_avoids_the_plain_words_seeds():
 
 # ---------- runner ----------
 
+# ---------- count_findings.py and the TL;DR schema check ----------
+
+def _finding(n, rule, location):
+    return (f"#### Finding {n}\n\n- **Rule:** {rule}\n- **Location:** {location}\n"
+            f"- **Quote:** `x`\n- **Suggested revision:** `y`\n\n")
+
+
+def test_count_findings_groups_by_file_and_rule():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'intro.md', '# Intro\n\nThis shows that it works.\n\n```\ncode words here\n```\n')
+        report = ("# AI Slop Review\n\n**Paper:** `paper.pdf`\n\n## Summary\n\nText.\n\n"
+                  "## Findings by file\n\n### intro.md\n\n"
+                  + _finding(1, 'Semicolons (G.semicolons)', '`intro.md:3`')
+                  + _finding(2, 'Semicolons (G.semicolons)', '`intro.md:3-4`')
+                  + _finding(3, 'Negative parallelism (tropes.fyi, consistent)', '`intro.md:1`')
+                  + "### commit abc1234\n\n"
+                  + _finding(4, 'Semicolons (G.semicolons)', '`commit abc1234:1`')
+                  + _finding(5, 'Semicolons (G.semicolons)', 'Section: Introduction')
+                  + _finding(7, 'One term (G.one-term) and Plain words (G.plain-words)', '`notes.md:2`')
+                  + "```markdown\n" + _finding(9, 'Quoted (G.quoted)', '`intro.md:1`') + "```\n\n"
+                  + "## Items requiring author judgment\n\n"
+                  + _finding(6, 'Judgment (G.judgment)', '`intro.md:1`'))
+        write(Path(d) / 'ai-slop-report.md', report)
+        rc, out, err = run('count_findings.py', str(Path(d) / 'ai-slop-report.md'), f'--root={d}')
+        assert rc == 0, (rc, err)
+        assert out.splitlines() == [
+            'file\tintro.md\t3\t7\t0\t1\t2\tMinor\t0%\t1\t0\t0\tLittle sign of AI tools',
+            'rule\tintro.md\t1\tdelays\tNegative parallelism (tropes.fyi, consistent)',
+            'rule\tintro.md\t2\tdistracts\tSemicolons (G.semicolons)',
+            'file\tcommit messages\t1\t-\t0\t0\t1\tNone\t-\t0\t-\t0\tLittle sign of AI tools',
+            'rule\tcommit messages\t1\tdistracts\tSemicolons (G.semicolons)',
+            'file\tnotes.md\t1\t-\t1\t0\t0\t-\t-\t1\t-\t0\tLittle sign of AI tools',
+            'rule\tnotes.md\t1\tobscures\tOne term (G.one-term)',
+            'rule\tnotes.md\t1\tdistracts\tPlain words (G.plain-words)',
+            'file\tpaper.pdf\t1\t-\t0\t0\t1\tNone\t-\t0\t-\t0\tLittle sign of AI tools',
+            'rule\tpaper.pdf\t1\tdistracts\tSemicolons (G.semicolons)',
+        ], out
+        assert 'counted 6 finding(s) across 4 file(s)' in err, err
+
+
+def test_count_findings_levels_from_rewrite_paragraphs():
+    # A paragraph with two costly findings needs a rewrite. In a file of two
+    # 30-word paragraphs, one such paragraph is half the prose, but Major needs
+    # three such paragraphs, so the level stays Moderate. Five paragraphs with
+    # three that need a rewrite are Major. A catalog trope takes its class
+    # from the catalog's category.
+    para = ' '.join(['word'] * 30)
+    pair = (_finding(1, 'Anchor sentence-initial pronouns (G.anchor-pronouns)', '`{f}:{n}`')
+            + _finding(2, 'Cut padding at the sentence level (G.sentence-padding)', '`{f}:{n}`'))
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'a.md', f'{para}\n\n{para}\n')
+        write(Path(d) / 'b.md', '\n\n'.join([para] * 5) + '\n')
+        write(Path(d) / 'c.md', f'{para}\n\n{para}\n\n{para}\n')
+        write(Path(d) / 'tropes.md', '# AI Writing Tropes to Avoid\n\n## Tapestry words\n\n`fading` · Word Choice\n\nText.\n')
+        report = ("# AI Slop Review\n\n## Findings by file\n\n"
+                  + pair.format(f='a.md', n=1)
+                  + _finding(3, 'Tapestry words (tropes.fyi, fading)', '`a.md:3`')
+                  + ''.join(pair.format(f='b.md', n=n) for n in (1, 3, 5))
+                  + _finding(4, 'Em-dashes (G.em-dashes)', '`c.md:1`')
+                  + _finding(5, 'Em-dashes (G.em-dashes)', '`c.md:3`'))
+        write(Path(d) / 'r.md', report)
+        rc, out, err = run('count_findings.py', str(Path(d) / 'r.md'), f'--root={d}',
+                           f'--tropes={Path(d) / "tropes.md"}')
+        assert rc == 0, (rc, err)
+        lines = out.splitlines()
+        assert 'file\ta.md\t3\t60\t1\t1\t1\tModerate\t50%\t2\t1\t0\tHarder to read' in lines, out
+        assert 'file\tb.md\t6\t150\t3\t3\t0\tMajor\t60%\t3\t3\t0\tHarder to read' in lines, out
+        assert 'file\tc.md\t2\t90\t0\t0\t2\tNone\t0%\t2\t0\t0\tReasonable' in lines, out
+        assert 'rule\ta.md\t1\tobscures\tAnchor sentence-initial pronouns (G.anchor-pronouns)' in lines, out
+        assert 'rule\ta.md\t1\tdistracts\tTapestry words (tropes.fyi, fading)' in lines, out
+        assert 'para\ta.md\t1-1\t1\t1' in lines, out
+
+
+def test_count_findings_classes_every_rule_key():
+    # Every rule key that a layer defines has exactly one cost class, so a new
+    # rule cannot reach a TL;DR unclassified.
+    sys.path.insert(0, str(SCRIPTS))
+    import count_findings
+    shared = SCRIPTS.parent / 'shared'
+    defined = set()
+    for name in LAYERS:
+        text = (shared / name).read_text(encoding='utf-8')
+        heading = SELF_CHECK_HEADING_RE.search(text)
+        rules = text[:heading.start()] if heading else text
+        defined |= {m.group('key') for m in KEY_DEF_RE.finditer(rules)}
+    sets = (count_findings.OBSCURES, count_findings.DELAYS, count_findings.DISTRACTS)
+    missing = sorted(defined - set().union(*sets))
+    assert not missing, f"keys without a cost class in count_findings.py: {missing}"
+    double = sorted(k for k in defined if sum(k in s for s in sets) > 1)
+    assert not double, f"keys in more than one cost class: {double}"
+    stale = sorted((set().union(*sets) | count_findings.AI_TYPICAL) - defined)
+    assert not stale, f"count_findings.py names keys that no layer defines: {stale}"
+
+
+def test_count_findings_usage_and_unreadable_report():
+    rc, out, err = run('count_findings.py', '--bogus')
+    assert rc == 2 and 'usage' in err, (rc, err)
+    rc, out, err = run('count_findings.py', '/nonexistent/ai-slop-report.md')
+    assert rc == 2 and out == '', (rc, out, err)
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'r.md', '# AI Slop Review\n\n## Summary\n\nNo findings.\n')
+        rc, out, err = run('count_findings.py', str(Path(d) / 'r.md'))
+        assert rc == 0 and out == '', (rc, out)
+        assert 'counted 0 finding(s) across 0 file(s)' in err, err
+        write(Path(d) / 'r.md', '# AI Slop Review\n\n## Findings by file\n\n'
+              '#### Finding 1\n\nRule: Semicolons (G.semicolons)\nLocation: a.md:1\n\n'
+              '#### Finding 2\n\n- **Location:** `a.md:2`\n')
+        rc, out, err = run('count_findings.py', str(Path(d) / 'r.md'))
+        assert rc == 0, (rc, err)
+        assert 'rule\ta.md\t1\tdistracts\tSemicolons (G.semicolons)' in out, out
+        assert 'rule\ta.md\t1\tdistracts\t-' in out, out
+        assert '1 finding(s) have no Rule field' in err, err
+
+
+def test_lint_markdown_tldr_block_shape():
+    good = ("# AI Slop TL;DR\n\n**Target:** `paper/`\n\n"
+            "## intro.tex\n\n**Impact on readability:** Major (40% of the prose needs a rewrite)\n\n**AI use:** Harder to read\n\n"
+            "The use of AI tools makes the introduction harder to read, e.g., in its opening. "
+            "Smith et al. (2020) is cited for every claim. The research question comes last.\n\n"
+            "**Patterns that most affect readability:**\n\n"
+            "- Windup sentences (9 times), as in \"In today's world. Testing matters.\"\n"
+            "- Groups of three (6 times), as in \"robust, scalable, and efficient\"\n"
+            "- Bare \"This\" (5 times), as in \"This highlights the need.\"\n\n"
+            "## Files without findings\n\n`main.tex`. The review found none of its patterns.\n")
+    bad = ("# AI Slop TL;DR\n\n"
+           "## a.tex\n\n**Impact on readability:** Mixed\n\n**AI use:** Some\n\n"
+           "One. Two. Three. Four. Five. Six.\n\n"
+           "- one\n- two\n- three\n- four\n  continued\n\n"
+           "## b.tex\n\n- only a bullet\n")
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'ai-slop-tldr.md', good)
+        rc, out, err = run('lint_markdown.py', str(Path(d) / 'ai-slop-tldr.md'))
+        assert rc == 0, (rc, out, err)
+        write(Path(d) / 'ai-slop-tldr.md', bad)
+        rc, out, err = run('lint_markdown.py', str(Path(d) / 'ai-slop-tldr.md'))
+        assert rc != 0, (rc, out)
+        shape = [l for l in out.splitlines() if 'tldr-block-shape' in l]
+        assert any("'Mixed' is not one of" in l for l in shape), out
+        assert any('6 sentences' in l for l in shape), out
+        assert any('4 bullets' in l for l in shape), out
+        assert any('no **Impact on readability:** line' in l for l in shape), out
+        assert any('no assessment' in l for l in shape), out
+        assert any("verdict 'Some' is not one of" in l for l in shape), out
+        assert any('no **AI use:** line' in l for l in shape), out
+        assert any('bullets without the **Patterns that most affect readability:** line' in l for l in shape), out
+
+
+def test_tldr_fixtures_levels_and_verdicts():
+    # The synthetic reviews under fixtures/tldr carry planted findings and
+    # signs of unassisted writing, with the level and verdict that each case
+    # must get. A change to a class, a weight, or a threshold that moves a
+    # case fails here and names the case.
+    import json
+    fixtures = SCRIPTS / 'tests' / 'fixtures' / 'tldr'
+    expected = json.loads((fixtures / 'expected.json').read_text(encoding='utf-8'))
+    assert len(expected) >= 9, expected.keys()
+    for name, want in expected.items():
+        rc, out, err = run('count_findings.py', str(fixtures / f'{name}.report.md'), f'--root={fixtures}')
+        assert rc == 0, (name, rc, err)
+        line = next(l.split('\t') for l in out.splitlines() if l.startswith('file\t'))
+        got = {'level': line[7], 'verdict': line[12]}
+        assert got == {'level': want['level'], 'verdict': want['verdict']}, (name, want['case'], got)
+
+
+def test_check_fixture_recall_on_planted_reports():
+    # The planted reports match themselves, and a report that swaps one
+    # planted rule for another shows one miss and one extra.
+    fixtures = SCRIPTS / 'tests' / 'fixtures' / 'tldr'
+    reports = sorted(str(p) for p in fixtures.glob('*.report.md'))
+    rc, out, err = run('tests/check_fixture_recall.py', *reports)
+    assert rc == 0, (rc, err)
+    assert 'verdicts as expected' in err and f'{len(reports)}/{len(reports)} verdicts' in err, err
+    assert 'missed\t' not in out and 'extra\t' not in out, out
+    with tempfile.TemporaryDirectory() as d:
+        text = (fixtures / 'ai-written.report.md').read_text(encoding='utf-8')
+        write(Path(d) / 'r.md', text.replace('(G.no-formulaic-closings)', '(G.semicolons)', 1))
+        rc, out, err = run('tests/check_fixture_recall.py', str(Path(d) / 'r.md'))
+        assert rc == 0, (rc, err)
+        assert 'missed\tai-written\t' in out and '\tG.no-formulaic-closings' in out, out
+        assert 'extra\tai-written\t' in out and '\tG.semicolons' in out, out
+    rc, out, err = run('tests/check_fixture_recall.py')
+    assert rc == 2 and 'usage' in err, (rc, err)
+
+
 TESTS = [
     test_scan_glyphs_counts_every_occurrence,
     test_scan_glyphs_two_on_one_line_distinct_columns,
@@ -2542,6 +2726,13 @@ TESTS = [
     test_check_quotes_confirms_and_downgrades,
     test_check_quotes_sources_dir_and_bad_json,
     test_first_party_prose_avoids_the_plain_words_seeds,
+    test_count_findings_groups_by_file_and_rule,
+    test_count_findings_levels_from_rewrite_paragraphs,
+    test_count_findings_classes_every_rule_key,
+    test_tldr_fixtures_levels_and_verdicts,
+    test_check_fixture_recall_on_planted_reports,
+    test_count_findings_usage_and_unreadable_report,
+    test_lint_markdown_tldr_block_shape,
 ]
 
 

@@ -45,8 +45,8 @@ What is scanned:
     File list. In a git repository the file set comes from `git ls-files` at
     REPO_ROOT, so `.gitignore`d build output, dependencies, and untracked files
     are excluded automatically. Outside a git repository the tree is walked
-    instead. In both cases, files under a denylisted build, dependency, or
-    vendored directory (DENY_DIRS) are skipped.
+    instead. In both cases, files under a denylisted build, dependency,
+    vendored, or test-fixture directory (DENY_DIRS) are skipped.
 
     Prose files (reviewed in full): .md .markdown .mdx .txt .text .rst .adoc
     .asciidoc .org .tex. Every non-blank line is emitted, so a LaTeX file's `%`
@@ -158,6 +158,7 @@ DENY_DIRS = {
     '.git', 'node_modules', 'build', 'dist', 'out', 'target', '.gradle', '.idea',
     '.vscode', 'vendor', '__pycache__', '.venv', 'venv', '.next', '.angular',
     '.nuxt', 'coverage', 'bin', 'obj', '_vendor', '.mypy_cache', '.pytest_cache',
+    'fixtures', 'testdata',
 }
 
 MAX_BYTES = 1_000_000  # skip a file larger than this (generated/vendored blobs)
