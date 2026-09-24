@@ -44,7 +44,7 @@ have been broken before:
    push alone leaves every tag on a commit that the branch no longer reaches. The
    commit message cleanups recorded in the 2026-09_rev15 and 2026-09_rev23
    changelog entries are the precedent.
-4. **Keep the 11 version callsites in sync.** The version string is in
+4. **Keep the 12 version callsites in sync.** The version string is in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
    `.claude-plugin/marketplace.json`, the `version:` frontmatter of each
    `SKILL.md`, the `**Skill version:**` line in `review/SKILL.md`'s report
