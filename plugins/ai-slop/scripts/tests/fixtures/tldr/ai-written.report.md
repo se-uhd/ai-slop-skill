@@ -26,45 +26,66 @@ Synthetic fixture. A review written with an AI tool: a formulaic opening, negati
 
 #### Finding 3
 
+- **Rule:** Restricted words (G.restricted-words)
+- **Location:** `ai-written.txt:17`
+- **Quote:** `software landscape`
+- **Suggested revision:** `software development`
+
+#### Finding 4
+
+- **Rule:** Cut padding at the sentence level (G.sentence-padding)
+- **Location:** `ai-written.txt:25`
+- **Quote:** `that developers actually make in practice`
+- **Suggested revision:** `that developers make`
+
+#### Finding 5
+
 - **Rule:** Negative parallelism (tropes.fyi, consistent)
 - **Location:** `ai-written.txt:21`
 - **Quote:** `The approach is not just a linter. It is a comprehensive framework`
 - **Suggested revision:** `The approach checks pipeline reliability`
 
-#### Finding 4
+#### Finding 6
 
 - **Rule:** No rule-of-three defaults (G.no-rule-of-three)
 - **Location:** `ai-written.txt:21`
 - **Quote:** `thorough, rigorous, and well executed`
 - **Suggested revision:** `thorough`
 
-#### Finding 5
+#### Finding 7
 
 - **Rule:** Refer back instead of repeating (G.refer-back)
 - **Location:** `ai-written.txt:29`
 - **Quote:** `The evaluation does not report false positives, which is a significant limitation.`
 - **Suggested revision:** `As noted under the weaknesses, false positives are missing.`
 
-#### Finding 6
+#### Finding 8
 
 - **Rule:** Refer back instead of repeating (G.refer-back)
 - **Location:** `ai-written.txt:29`
 - **Quote:** `the comparison with actionlint covers only 50 workflows`
 - **Suggested revision:** `the small comparison noted above`
 
-#### Finding 7
+#### Finding 9
 
-- **Rule:** Phrases to avoid (G.phrases-to-avoid)
+- **Rule:** Cut padding at the sentence level (G.sentence-padding)
 - **Location:** `ai-written.txt:29`
 - **Quote:** `It is important to note that`
 - **Suggested revision:** ``
 
-#### Finding 8
+#### Finding 10
 
 - **Rule:** No formulaic closings (G.no-formulaic-closings)
 - **Location:** `ai-written.txt:33`
 - **Quote:** `Overall, PipeGuard represents a promising step toward more reliable CI pipelines`
 - **Suggested revision:** `PipeGuard could make CI pipelines more reliable`
+
+#### Finding 11
+
+- **Rule:** The "Serves As" dodge (tropes.fyi, fading)
+- **Location:** `ai-written.txt:33`
+- **Quote:** `PipeGuard represents a promising step`
+- **Suggested revision:** `PipeGuard is a step`
 
 ## Items requiring author judgment
 

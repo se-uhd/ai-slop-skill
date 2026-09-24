@@ -2578,6 +2578,41 @@ def test_check_fixture_recall_on_planted_reports():
     assert rc == 2 and 'usage' in err, (rc, err)
 
 
+# ---------- scan_repeats.py ----------
+
+def test_scan_repeats_lists_pasted_and_partial_copies():
+    # A sentence pasted verbatim, a copy with a changed ending, and a short
+    # sentence pasted twice are listed at the later sentence with the line of
+    # the earlier one. A label that three sections repeat is boilerplate, and
+    # a repeat inside a fenced block is not prose.
+    text = ("# Review\n\n"
+            "The comparison with the baseline is not fair because the tool gets more time.\n\n"
+            "Only 25 crates is small sample.\n\n"
+            "Good - clear, well organized, and easy to follow.\n\n"
+            "Good - clear, well organized, and easy to follow.\n\n"
+            "Good - clear, well organized, and easy to follow.\n\n"
+            "The comparison with the baseline is not fair because the tool gets more time. Please rerun it.\n\n"
+            "The comparison with the baseline is not fair, and the budget differs as well.\n\n"
+            "Only 25 crates is small sample.\n\n"
+            "```\nThe comparison with the baseline is not fair because the tool gets more time.\n```\n")
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'r.md', text)
+        rc, out, err = run('scan_repeats.py', str(Path(d) / 'r.md'))
+        assert rc == 0, (rc, err)
+        rows = [l.split('\t') for l in out.splitlines()]
+        where = [(r[0].rsplit(':', 2)[1], r[2].split(' | ')[0]) for r in rows]
+        assert where == [('13', 'line 3'), ('15', 'line 3'), ('17', 'line 5')], out
+        assert all(r[1] == 'repeat' for r in rows), out
+        assert '3 repeat(s)' in err, err
+
+
+def test_scan_repeats_usage_and_unreadable_paths():
+    rc, out, err = run('scan_repeats.py')
+    assert rc == 2 and 'usage' in err, (rc, err)
+    rc, out, err = run('scan_repeats.py', '/nonexistent/file.md')
+    assert rc == 2 and 'none of the 1 path(s)' in err, (rc, err)
+
+
 TESTS = [
     test_scan_glyphs_counts_every_occurrence,
     test_scan_glyphs_two_on_one_line_distinct_columns,
@@ -2731,6 +2766,8 @@ TESTS = [
     test_count_findings_classes_every_rule_key,
     test_tldr_fixtures_levels_and_verdicts,
     test_check_fixture_recall_on_planted_reports,
+    test_scan_repeats_lists_pasted_and_partial_copies,
+    test_scan_repeats_usage_and_unreadable_paths,
     test_count_findings_usage_and_unreadable_report,
     test_lint_markdown_tldr_block_shape,
 ]

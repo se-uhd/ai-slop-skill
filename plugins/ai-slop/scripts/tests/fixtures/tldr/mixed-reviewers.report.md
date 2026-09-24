@@ -19,7 +19,7 @@ Synthetic fixture. One submission with three reviews: a human review with slips,
 
 #### Finding 2
 
-- **Rule:** Grandiose stakes inflation (tropes.fyi, rising)
+- **Rule:** Promotional language (tropes.fyi, new)
 - **Location:** `mixed-reviewers.txt:36`
 - **Quote:** `a groundbreaking approach to log summarization`
 - **Suggested revision:** `an approach to log summarization`
@@ -40,24 +40,17 @@ Synthetic fixture. One submission with three reviews: a human review with slips,
 
 #### Finding 5
 
-- **Rule:** Refer back instead of repeating (G.refer-back)
+- **Rule:** Cut padding at the sentence level (G.sentence-padding)
 - **Location:** `mixed-reviewers.txt:44`
-- **Quote:** `The user study includes only eight engineers, which is a significant limitation.`
-- **Suggested revision:** `The small user study noted above limits the results.`
+- **Quote:** `As noted earlier,`
+- **Suggested revision:** ``
 
 #### Finding 6
 
-- **Rule:** Phrases to avoid (G.phrases-to-avoid)
+- **Rule:** Cut padding at the sentence level (G.sentence-padding)
 - **Location:** `mixed-reviewers.txt:44`
 - **Quote:** `It is worth noting that`
 - **Suggested revision:** ``
-
-#### Finding 7
-
-- **Rule:** Oxford comma (G.oxford-comma)
-- **Location:** `mixed-reviewers.txt:21`
-- **Quote:** `only 8 engineers and all from same company`
-- **Suggested revision:** `only 8 engineers, all from the same company`
 
 ## Items requiring author judgment
 

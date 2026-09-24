@@ -1,6 +1,6 @@
 {
   "name": "ai-slop",
-  "version": "2026-09_rev28",
+  "version": "2026-09_rev29",
   "description": "Catches AI slop in any prose and adds a scientific layer for empirical software engineering papers (voice and tense, statistical reporting per APA/IEEE/ACM, citations) and a LaTeX layer (BibTeX verification, reference checks against CrossRef/DBLP, citation macros, grounding comments). Both load automatically for .tex source, and --scientific opts a non-LaTeX manuscript into the scientific layer. An optional --ste layer applies Simplified Technical English rules to any prose. Combines these with the AI trope catalog by Ossama Chaib at tropes.fyi.",
   "homepage": "https://github.com/se-uhd/ai-slop-skill",
   "repository": "https://github.com/se-uhd/ai-slop-skill",

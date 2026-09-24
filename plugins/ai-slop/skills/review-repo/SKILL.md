@@ -3,7 +3,7 @@ name: review-repo
 description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research article layer, and `--ste` adds the Simplified Technical English layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev28"
+  version: "2026-09_rev29"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -61,6 +61,7 @@ The skill scans the repository rooted at the current working directory by defaul
    - American-vs-British spelling, a frequent source of drift in code comments.
    - Restricted-word occurrences.
    - The "significant" audit and verb tense, when the scientific layer is in scope.
+   - Repeated sentences, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_repeats.py` run over the same Markdown, plain-text, and LaTeX files, with the rows tested per **Refer back instead of repeating** (`G.refer-back`) as `/ai-slop:review` step 5 does. The scan compares sentences within one file, not across files.
    - STE sentence candidates (STE mode only), from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_sentences.py` run over the same Markdown, plain-text, and LaTeX files, with the rows tested as `/ai-slop:review` step 5 does.
 
    A single punctuation mark that is the wrong choice (a semicolon joining two independent clauses, an em-dash standing in for a period, a colon used as a generic mid-sentence pause) is a per-file finding under step 5. Read comments and commit messages for the same rules without the scan.
@@ -82,7 +83,7 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 ## Bundled files
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-ste.md` are the rule layers that repo mode can load (the LaTeX layer never applies here).
-- `../../scripts/scan_repo.py` extracts the repository's natural-language text. `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_sentences.py`, and `../../scripts/lint_markdown.py` implement the catalog download, the glyph scan, the sentence scan for STE mode, and report linting. Their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../scripts/scan_repo.py` extracts the repository's natural-language text. `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_repeats.py`, `../../scripts/scan_sentences.py`, and `../../scripts/lint_markdown.py` implement the catalog download, the glyph scan, the repeat scan, the sentence scan for STE mode, and report linting. Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 

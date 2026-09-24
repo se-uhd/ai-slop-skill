@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev28"
+  version: "2026-09_rev29"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -68,6 +68,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 9. **Cross-cutting metrics, scoped to the diff.** Compute on changed lines only:
    - Dash count and locations in changed lines. Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py` over the changed files and keep the rows inside the changed-line set, as `/ai-slop:review` step 5 does.
    - Reference candidates on changed lines, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_reference.py` over the changed files, filtered the same way and tested per the **Reference** rules.
+   - Repeated sentences on changed lines, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_repeats.py` over the changed files. Keep a row when its sentence (the later occurrence) is on a changed line, and test it per **Refer back instead of repeating** (`G.refer-back`) as `/ai-slop:review` step 5 does. A changed sentence that an unchanged one repeats later is out of scope.
    - Restricted-word occurrences in changed lines.
    - Verb-tense compliance for changed paragraphs (against the section table in the scientific layer, and only when that layer is in scope).
    - American-vs-British spelling in changed lines.
@@ -101,7 +102,7 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 ## Bundled files
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers, and `../../shared/rules-ste.md` is the optional STE layer. Load the subset that each changed file calls for (step 6).
-- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_sentences.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection; the catalog download; the glyph, reference, and sentence scans; citation issues; BibTeX field and reference verification; and report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_repeats.py`, `../../scripts/scan_sentences.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection; the catalog download; the glyph, reference, repeat, and sentence scans; citation issues; BibTeX field and reference verification; and report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 
