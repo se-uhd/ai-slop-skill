@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev31] - 2026-09-24
+
+- **Changed:** the thresholds that only the general layer's self-check stated are now also in their rules: more than one-third passive sentences in a paragraph (`G.active-voice`), more than two hedges in a paragraph (`G.hedge-from-evidence`), three consecutive sentences within 5 words of each other in length (`G.sentence-length`), and around 5 pause marks per page-equivalent as the combined target (`G.pause-mark-count`). A self-check item restates its rule, so a test that only the self-check stated was missing from the rule it belongs to, and the self-check could not be shortened without losing it. The thresholds are the same, and the self-check items still repeat them.
+
 ## [2026-09_rev30] - 2026-09-24
 
 - **Added:** an export mode, `/ai-slop:export`. It writes the general layer and the AI trope catalog into one Markdown file that Claude Code loads at the start of every session, below an instruction to apply the rules to all prose that Claude writes: replies in chat, files that it creates or edits, code comments and docstrings, and commit messages. The instruction limits the rules to the text that Claude writes or changes and gives a project's own writing conventions precedence. The default output is `~/.claude/rules/ai-slop.md`. Claude Code reads every Markdown file under `~/.claude/rules/` at launch, in every project, so no `CLAUDE.md` needs an import. A path under a repository's `.claude/rules/` loads the file in that project only, and any other path writes it for another use, such as a claude.ai Project or an `@` import. `--ste` adds the STE layer. The scientific and LaTeX layers stay out, because they apply to research articles and LaTeX source. `/ai-slop:init` still writes them into the `WRITING.md` of a paper project, which serves a different purpose, and init is unchanged.
