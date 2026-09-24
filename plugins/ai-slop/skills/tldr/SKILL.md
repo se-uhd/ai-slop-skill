@@ -3,7 +3,7 @@ name: tldr
 description: Run a regular AI slop review and condense it into a TL;DR with one short assessment per scanned file of whether the authors used AI tools in a reasonable way or in a way that makes the text harder to read, plus up to three bullets naming the worst patterns that the review found. Use when the user asks for a tl;dr or a quick verdict on a draft, a thesis, a paper, or a repository, or asks whether the AI use in a text is reasonable, or runs `/ai-slop:tldr`. Reviews a document like `/ai-slop:review` and a directory like `/ai-slop:review-repo`, with the same flags. Writes `ai-slop-report.md` and `ai-slop-tldr.md`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev29"
+  version: "2026-09_rev30"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
