@@ -3,7 +3,7 @@ name: export
 description: Export the general writing rules and the AI trope catalog as one Markdown file that Claude Code loads at the start of every session, so that Claude's replies in chat, the files it edits, its code comments, and its commit messages follow the rules. Use when the user wants the writing rules applied to everything Claude writes, in every project, or asks for the rules as one file to load at startup or to add to a system prompt, or runs `/ai-slop:export`. Writes `~/.claude/rules/ai-slop.md` by default. For the editable WRITING.md of one project, use `/ai-slop:init`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev30"
+  version: "2026-09_rev31"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
