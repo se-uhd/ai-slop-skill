@@ -4,7 +4,7 @@
 
 ## Summary
 
-Synthetic fixture. A clean human review whose only tells are the curly quotes of a word processor.
+Synthetic fixture. A clean review with no pattern other than the curly quotes of a word processor.
 
 ## Findings by file
 
@@ -32,13 +32,6 @@ Synthetic fixture. A clean human review whose only tells are the curly quotes of
 - **Suggested revision:** `how "consistency" was defined`
 
 #### Finding 4
-
-- **Rule:** Keep *that* in formal prose (G.keep-that)
-- **Location:** `curly-quotes.txt:25`
-- **Quote:** `The paper argues the checker reduces incidents`
-- **Suggested revision:** `The paper argues that the checker reduces incidents`
-
-#### Finding 5
 
 - **Rule:** Unicode decoration (tropes.fyi, fading)
 - **Location:** `curly-quotes.txt:29`

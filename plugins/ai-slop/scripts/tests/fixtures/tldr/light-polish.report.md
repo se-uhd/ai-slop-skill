@@ -4,7 +4,7 @@
 
 ## Summary
 
-Synthetic fixture. A clean review polished by a tool, with restricted words and em-dash glyphs.
+Synthetic fixture. A clean review with em-dash glyphs and words such as "leverage".
 
 ## Findings by file
 
@@ -12,38 +12,24 @@ Synthetic fixture. A clean review polished by a tool, with restricted words and 
 
 #### Finding 1
 
-- **Rule:** Literal em-dash glyphs in source (G.em-dash-glyphs)
+- **Rule:** Em-dash addiction (tropes.fyi, consistent)
 - **Location:** `light-polish.txt:17`
 - **Quote:** `projects — using a regression`
 - **Suggested revision:** `projects, using a regression`
 
 #### Finding 2
 
-- **Rule:** Restricted words (G.restricted-words)
+- **Rule:** "Delve" and friends (tropes.fyi, fading)
 - **Location:** `light-polish.txt:21`
 - **Quote:** `the analysis leverages a large dataset`
 - **Suggested revision:** `the analysis uses a large dataset`
 
 #### Finding 3
 
-- **Rule:** Literal em-dash glyphs in source (G.em-dash-glyphs)
-- **Location:** `light-polish.txt:25`
-- **Quote:** `what they check — style, tests, or security — and`
-- **Suggested revision:** `what they check (style, tests, or security), and`
-
-#### Finding 4
-
-- **Rule:** Restricted words (G.restricted-words)
+- **Rule:** "Delve" and friends (tropes.fyi, fading)
 - **Location:** `light-polish.txt:25`
 - **Quote:** `harness the findings`
 - **Suggested revision:** `use the findings`
-
-#### Finding 5
-
-- **Rule:** Keep *that* in formal prose (G.keep-that)
-- **Location:** `light-polish.txt:17`
-- **Quote:** `around the date each bot was installed`
-- **Suggested revision:** `around the date that each bot was installed`
 
 ## Items requiring author judgment
 

@@ -4,7 +4,7 @@
 
 ## Summary
 
-Synthetic fixture. One submission with three reviews: a human review with slips, an AI-written review, and a clean human review.
+Synthetic fixture. One submission with three reviews, of which only the second has catalog tropes.
 
 ## Findings by file
 
@@ -12,7 +12,7 @@ Synthetic fixture. One submission with three reviews: a human review with slips,
 
 #### Finding 1
 
-- **Rule:** No formulaic section openings (G.no-formulaic-openings)
+- **Rule:** Grandiose stakes inflation (tropes.fyi, rising)
 - **Location:** `mixed-reviewers.txt:36`
 - **Quote:** `In an era where software systems are increasingly complex, incident response has never been more critical.`
 - **Suggested revision:** `Incidents cost on-call engineers time.`
@@ -33,21 +33,14 @@ Synthetic fixture. One submission with three reviews: a human review with slips,
 
 #### Finding 4
 
-- **Rule:** No rule-of-three defaults (G.no-rule-of-three)
+- **Rule:** Rule of Three pattern (tropes.fyi, consistent)
 - **Location:** `mixed-reviewers.txt:40`
 - **Quote:** `clear, concise, and compelling`
 - **Suggested revision:** `clear`
 
 #### Finding 5
 
-- **Rule:** Cut padding at the sentence level (G.sentence-padding)
-- **Location:** `mixed-reviewers.txt:44`
-- **Quote:** `As noted earlier,`
-- **Suggested revision:** ``
-
-#### Finding 6
-
-- **Rule:** Cut padding at the sentence level (G.sentence-padding)
+- **Rule:** "It's worth noting" (tropes.fyi, fading)
 - **Location:** `mixed-reviewers.txt:44`
 - **Quote:** `It is worth noting that`
 - **Suggested revision:** ``
@@ -55,9 +48,3 @@ Synthetic fixture. One submission with three reviews: a human review with slips,
 ## Items requiring author judgment
 
 None.
-
-## Signs of unassisted writing
-
-- `mixed-reviewers.txt:17` missing article: `Paper present`
-- `mixed-reviewers.txt:17` grammar slip: `a tool that summarize`
-- `mixed-reviewers.txt:21` missing article: `all from same company`
