@@ -2796,9 +2796,12 @@ Remember: any of these patterns used once might be fine.
 
 def test_export_rules_writes_general_layer_and_catalog():
     """The export holds the general layer and the catalog under their own
-    headings, with the catalog's title and preamble dropped, its headings
-    demoted, and its lists spaced, and it lints clean. It carries no layer for
-    a single genre or file format, and --ste adds the STE layer."""
+    headings, and it lints clean. The layer loses its self-check, which the
+    opening paragraph asks for instead. The catalog loses its title, preamble,
+    status lines, `**Avoid patterns like:**` labels, and `---` lines, its
+    headings are demoted, and each description is followed by a blank line and
+    its list. The file carries no layer for a single genre or file format, and
+    --ste adds the STE layer, also without its self-check."""
     with tempfile.TemporaryDirectory() as d:
         catalog = Path(d) / 'tropes.md'
         write(catalog, EXPORT_CATALOG)
@@ -2813,12 +2816,20 @@ def test_export_rules_writes_general_layer_and_catalog():
         assert headings[0] == 'General rules', headings
         assert headings[-1] == 'AI writing tropes to avoid', headings
         assert len(headings) == 2, headings
-        assert '### Self-check before presenting text' in text, "general layer headings not demoted"
+        assert '### Restricted words' in text, "general layer headings not demoted"
+        assert 'Self-check' not in text, "self-check section exported"
+        assert 'Check each text against every rule below' in text, text[:900]
         assert '# Writing rules: general layer' not in text, "layer title leaked"
         assert 'system prompt' not in text.split('## AI writing tropes to avoid')[1], \
             "catalog preamble leaked"
         assert '### Negative parallelism' in text and '### Em-dash addiction' in text, text[-800:]
-        assert '**Avoid patterns like:**\n\n- "It\'s not bold' in text, "catalog list not spaced"
+        assert 'pattern.\n\n- "It\'s not bold' in text, "catalog list not spaced"
+        assert 'Compulsive em dashes.\n\n- "The problem' in text, "catalog list not spaced"
+        catalog_part = text.split('## AI writing tropes to avoid')[1]
+        assert '**Avoid patterns like:**' not in catalog_part, "catalog label exported"
+        assert '`consistent` ·' not in catalog_part, "catalog status line exported"
+        assert '\n---\n' not in catalog_part, "catalog thematic break exported"
+        assert '\n\n\n' not in catalog_part, "catalog blank lines not collapsed"
         assert 'Remember: any of these patterns' in text, "catalog closing dropped"
         rc, lint_out, lint_err = run('lint_markdown.py', str(out))
         assert rc == 0, f"export lint rc={rc} out={lint_out!r} err={lint_err!r}"
@@ -2826,11 +2837,26 @@ def test_export_rules_writes_general_layer_and_catalog():
         ste = Path(d) / 'ste.md'
         rc, _, err = run('export_rules.py', str(ste), '--ste', f'--tropes={catalog}')
         assert rc == 0, (rc, err)
-        headings = re.findall(r'^## (.+)$', ste.read_text(encoding='utf-8'), re.M)
+        ste_text = ste.read_text(encoding='utf-8')
+        headings = re.findall(r'^## (.+)$', ste_text, re.M)
         assert headings == ['General rules', 'Simplified Technical English rules',
                             'AI writing tropes to avoid'], headings
+        assert 'Self-check' not in ste_text, "STE self-check section exported"
+        assert '### Editing existing text' in ste_text, "STE section before the self-check lost"
         rc, lint_out, lint_err = run('lint_markdown.py', str(ste))
         assert rc == 0, f"STE export lint rc={rc} out={lint_out!r} err={lint_err!r}"
+
+
+def test_export_rules_drops_only_the_self_check_section():
+    """drop_self_checks removes a `## Self-check` section up to the next H2
+    and keeps the sections around it and a fenced block that shows one."""
+    import export_rules
+    layer = ('## Rules\n\n- A rule.\n\n## Self-check before presenting text\n\n'
+             '1. Check the rule.\n\n## Later\n\n```md\n## Self-check in a fence\n```\n')
+    out = export_rules.drop_self_checks(layer)
+    assert '## Rules' in out and '- A rule.' in out, out
+    assert 'Check the rule' not in out, out
+    assert '## Later' in out and '## Self-check in a fence' in out, out
 
 
 def test_export_rules_replaces_only_an_earlier_export():
@@ -3043,6 +3069,7 @@ TESTS = [
     test_count_findings_usage_and_unreadable_report,
     test_lint_markdown_tldr_block_format,
     test_export_rules_writes_general_layer_and_catalog,
+    test_export_rules_drops_only_the_self_check_section,
     test_export_rules_replaces_only_an_earlier_export,
     test_export_rules_usage_and_bad_catalog,
 ]
