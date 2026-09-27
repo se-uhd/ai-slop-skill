@@ -1,116 +1,62 @@
 ---
 name: init
-description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the repository's CLAUDE.md (creating CLAUDE.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", "init the writing conventions", or `/ai-slop:init`. Writes WRITING.md and creates or amends CLAUDE.md, and does not modify your content.
+description: Write the general writing rules and the AI trope catalog into one Markdown file that Claude Code loads at the start of every session, so that Claude's replies in chat, the files it edits, its code comments, and its commit messages follow the rules. Use when the user wants the writing rules applied to everything Claude writes, in every project, or asks for the rules as one file to load at startup or to add to a system prompt, or runs `/ai-slop:init`. Writes `~/.claude/rules/ai-slop.md` by default. For the editable WRITING.md of one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev33"
+  version: "2026-09_rev34"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
 # AI Slop Review: Init Mode
 
-This skill builds a project-local `WRITING.md` by concatenating the layered writing rules with the AI trope catalog (fetched live from tropes.fyi), then either creates a `CLAUDE.md` that references it or appends a reference to an existing one. The result is a repository where any Agent Skills client sees both the rules and the trope catalog through the standard CLAUDE.md mechanism, even if the user has not installed this plugin and even when offline.
+This skill writes the general rule layer and the AI trope catalog (fetched live from tropes.fyi) into one Markdown file, under an instruction to apply them to all prose that Claude writes: replies in chat, files that it creates or edits, code comments and docstrings, and commit messages. Claude Code reads every Markdown file under `~/.claude/rules/` at launch, in every project, so a file at the default location is part of the context of each new session without an import in any `CLAUDE.md`.
 
-**Audience and tone.** The default user is an author setting up a new project repository or retrofitting an existing one. After this mode runs, the user may edit WRITING.md to add project-specific conventions. The file is a starting point, not a synced replica of the bundled rules.
+**Audience and tone.** The user wants Claude's own output to follow the rules everywhere, instead of auditing it afterward. The file applies to any prose, so it carries no rules for a single genre or file format.
+
+**Init and writing.** `/ai-slop:writing` writes a `WRITING.md` into one project, with the layers that the project calls for (the scientific and LaTeX layers for a paper), for co-authors to read and edit and to commit with the project. Init writes one file for every session, with the general layer only (plus the STE layer on request), and replaces it on each run.
 
 ## When to use
 
 Invoke this skill when the user:
 
-1. Asks to set up writing rules in their paper repo, generate a WRITING.md, or initialize the writing conventions.
-2. Runs `/ai-slop:init`.
-3. Wants the writing rules visible to co-authors and to other Agent Skills clients without requiring this plugin to be installed.
+1. Wants Claude to follow the writing rules in chat replies and in every file that it touches, across projects.
+2. Asks for the rules as one file to load at startup, to add to a system prompt, or to upload to a claude.ai Project.
+3. Runs `/ai-slop:init`.
 
-Do not invoke when the user wants to audit a draft (use `/ai-slop:review` or `/ai-slop:review-diff`) or to apply review findings (`/ai-slop:revise`).
+Do not invoke when the user wants the rules of one project as an editable file (use `/ai-slop:writing`) or wants to audit text (use `/ai-slop:review` or its variants).
 
 ## Inputs
 
-The skill operates on the current working directory. No arguments are required.
+**Output path.** A positional path sets the file to write. The default is `~/.claude/rules/ai-slop.md`, which every session in every project loads. `.claude/rules/ai-slop.md` inside a repository loads the file in that project only. Any other path writes the file there for the user to load another way.
 
-**Optional path override.** A target directory can be passed as the first positional argument. The default is the working directory.
+**Flags.** `--ste` adds the Simplified Technical English layer (`../../shared/rules-ste.md`), which applies to any prose. `--tropes=<path>` (repeatable) reads the catalog from local files instead of tropes.fyi, concatenated in the order given, as in `/ai-slop:review`. The scientific and LaTeX layers are not available here, since they apply to research articles and LaTeX source. `/ai-slop:writing` writes them into a paper project's `WRITING.md`.
 
 ## Workflow
 
-1. **Resolve the target directory.** Default is the working directory. If the user passed a directory argument, use that. Verify that it exists and is writable.
+1. **Resolve the output path.** Take the positional path, or `~/.claude/rules/ai-slop.md` when there is none.
 
-2. **Determine which rule layers to include.** The layers under `../../shared/` are `rules-general.md` (always), `rules-scientific.md` (research article conventions), `rules-latex.md` (LaTeX-source mechanics), and `rules-ste.md` (the optional Simplified Technical English layer). Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <target-directory>`. `latex` (the directory has a LaTeX root) includes the general, scientific, and LaTeX layers. `general` includes `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research article project). `--general` overrides the detection and includes `rules-general.md` alone, for a code repository that happens to contain a paper under a subdirectory. `--ste` adds `rules-ste.md` to whatever the detection or `--general` chose, for a project that writes in Simplified Technical English. From each selected layer file, take everything from its first `##` heading onward (skip the H1 title and the intro paragraph). These bodies, concatenated in the order general, scientific, latex, ste, form the rules section of WRITING.md.
+2. **Write the file.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/export_rules.py <output> [--ste] [--tropes=<path> ...]`. The script builds the file from `../../shared/rules-general.md` (and `rules-ste.md` with `--ste`) and the catalog, each under its own heading, and writes it in one step, so do not compose or edit the file by hand. The next step depends on its exit code:
+   - `0`: the file is written. The stderr line says whether it was created or replaced, and gives its size in bytes and approximate tokens.
+   - `1`: there is no catalog. tropes.fyi is the only source and there is no bundled fallback, so stop and tell the user that fetching the catalog failed and that `--tropes=<path>` writes the file from a local copy.
+   - `2`: a usage error, or a file that could not be read. Pass the message on and stop.
+   - `3`: a file that this mode did not write already exists at the output path. The script replaces a file from an earlier run without asking, because running this mode again is how the rules and the catalog are refreshed. Any other file may hold the user's own rules, so ask before replacing it (e.g., "`~/.claude/rules/ai-slop.md` exists and was not written by `/ai-slop:init`. Replace it (y/n)?"). On yes, run the script again with `--force`. On no, stop and leave the file as it is.
 
-3. **Load the AI trope catalog.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py`. tropes.fyi is the only source and there is no bundled fallback, so the script exits 1 with an empty stdout when it cannot fetch the catalog. Stop there and tell the user, rather than writing a `WRITING.md` with no trope catalog in it. The script accepts only a body with the catalog's structure and prints the size, heading count, and content hash of what it accepted to stderr.
+3. **Print a summary** in two or three lines:
+   - The file: created or replaced at `<output>`, with the layers and its size in tokens, rounded to the nearest thousand. The whole file stays in the context of every session that loads it.
+   - How it loads. Under `~/.claude/rules/`, Claude Code loads it at the start of every new session, in every project. Under a repository's `.claude/rules/`, it loads in that project. Elsewhere, name the ways to load it: move it into `~/.claude/rules/`, import it with `@<path>` in a `CLAUDE.md`, or add it to a claude.ai Project's knowledge.
+   - The current session does not load it. It takes effect in the next session.
 
-4. **Normalize the trope catalog for inlining.** The fetched catalog is a standalone document with its own H1 and a leading preamble that points readers at system-prompt usage. Neither belongs inside WRITING.md. To inline it cleanly:
-   - Drop everything before the first H2 (a line starting with `##`) in the trope content (the original H1 `# AI Writing Tropes to Avoid`, the "Add this file to your AI assistant's system prompt..." paragraph, and the leading `---` separator).
-   - Demote every remaining heading by one level: `## Negative parallelism` becomes `### Negative parallelism`, `## "Quietly" and other magic adverbs` becomes `### "Quietly" and other magic adverbs`, and so on. Adjust headings only at the start of a line. Do not touch `#` characters that appear mid-sentence.
-   - Insert a blank line between each `**Avoid patterns like:**` line and the bullet list that follows it. The catalog runs the two together, which the Markdown linter flags as a list without surrounding blank lines.
-   - Leave the status line under each heading (e.g., `` `consistent` · Sentence Structure ``) as it stands. It carries the catalog's own frequency rating and category.
-   - Keep the trailing closing paragraph ("Remember: any of these patterns used once might be fine...") at the end of the demoted content.
-
-5. **Build the WRITING.md content.** Compose the file as `<header>` + `<rules body>` + `<separator and trope intro>` + `<normalized trope body>`:
-
-    ````markdown
-    # Writing rules for this project
-
-    <!-- maintainer: bump the version string below on every release (see README "Maintainer notes") -->
-    These rules apply to all prose in this repository. They were generated by `/ai-slop:init` from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) (skill version 2026-09_rev33) and combine the writing rules maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd) with a general AI trope catalog from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is).
-
-    Edit this file freely to add project-specific conventions. The sections below are a starting point. Once you edit them, this file is yours.
-
-    To audit a draft against everything below, run `/ai-slop:review` (or `/ai-slop:review-diff` to scope the audit to git-modified lines).
-    ````
-
-    Then concatenate the rules bodies from the layer files selected in step 2 (each from its first `##` heading onward, in the order general, scientific, latex, ste), followed by:
-
-    ````markdown
-
-    ---
-
-    ## AI Writing Tropes to Avoid
-
-    The catalog below is sourced from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is) and inlined here so co-authors and offline tooling can read it without re-fetching. The skill's runtime fetches the live catalog on every run. This inlined copy is for reading by humans and other Agent Skills clients.
-    ````
-
-    Then concatenate the normalized trope body from step 4.
-
-6. **Write WRITING.md.** If `<target>/WRITING.md` does not exist, write the new content. If it exists, ask the user before overwriting (e.g., "`WRITING.md` already exists in this directory. Overwrite (y/n)?"). Do not silently overwrite. The user may have local edits that matter. If the user declines, leave WRITING.md alone and continue to the CLAUDE.md step.
-
-7. **Update CLAUDE.md.**
-
-    **If `<target>/CLAUDE.md` does not exist**, create it with this content:
-
-    ````markdown
-    # CLAUDE.md
-
-    This file is loaded by Claude Code (and other Agent Skills clients) to guide work in this repository.
-
-    ## Writing conventions
-
-    Apply the rules in [`WRITING.md`](./WRITING.md) to all prose in this repository. The file is derived from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) and can be edited to add project-specific conventions. Run `/ai-slop:review` or `/ai-slop:review-diff` to audit a draft against these rules.
-    ````
-
-    **If `<target>/CLAUDE.md` exists**, check whether it already references `WRITING.md` (a substring match for `WRITING.md` is sufficient). If found, leave CLAUDE.md alone. The reference is already in place. If not found, append the following section to the end of the file, preceded by a blank line:
-
-    ````markdown
-
-    ## Writing conventions
-
-    Apply the rules in [`WRITING.md`](./WRITING.md) to all prose in this repository. The file is derived from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) and can be edited to add project-specific conventions. Run `/ai-slop:review` or `/ai-slop:review-diff` to audit a draft against these rules.
-    ````
-
-8. **Lint and finalize.** For each file written or modified in steps 6 and 7 (WRITING.md, and CLAUDE.md if created or appended), run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/lint_markdown.py --fix <path>`. If the linter exits non-zero on any file, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise that file in place to address each, and re-run. Repeat at most three iterations per file. After the third pass, proceed regardless of the linter's state. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
-
-9. **Print a summary.** Tell the user, in two lines, what happened to each file: WRITING.md (created / overwritten / left alone / declined), CLAUDE.md (created / appended / left alone because already referenced).
-
-10. **Stop.** Do not run a review. The user can invoke `/ai-slop:review` separately when ready, and is expected to inspect the new files with `git diff` and commit when satisfied.
+4. **Stop.** Do not review or edit any other file, and do not commit.
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, and `../../shared/rules-ste.md` are the rule layers. The scope and the `--general` and `--ste` flags select which layers provide the rules section of WRITING.md.
-- `../../scripts/fetch_tropes.py` fetches the catalog from tropes.fyi. The inlined catalog is current at the moment of generation. The skill stops when fetching the catalog fails (step 3).
-- `../../scripts/detect_scope.py` selects the rule layers (step 2), and `../../scripts/lint_markdown.py` lints the written files (step 8).
+- `../../scripts/export_rules.py` assembles and writes the file. Unless `--force` is passed, it replaces only a file from an earlier run, including one from `/ai-slop:export`, the former name of this mode.
+- `../../scripts/fetch_tropes.py` fetches the catalog from tropes.fyi. `export_rules.py` calls it unless `--tropes=<path>` is passed.
+- `../../shared/rules-general.md` and `../../shared/rules-ste.md` are the rule layers in the file.
 
 ## Constraints
 
-- **Do not silently overwrite WRITING.md.** Always confirm before replacing an existing file. The user may have edited it.
-- **Idempotent CLAUDE.md updates.** If CLAUDE.md already references `WRITING.md`, do not append a duplicate section. Re-running this skill must be safe.
-- **Demote trope catalog headings cleanly.** Inline the trope catalog under a single `## AI Writing Tropes to Avoid` section in WRITING.md, with all sub-headings shifted one level deeper than in the source. Do not produce two H1s or sibling H2 trees in the same document.
-- **Do not modify the paper itself.** This mode writes only `WRITING.md` and `CLAUDE.md` in the target directory.
-- **No commits.** Leave the new files in the working tree. The user inspects the result with `git diff` and commits when satisfied.
+- **Do not edit the file by hand.** The next run replaces it. The file's header tells the user to keep their own additions in a separate file, such as another Markdown file under `~/.claude/rules/`.
+- **Ask before replacing a file that this mode did not write.** It may hold the user's own rules.
+- **Do not modify `CLAUDE.md` or any other file.** A file in the rules directory loads without an import, and a file at another path is the user's to load.
+- **No commits.** A file written into a repository stays in the working tree for the user to inspect and commit.

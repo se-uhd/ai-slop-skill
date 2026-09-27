@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev34] - 2026-09-27
+
+- **Changed:** `/ai-slop:export` is now `/ai-slop:init`, and the former `/ai-slop:init`, which writes a project's `WRITING.md`, is now `/ai-slop:writing`. The new init replaces a rules file from `/ai-slop:export` without `--force`.
+- **Changed:** `G.plain-words` lists "cut" for creating or publishing, as in "cut a release" -> "publish a release", and keeps it for removing or shortening. `CLAUDE.md` and the README no longer use it in that sense, and the seed test fails on "re-cut" and on "cut" before a release, tag, branch, or reference.
+
 ## [2026-09_rev33] - 2026-09-27
 
 - **Changed:** `/ai-slop:tldr` checks a text against the tropes.fyi catalog only. The layer rules no longer produce findings but still supply their exceptions, so a single "robust", the count of a study's research questions, or "we" in a paper is not flagged. `--ste` no longer applies to this mode.

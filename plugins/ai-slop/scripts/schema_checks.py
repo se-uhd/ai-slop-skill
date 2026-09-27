@@ -10,7 +10,7 @@ The checks against `ai-slop-report.md`, `ai-slop-tldr.md`, and `WRITING.md`:
                                 `## AI Writing Tropes to Avoid` section,
                                 or an H1 appears inside that section. A
                                 WRITING.md is recognized by its H1, which
-                                `/ai-slop:init` writes as "Writing rules for
+                                `/ai-slop:writing` writes as "Writing rules for
                                 this project" (older files say "paper").
   tldr-block-format             `ai-slop-tldr.md`: a per-file `##` block
                                 has no `**Number of patterns that affect
