@@ -12,7 +12,7 @@ The checks against `ai-slop-report.md`, `ai-slop-tldr.md`, and `WRITING.md`:
                                 WRITING.md is recognized by its H1, which
                                 `/ai-slop:init` writes as "Writing rules for
                                 this project" (older files say "paper").
-  tldr-block-shape              `ai-slop-tldr.md`: a per-file `##` block
+  tldr-block-format             `ai-slop-tldr.md`: a per-file `##` block
                                 has no `**Impact on readability:**` line
                                 or a level outside the scale (None,
                                 Minor, Moderate, Major, Severe, followed
@@ -75,7 +75,7 @@ def count_sentences(text):
 
 def tldr_findings(lines):
     """Check the per-file blocks of an `ai-slop-tldr.md` (see the module
-    docstring for the shape they must have)."""
+    docstring for the structure they must have)."""
     findings = []
     blocks = []  # (heading line, body, [(lineno, line), ...])
     in_fence = None
@@ -120,7 +120,7 @@ def tldr_findings(lines):
                 in_bullet = False
             elif BULLET_RE.match(line):
                 if not bullets and not intro:
-                    findings.append((head, 'tldr-block-shape',
+                    findings.append((head, 'tldr-block-format',
                                      f'TL;DR bullets without the {TLDR_BULLETS_INTRO} line'))
                 bullets += 1
                 in_bullet = True
@@ -132,29 +132,29 @@ def tldr_findings(lines):
                 in_bullet = False
                 prose.append(line.strip())
         if level is None:
-            findings.append((head, 'tldr-block-shape',
+            findings.append((head, 'tldr-block-format',
                              'TL;DR block has no **Impact on readability:** line'))
         elif level not in TLDR_LEVELS:
-            findings.append((head, 'tldr-block-shape',
+            findings.append((head, 'tldr-block-format',
                              f'TL;DR impact level {level!r} is not one of '
                              + ', '.join(TLDR_LEVELS)))
         if verdict is None:
-            findings.append((head, 'tldr-block-shape',
+            findings.append((head, 'tldr-block-format',
                              'TL;DR block has no **AI use:** line'))
         elif verdict not in TLDR_VERDICTS:
-            findings.append((head, 'tldr-block-shape',
+            findings.append((head, 'tldr-block-format',
                              f'TL;DR AI-use verdict {verdict!r} is not one of '
                              + ', '.join(TLDR_VERDICTS)))
         n = count_sentences(' '.join(prose))
         if n == 0:
-            findings.append((head, 'tldr-block-shape',
+            findings.append((head, 'tldr-block-format',
                              'TL;DR block has no assessment'))
         elif n > TLDR_MAX_SENTENCES:
-            findings.append((head, 'tldr-block-shape',
+            findings.append((head, 'tldr-block-format',
                              f'TL;DR assessment has {n} sentences '
                              f'(at most {TLDR_MAX_SENTENCES})'))
         if bullets > TLDR_MAX_BULLETS:
-            findings.append((head, 'tldr-block-shape',
+            findings.append((head, 'tldr-block-format',
                              f'TL;DR block has {bullets} bullets '
                              f'(at most {TLDR_MAX_BULLETS})'))
     return findings

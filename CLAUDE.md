@@ -106,9 +106,9 @@ have been broken before:
   the other exception. The bundle's prose does not
   follow it, so an STE rule change needs no sweep. Between sweeps,
   `test_first_party_prose_avoids_the_plain_words_seeds` runs `scan_repo.py`
-  over the repository and fails on "lives in" outside a quoted example.
-  `/ai-slop:review-repo` finds clause-joining semicolons on the next sweep,
-  since a count cannot tell them from list separators. Released `CHANGELOG.md`
+  over the repository and fails on "lives in" or "shape" outside a quoted
+  example. `/ai-slop:review-repo` finds clause-joining semicolons on the next
+  sweep, since a count cannot tell them from list separators. Released `CHANGELOG.md`
   entries are edited only to correct or complete the record, never to restate
   it. Upstream-owned files are left to their own repo.
 - Generated artifacts (`ai-slop-report.md`, `ai-slop-tldr.md`,

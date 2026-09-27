@@ -14,7 +14,7 @@ markdown. `extract_markdown` therefore unwraps it: first from the download link'
 `data:text/markdown` URI (percent-encoded or base64), then from the `<pre>`
 block that renders the same text. Both come from the site's own generator and
 carry the same bytes. Whatever is extracted, and a body that arrives as plain
-text, is accepted only when it has the catalog's shape (see
+text, is accepted only when it has the catalog's structure (see
 `looks_like_catalog`): a Markdown H1 as its first non-blank line and at least
 MIN_HEADINGS `## ` trope headings. A plain-text error message, a JSON error
 body, or an error page that happens to carry a `<pre>` block is rejected, so a
@@ -72,7 +72,7 @@ def try_fetch(url):
 
 
 def looks_like_catalog(text):
-    """True when `text` has the catalog's shape: a Markdown H1 as its first
+    """True when `text` has the catalog's structure: a Markdown H1 as its first
     non-blank line and at least MIN_HEADINGS `## ` trope headings."""
     if not text or not text.lstrip().startswith('# '):
         return False
@@ -99,7 +99,7 @@ def extract_markdown(body):
 
     A body that is already markdown is a candidate as it is. An HTML page is
     unwrapped into candidates: the download link's data URI first, then the
-    rendered <pre> block. The first candidate with the catalog's shape is
+    rendered <pre> block. The first candidate with the catalog's structure is
     returned. Returns None when no candidate looks like the catalog.
     """
     if not body or not body.strip():
