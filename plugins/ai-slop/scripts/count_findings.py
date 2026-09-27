@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""count_findings.py [REPORT] [--root=DIR] [--tropes=PATH]
+"""count_findings.py [REPORT] [--root=DIR] [--tropes=PATH] [--scope=PATH:RANGES ...]
 
-Count the findings of an ai-slop review report per file, sort them by what
-they cost the reader, and give each file's impact level and AI-use verdict, for
-`/ai-slop:tldr`. A count taken by eye from a long report drifts, and two readers
-of the same findings classify, rank, and rate them differently, so the skill
-takes every count, class, ranking, level, and verdict from this script.
+Count the findings of the catalog-only review that `/ai-slop:tldr` runs, per
+file, and rank each file's patterns by what they cost the reader. A count taken
+by eye from a long report drifts, and two readers of the same findings classify
+and rank them differently, so the skill takes every count and ranking from this
+script.
 
 REPORT defaults to `ai-slop-report.md`. Only the `#### Finding <N>` blocks under
-a `## Findings by ...` heading are counted. Items requiring author judgment, the
-metric sections, and the grounding to-do are not findings.
+a `## Findings by ...` heading are counted. Items requiring author judgment and
+the metric sections are not findings.
 
 Each finding is assigned to a file by its `**Location:**` field:
 
@@ -19,102 +19,87 @@ Each finding is assigned to a file by its `**Location:**` field:
                                          header (a PDF has no line numbers)
 
 Each rule that a finding's `**Rule:**` field names falls into one of three
-classes. A rule of a layer is classed by its key (see OBSCURES, DELAYS, and
-DISTRACTS). A catalog trope is classed by the category that the catalog gives
-it (see TROPE_CATEGORY_CLASS and TROPE_CLASS), when --tropes names the catalog,
-and counts as `delays` otherwise.
+classes. A catalog trope, which the field names as `<name> (tropes.fyi,
+<status>)`, is classed by the category that the catalog gives it (see
+TROPE_CATEGORY_CLASS), with the exceptions in TROPE_CLASS. A trope that neither
+the catalog given with --tropes nor TROPE_CLASS names counts as `delays`. Any
+other rule, such as a pattern that the user's instructions added, counts as
+`distracts`.
 
     obscures   the reader cannot tell what is meant
     delays     the reader has to get through text that adds nothing
     distracts  the meaning comes through, but the wording draws attention
 
-A finding that names several rules takes the costliest of their classes.
+A finding that names several rules takes the costliest of their classes. Trope
+names are compared in lowercase and without quotation marks, since a Rule field
+may write `"Delve" and friends` with or without them.
+
+The tropes of characters and formatting in PER_LINE_TROPES count once per line,
+so a line with a pair of curly quotes and an apostrophe is one finding of
+Unicode decoration, and a bold lead-in counts once per list item. A report may
+record them per character, per pair, or per line, and the counts and the
+ranking come out the same.
+
+A finding affects readability when it names a rule that is not minor. The
+minor rules are the catalog tropes that only distract, which cover formatting
+and the choice of single words, and the tropes in MINOR_TROPES, which restate a
+point just made, reuse a word or a filler phrase, or add a short phrase after a
+comma. They are nit-picks rather
+than feedback: the report keeps them, but they neither count nor rank. A rule
+that is not a catalog trope, such as a pattern that the user's instructions
+added, is never minor, since the user asked for it.
 
 Output (stdout), tab-separated. Per file with findings, ordered by finding
 count, highest first, then by path:
 
-    file\\t<path>\\t<findings>\\t<words>\\t<obscures>\\t<delays>\\t<distracts>\\t<level>\\t<rewrite>%\\t<ai>\\t<ai in rewrite>\\t<signs>\\t<verdict>
-    rule\\t<path>\\t<count>\\t<class>\\t<rule>
-    para\\t<path>\\t<first line>-<last line>\\t<obscures>\\t<delays>
+    file\\t<path>\\t<findings>\\t<words>\\t<obscures>\\t<delays>\\t<distracts>\\t<patterns>\\t<feedback>
+    rule\\t<path>\\t<count>\\t<affecting>\\t<class>\\t<rule>
+    bullet\\t<path>\\t<affecting>\\t<label>\\t<quote>
 
 <words> is the file's prose word count as the reviews extract it with
 `scan_repo.py`: every non-blank line of a Markdown, plain-text, or LaTeX file
 (so LaTeX markup and form text count too, and the figure is approximate) and
-only the comments of a source or config file. The three class columns count
-findings. The `rule` lines rank the file's rules by cost, which is the count
-times WEIGHT of the class, then by count and by name. A field that names several
-rules counts once for each of them, so the `rule` counts can add up to more than
-the findings.
+only the comments of a source or config file. The `%` comments of a LaTeX file
+do not count, since they hold notes and quoted grounding sources rather than the
+text that the reader sees. <words> is `-` where the script cannot read the
+file, as for a PDF, a path that does not exist under DIR, or the commit
+messages. The three class columns count findings.
 
-The level follows from the paragraphs, which are runs of consecutive prose
-lines. A paragraph needs a rewrite when at least two of its findings obscure or
-delay, and at least one per REWRITE_WORDS words of the paragraph, so a long
-paragraph does not qualify by its length alone. Each such paragraph gets a
-`para` line. <rewrite> is the share of the prose words, in percent, that are in
-paragraphs that need a rewrite. The prose is every paragraph of at least
-MIN_PARAGRAPH_WORDS words (shorter ones are mostly form fields and headings)
-plus any shorter paragraph that needs a rewrite. The level is
+<patterns> is the number of findings in the file that affect readability.
+<feedback> is `yes` when there are at least MIN_FEEDBACK_PATTERNS of them and
+`n/a` otherwise, since one isolated pattern does not warrant feedback.
+<affecting> is the number of the rule's findings that affect readability, which
+is 0 for a minor rule.
 
-    None       no finding obscures or delays
-    Minor      under a tenth of the prose needs a rewrite
-    Moderate   a tenth to under a third
-    Major      a third to under two thirds
-    Severe     two thirds or more
+The `rule` lines rank the file's rules by cost, which is WEIGHT of the class
+times <affecting>, so the minor rules rank last.
 
-Major and Severe also need at least MIN_REWRITE_PARAGRAPHS paragraphs that need
-a rewrite, since in a short text one or two paragraphs make up most of the
-prose. With fewer, the level stays at Moderate.
-
-The verdict answers whether the writers used AI tools in a reasonable way or in
-a way that makes the text harder to read. It rests on the AI-typical findings,
-which are the findings of a catalog trope or of a rule in AI_TYPICAL, the
-patterns that AI output overproduces. Grammar slips, dropped words, spelling,
-and unclear pronouns are left out, since hurried human writing produces them
-too. A trope in EDITOR_TROPES never counts, because the editor or the web form
-inserts it rather than the writer (curly quotes appeared in 68 to 88 percent of
-a set of peer reviews, whatever else the reviews showed).
-
-The report's `## Signs of unassisted writing` section, which `/ai-slop:tldr`
-adds, lists typos, grammar slips, missing articles, and missing words, one
-bullet each that opens with its location in backticks. Current models rarely
-produce them, and a sign shows that its own paragraph was typed by a person. In
-a paragraph with a sign, the findings of the rules in WEAK_AI stop counting as
-AI-typical, since non-native and hurried writers produce figurative phrasing,
-padding, long sentences, and enumerations as readily as models do. The same
-holds for the catalog tropes with the status `fading`, which describe habits of
-older models that overlap with human phrasing. The sign
-does not affect other paragraphs, which in a file with several writers may be
-someone else's. Where the script cannot read the file by paragraphs, the WEAK_AI
-findings stop counting when the file has at least MIN_HUMAN_SIGNS signs. <ai> counts the AI-typical findings that count,
-<ai in rewrite> counts those in paragraphs that need a rewrite, and <signs>
-counts the signs of unassisted writing. The verdict is
-
-    Little sign of AI tools  fewer than MIN_AI_FINDINGS AI-typical findings,
-                             or fewer than MIN_AI_DENSITY per page-equivalent
-                             of PAGE_WORDS words
-    Harder to read           otherwise, when the level is Moderate or above
-                             and at least one AI-typical finding is in a
-                             paragraph that needs a rewrite
-    Reasonable               otherwise
-
-On a set of 339 peer reviews without recorded signs of unassisted writing, this
-rule matched the answer of a model that read each review with its findings in
-190 of 298 cases, and in 75 of the 103 that the model called harder to read.
-The synthetic reviews under tests/fixtures/tldr pin the intended verdict for
-each case.
-
-The words, the level, the share, and <ai in rewrite> are `-` where the script
-cannot read the file, as for a PDF, a path that does not exist under DIR, or
-the commit messages, except that the level is `None` there too when no finding
-obscures or delays. The verdict is `-` there when it depends on the paragraphs.
+The `bullet` lines are the TL;DR's bullets: the first MAX_BULLETS rules that
+affect readability, in the order of the ranking, each with the plain label of
+LABELS and the quote of its first finding that no earlier bullet quotes, so
+that two bullets never show the same passage. A rule whose findings are all
+quoted by earlier bullets gets no bullet. The quote loses its Markdown marks. A
+quote longer than MAX_QUOTE_WORDS words is cut at a word boundary and ends in
+"...", and a shorter quote that ends in a fragment of a further sentence ends
+at its last complete sentence. A pattern that the
+instructions added is labeled with its name. A fixed label keeps the TL;DR from
+naming one pattern in several ways. Ties break by count, then by catalog status in the order of
+STATUS_RANK, since `new` and `rising` name the patterns that the catalog finds
+most often in current text, and then by the normalized name. A field that names
+several rules counts once for each of them, so the `rule` counts can add up to
+more than the findings.
 
 --root=DIR is the directory that the Location paths are relative to. It defaults
 to the current working directory. --tropes=PATH is the trope catalog that the
-review used.
+review used. --scope=PATH:RANGES limits the words of the file at PATH to the
+lines that the review covered, as comma-separated ranges such as
+`12-80,140-190`, when the user's instructions narrowed it to some of its
+sections. The option can be given once per file.
 
-The `**Rule:**` and `**Location:**` labels are also read without the bullet
-or the bold, as a model sometimes writes them. A one-line summary is always
-printed to stderr, followed by a warning when a finding block has no rule:
+The `**Rule:**`, `**Location:**`, and `**Quote:**` labels are also read without
+the bullet or the bold, as a model sometimes writes them. A one-line summary is
+always printed to stderr, followed by a warning when a finding block has no
+rule:
 
     counted 42 finding(s) across 5 file(s)
     warning: 2 finding(s) have no Rule field and are counted under `-`
@@ -134,93 +119,76 @@ from scan_io import FenceTracker, report_unreadable
 COMMITS = 'commit messages'
 CLASSES = ('obscures', 'delays', 'distracts')
 WEIGHT = {'obscures': 4, 'delays': 3, 'distracts': 1}
-MIN_PARAGRAPH_WORDS = 15
-REWRITE_WORDS = 100
-MIN_REWRITE_PARAGRAPHS = 3
-LEVELS = ((2 / 3, 'Severe'), (1 / 3, 'Major'), (1 / 10, 'Moderate'), (0, 'Minor'))
+# Catalog tropes (normalized names) outside the class `distracts` that are
+# minor too: a closing restatement of the points just made, a reused word, a
+# filler phrase, and a short phrase after a comma cost the reader a sentence
+# at most.
+MINOR_TROPES = {
+    'fractal summaries', 'the tie-back', 'signposted conclusion', 'self-echo',
+    "it's worth noting", 'comma-clipped trailing phrase',
+}
+# A file needs feedback when it has at least this many findings that affect
+# readability, so that a pattern recurs.
+MIN_FEEDBACK_PATTERNS = 2
+MAX_BULLETS = 5
+MAX_QUOTE_WORDS = 25
+# Plain labels of the catalog tropes that are not minor (normalized names).
+LABELS = {
+    'negative parallelism': 'Contrast with a claim that nobody made',
+    'short punchy fragments': 'Very short sentences set apart for emphasis',
+    'reasoning leak': "Remark about the text's own wording",
+    'premise stacking': 'Question or point stated twice in a row',
+    'preamble (announce-then-answer)': 'Sentence that announces a point instead of making it',
+    'grandiose stakes inflation': 'Inflated claims of importance',
+    'compulsive counting': 'Count announced before a list',
+    'invented concept labels': 'Invented label used as an established term',
+    'rule of three pattern': 'Three words or phrases where one would do',
+    'belaboring the unnecessary': 'Defense against an objection that nobody raised',
+    'vague attributions': 'Claim attributed to unnamed sources',
+    'quotable one-liners': 'Slogan-like sentence without information',
+    'forced figurative language': 'Metaphor or simile in place of a plain statement',
+    'never-ending conclusion': 'Conclusion that keeps adding clauses',
+    'synonym cycling': 'One term replaced by several synonyms',
+    'appeal to familiarity': 'Claim of common knowledge without a source',
+    'promotional language': 'Promotional wording',
+    'collaborative communication': 'Collective "we" for a single writer',
+    'not x. not y. just z.': 'Negations stacked before the point',
+    "here's the kicker": 'Announced reveal before an ordinary point',
+    'excessive enumeration': 'List written as numbered paragraphs',
+    'the x? a y.': 'Question answered right away for effect',
+    'anaphora abuse': 'Same opening repeated in consecutive sentences',
+    'think of it as...': 'Analogy where a plain statement would do',
+    'rapid-fire historical analogies': 'String of historical examples offered as proof',
+    'imagine a world where...': '"Imagine" scenario in place of an argument',
+    'false vulnerability': 'Staged admission',
+    'false ranges': '"From X to Y" range with unrelated ends',
+    'one-point dilution': 'One point restated at length',
+    'content duplication': 'Passage repeated from earlier in the text',
+    "let's break this down": 'Explanation of what the reader already knows',
+    'superficial analyses': 'Claim of significance added without support',
+    'despite its challenges...': 'Problems named and then dismissed',
+}
+MARKUP_RE = re.compile(r'\*\*|__|`')
+# The end of a sentence inside a quote: a period, a question mark, or an
+# exclamation mark, with any closing quotation mark or bracket, before a space.
+SENTENCE_END_RE = re.compile('(?<!\\be\\.g)(?<!\\bi\\.e)(?<!\\bal)(?<!\\betc)(?<!\\bvs)(?<!\\bcf)'
+                             '(?<!\\bFig)(?<!\\bSec)(?<!\\bEq)(?<!\\bTab)(?<!\\bNo)'
+                             '[.!?][\'"\u2019\u201d)\\]]*(?=\\s)')
+# A quote cut at its last sentence keeps at least this many words.
+MIN_SENTENCE_WORDS = 4
 
-OBSCURES = {
-    'G.one-term', 'G.define-once', 'G.distinct-synonyms', 'G.anchor-pronouns',
-    'G.summarizing-nouns', 'G.definite-article', 'G.stand-ins', 'G.connectives',
-    'G.parenthetical-lists', 'G.be-concrete', 'G.no-coinages',
-    'S.significant', 'S.citation-clusters', 'S.cite-specific-works',
-    'S.ground-claims', 'S.state-the-gap', 'S.verify-references',
-    'S.no-invented-fields', 'S.effect-sizes', 'S.exact-p-values',
-    'S.confidence-intervals', 'S.specific-captions',
-    'L.verify-bibtex', 'L.no-invented-fields',
-    'T.one-meaning',
+# Catalog tropes (normalized names) that count once per line of a file.
+PER_LINE_TROPES = {
+    'unicode decoration', 'em-dash addiction', 'bold-first bullets',
+    'title case headings', 'where / what / why headers',
 }
-DELAYS = {
-    'G.phrases-to-avoid', 'G.no-formulaic-openings', 'G.no-formulaic-closings',
-    'G.no-rule-of-three', 'G.no-announced-counts', 'G.short-enumerations',
-    'G.no-list-cramming', 'G.no-prose-listicle', 'G.refer-back',
-    'G.sentence-padding', 'G.paragraph-padding', 'G.hedge-from-evidence',
-    'G.take-positions', 'G.no-metacommentary', 'G.plain-language',
-    'G.no-figurative-language',
-    'S.research-coded-phrases', 'S.no-restatement', 'S.body-independent',
-    'S.analyze-prior-work', 'S.no-table-repetition', 'S.specific-threats',
-    'S.no-performative-hedging',
-    'T.short-sentences', 'T.one-topic',
-}
-DISTRACTS = {
-    'G.american-english', 'G.data-singular', 'G.such-as', 'G.restricted-words',
-    'G.consequence-connectives', 'G.catalog-precedence', 'G.active-voice',
-    'G.consistent-tense', 'G.participial-openings', 'G.keep-that',
-    'G.whose-on-things', 'G.em-dashes', 'G.em-dash-glyphs', 'G.colons',
-    'G.introducer-colon', 'G.colon-capitalization', 'G.semicolons',
-    'G.pause-mark-count', 'G.sentence-length', 'G.compound-hyphens',
-    'G.oxford-comma', 'G.paragraph-length', 'G.one-example-signal',
-    'G.no-excess-bold', 'G.reformulate', 'G.match-voice', 'G.plain-words',
-    'S.we', 'S.tense-by-section', 'S.paper-vs-study', 'S.no-lists',
-    'S.no-abstract-citations', 'S.spell-out-below-ten', 'S.no-initial-numeral',
-    'S.numerals-from-ten', 'S.thousands-separator', 'S.rounding',
-    'S.consistent-decimals', 'S.leading-zeros', 'S.sample-size-symbols',
-    'S.italic-symbols', 'S.spell-out-statistics',
-    'S.capitalize-cross-references', 'S.refer-to-every-figure',
-    'S.sequential-numbering',
-    'L.quotes', 'L.unspaced-em-dashes', 'L.caption-punctuation',
-    'L.cross-reference-macros', 'L.citeauthor', 'L.grounding-comments',
-    'L.editorial-comments', 'L.source-priority', 'L.check-fields',
-    'T.scope', 'T.precedence', 'T.vary-length', 'T.active-voice',
-    'T.verbs-not-nouns', 'T.keep-articles', 'T.one-device', 'T.quotations',
-    'T.literals', 'T.keep-original',
-}
-# Rules for the patterns that AI output overproduces. Every catalog trope counts
-# too. A finding of one of them is AI-typical.
-AI_TYPICAL = {
-    'G.restricted-words', 'G.phrases-to-avoid', 'G.sentence-padding',
-    'G.paragraph-padding', 'G.refer-back', 'G.no-formulaic-openings',
-    'G.no-formulaic-closings', 'G.no-rule-of-three', 'G.no-announced-counts',
-    'G.no-prose-listicle', 'G.em-dashes', 'G.em-dash-glyphs', 'G.no-excess-bold',
-    'G.hedge-from-evidence', 'G.take-positions', 'G.no-metacommentary',
-    'G.no-figurative-language', 'G.plain-words', 'G.no-coinages',
-    'G.sentence-length',
-    'S.research-coded-phrases', 'S.no-restatement', 'S.analyze-prior-work',
-    'S.specific-threats', 'S.no-performative-hedging',
-}
-MIN_AI_FINDINGS = 2
-# Catalog tropes (lowercase names) that the editor or web form inserts.
-EDITOR_TROPES = {'unicode decoration'}
-# AI-typical rules whose patterns non-native and hurried writers produce too.
-# They stop counting when a file shows signs of unassisted writing.
-WEAK_AI = {
-    'G.no-figurative-language', 'G.sentence-padding', 'G.sentence-length',
-    'G.no-prose-listicle', 'G.plain-words', 'G.no-coinages', 'G.em-dashes',
-    'G.take-positions', 'G.hedge-from-evidence',
-}
-MIN_HUMAN_SIGNS = 2
-MIN_AI_DENSITY = 1.0
-PAGE_WORDS = 350
-MODERATE_OR_ABOVE = ('Moderate', 'Major', 'Severe')
-
-KEY_CLASS = {**{k: 'obscures' for k in OBSCURES},
-             **{k: 'delays' for k in DELAYS},
-             **{k: 'distracts' for k in DISTRACTS}}
+# Catalog statuses in the order that breaks a tie in the ranking.
+STATUS_RANK = ('new', 'rising', 'consistent', 'fading')
 
 # Catalog tropes by the category under their heading, with the tropes whose
-# cost differs from their category's named in TROPE_CLASS (lowercase names).
-# The formatting tropes are named there too, so they keep their class when no
-# catalog is given.
+# cost differs from their category's named in TROPE_CLASS (normalized names).
+# The formatting and word-choice tropes are named there too, so they keep their
+# class when no catalog is given.
 TROPE_CATEGORY_CLASS = {
     'composition': 'delays', 'tone': 'delays', 'sentence structure': 'delays',
     'paragraph structure': 'delays', 'word choice': 'distracts',
@@ -234,12 +202,17 @@ TROPE_CLASS = {
     'em-dash addiction': 'distracts',
     'title case headings': 'distracts',
     'bold-first bullets': 'distracts',
+    'quietly and other magic adverbs': 'distracts',
+    'tapestry and landscape': 'distracts',
+    'where it actually lives': 'distracts',
+    'the serves as dodge': 'distracts',
+    'delve and friends': 'distracts',
 }
 
 HEADING_RE = re.compile(r'^(#{1,6})\s+(.*?)\s*#*\s*$')
 FINDING_RE = re.compile(r'^####\s+Finding\s+\d+')
 FIELD_RE = re.compile(
-    r'^\s*(?:[-*]\s+)?(?:\*\*)?(Rule|Location)(?:\*\*)?:(?:\*\*)?\s*(.*?)\s*$')
+    r'^\s*(?:[-*]\s+)?(?:\*\*)?(Rule|Location|Quote)(?:\*\*)?:(?:\*\*)?\s*(.*?)\s*$')
 PAPER_RE = re.compile(r'^\*\*Paper:\*\*\s*(.*?)\s*$')
 COMMIT_LOC_RE = re.compile(r'^commit\s+[0-9a-fA-F]{4,40}\b')
 PATH_LOC_RE = re.compile(r'^(.+?):(\d+)(?:[-:,]\d+)*\b')
@@ -247,9 +220,9 @@ RULE_RE = re.compile(r'[^(),;]+?\s*\([^()]*\)')
 # Words that a model puts between two rules in one Rule field, as in
 # "Semicolons (G.semicolons), matching \"Self-echo\" (tropes.fyi, new)".
 JOINER_RE = re.compile(r'^(?:(?:and|or|plus|also|matching|via|see|as|with|i\.e\.|e\.g\.),?\s+)+', re.IGNORECASE)
-KEY_RE = re.compile(r'^\(\s*([GSLT]\.[a-z0-9-]+)')
-SIGNS_TITLE = 'Signs of unassisted writing'
-SIGN_RE = re.compile(r'^\s*[-*]\s+`([^`]+)`')
+QUOTES_RE = re.compile('["\u201c\u201d]')
+# A LaTeX comment: an unescaped `%` and the rest of its line.
+TEX_COMMENT_RE = re.compile(r'(?<!\\)%.*$')
 TROPE_HEADING_RE = re.compile(r'^##\s+(.*?)\s*$')
 TROPE_META_RE = re.compile(r'^`(?:new|rising|consistent|fading)`\s*·\s*(.+?)\s*$')
 
@@ -261,8 +234,8 @@ def strip_code(value):
 
 def parse_report(text):
     """Return (paper, findings) for a report. `paper` is the `**Paper:**`
-    header value or None, and each finding is a (rule, location) pair, either
-    of which may be ''."""
+    header value or None, and each finding is a (rule, location, quote)
+    triple, any of which may be ''."""
     paper = None
     findings = []
     in_findings = False
@@ -284,7 +257,7 @@ def parse_report(text):
             if level <= 2:
                 in_findings = level == 2 and title.startswith('Findings by')
             elif in_findings and FINDING_RE.match(line):
-                current = {'Rule': '', 'Location': ''}
+                current = {'Rule': '', 'Location': '', 'Quote': ''}
             continue
         if current is not None:
             f = FIELD_RE.match(line)
@@ -292,35 +265,24 @@ def parse_report(text):
                 current[f.group(1)] = strip_code(f.group(2))
     if current is not None:
         findings.append(current)
-    return paper, [(f['Rule'], f['Location']) for f in findings]
+    return paper, [(f['Rule'], f['Location'], f['Quote']) for f in findings]
 
 
-def parse_signs(text):
-    """Return the locations listed under the report's `## Signs of unassisted
-    writing` heading."""
-    signs, inside = [], False
-    fences = FenceTracker()
-    for line in text.splitlines():
-        if fences.feed(line):
-            continue
-        h = HEADING_RE.match(line)
-        if h:
-            inside = len(h.group(1)) == 2 and h.group(2) == SIGNS_TITLE
-            continue
-        m = SIGN_RE.match(line) if inside else None
-        if m:
-            signs.append(m.group(1).strip())
-    return signs
+def normalize(name):
+    """Return a trope name in lowercase, without quotation marks, and with its
+    spaces collapsed, so that `"Delve" and friends` and `Delve and friends`
+    match."""
+    return ' '.join(QUOTES_RE.sub('', name).lower().split())
 
 
 def parse_catalog(text):
-    """Return {lowercase trope name: lowercase category} for a trope catalog."""
+    """Return {normalized trope name: lowercase category} for a trope catalog."""
     categories = {}
     name = None
     for line in text.splitlines():
         h = TROPE_HEADING_RE.match(line)
         if h:
-            name = h.group(1).strip().lower()
+            name = normalize(h.group(1))
             continue
         m = TROPE_META_RE.match(line.strip())
         if m and name:
@@ -342,39 +304,78 @@ def place(location, paper):
 def split_rules(field):
     """Split a Rule field into the rules that it names. Each rule is a name
     followed by its key in parentheses, and the rules may be joined by commas,
-    semicolons, "and", "or", or "plus". A field without a parenthesized key is
-    one rule."""
-    rules = [JOINER_RE.sub('', m.group(0).strip()) for m in RULE_RE.finditer(field)]
+    semicolons, "and", "or", or "plus". A parenthesized group without a name
+    belongs to the rule before it, as in `Preamble (announce-then-answer)
+    (tropes.fyi, new)`. A field without a parenthesized key is one rule."""
+    rules = []
+    for m in RULE_RE.finditer(field):
+        rule = JOINER_RE.sub('', m.group(0).strip())
+        if rules and rule.startswith('('):
+            rules[-1] += ' ' + rule
+        else:
+            rules.append(rule)
     return rules or [field or '-']
 
 
-def is_ai_typical(rule, discount_weak=False):
-    """True for a catalog trope outside EDITOR_TROPES or a rule in AI_TYPICAL.
-    With discount_weak, the weak evidence does not count: the rules in WEAK_AI
-    and the tropes with the catalog status `fading`, which describe habits of
-    older models that overlap with human phrasing."""
+def trope(rule):
+    """Return (normalized name, status) for a rule that names a catalog trope,
+    as in `Negative parallelism (tropes.fyi, consistent)`, or None for any
+    other rule."""
     paren = rule.rfind('(')
-    tail = rule[paren:] if paren >= 0 else ''
-    m = KEY_RE.match(tail)
-    if m:
-        return m.group(1) in AI_TYPICAL and not (discount_weak and m.group(1) in WEAK_AI)
-    name = rule[:paren].strip().strip('"').strip().lower() if paren >= 0 else ''
-    if 'tropes.fyi' not in tail or name in EDITOR_TROPES:
-        return False
-    return not (discount_weak and 'fading' in tail.lower())
+    if paren < 0 or 'tropes.fyi' not in rule[paren:]:
+        return None
+    return normalize(rule[:paren]), rule[paren:].lower()
+
+
+def rank_key(rule, count, units, cls):
+    """Return the sort key of a rule in a file's ranking: cost, count, catalog
+    status, and name. `units` is the number of its findings that affect
+    readability."""
+    found = trope(rule)
+    status = next((i for i, s in enumerate(STATUS_RANK) if found and s in found[1]),
+                  len(STATUS_RANK))
+    return (-units * WEIGHT[cls], -count, status, found[0] if found else normalize(rule))
+
+
+def label(rule):
+    """Return the plain label of a rule for a TL;DR bullet."""
+    found = trope(rule)
+    if found is None:
+        return re.sub(r'\s*\([^()]*\)\s*$', '', rule).strip() or rule
+    return LABELS.get(found[0], rule[:rule.rfind('(')].strip())
+
+
+def short_quote(quote):
+    """Return a quote without its Markdown marks. A quote longer than
+    MAX_QUOTE_WORDS words is cut at a word boundary and marked with "...". A
+    shorter quote that ends in a fragment of a further sentence, which a report
+    adds so that /ai-slop:revise finds the passage, ends at its last complete
+    sentence instead."""
+    text = ' '.join(MARKUP_RE.sub('', quote).split())
+    words = text.split()
+    if len(words) > MAX_QUOTE_WORDS:
+        return ' '.join(words[:MAX_QUOTE_WORDS]) + ' ...'
+    ends = [m.end() for m in SENTENCE_END_RE.finditer(text + ' ')]
+    if ends and ends[-1] < len(text) and len(text[:ends[-1]].split()) >= MIN_SENTENCE_WORDS:
+        return text[:ends[-1]]
+    return text
+
+
+
+def affects(rule, cls):
+    """Tell whether a finding of this rule, of class `cls`, affects
+    readability, which a minor rule does not."""
+    found = trope(rule)
+    return found is None or not (cls == 'distracts' or found[0] in MINOR_TROPES)
 
 
 def rule_class(rule, catalog):
-    """Return the class of one rule as a Rule field names it. A finding
-    without a rule counts as `distracts`, the class that moves no level."""
-    if rule == '-':
+    """Return the class of one rule as a Rule field names it. A rule that is
+    not a catalog trope, and a finding without a rule, count as `distracts`."""
+    found = trope(rule)
+    if found is None:
         return 'distracts'
-    paren = rule.rfind('(')
-    tail = rule[paren:] if paren >= 0 else ''
-    m = KEY_RE.match(tail)
-    if m:
-        return KEY_CLASS.get(m.group(1), 'distracts')
-    name = rule[:paren].strip().strip('"').strip().lower() if paren >= 0 else rule.lower()
+    name = found[0]
     if name in TROPE_CLASS:
         return TROPE_CLASS[name]
     return TROPE_CATEGORY_CLASS.get(catalog.get(name, ''), 'delays')
@@ -397,112 +398,87 @@ def prose_lines(root, relpath):
     if kind == 'prose':
         ext = relpath.rsplit('.', 1)[-1].lower() if '.' in relpath else ''
         pairs = scan_repo.extract_prose(text, ext in ('md', 'markdown', 'mdx'))
+        if ext == 'tex':
+            return [(ln, TEX_COMMENT_RE.sub('', t).strip()) for ln, t in pairs if t]
     else:
         pairs = scan_repo.extract_comments(text, spec)
     return [(ln, t) for ln, t in pairs if t]
 
 
-def paragraphs(lines):
-    """Group (lineno, text) lines into paragraphs of consecutive line numbers.
-    Return a list of [first, last, words]."""
-    paras = []
-    for ln, t in lines:
-        if paras and ln == paras[-1][1] + 1:
-            paras[-1][1] = ln
-            paras[-1][2] += len(t.split())
-        else:
-            paras.append([ln, ln, len(t.split())])
-    return paras
-
-
-def summarize(path, entries, root, catalog, sign_lines=()):
-    """Return the output lines for one file's (rule field, line) entries, given
-    the lines of its signs of unassisted writing."""
-    signs = len(sign_lines)
+def summarize(path, entries, root, catalog, scope=None):
+    """Return the output lines for one file's (rule field, line, quote)
+    entries, given the (first, last) line ranges that the review covered when
+    it covered only part of the file."""
     classes = Counter()
-    rules = {}
-    placed = []
-    kinds = []  # per finding: (line, 'strong', 'weak', or None)
-    for field, line in entries:
-        named = split_rules(field)
+    rules = {}  # rule: [count, affecting, class]
+    seen = set()  # (trope, line) of the PER_LINE_TROPES already counted
+    counted = 0
+    patterns = 0
+    quotes = {}  # rule: [(finding index, quote), ...] of its findings that affect readability
+    for index, (field, line, quote) in enumerate(entries):
+        named = []
+        for r in split_rules(field):
+            found = trope(r)
+            if found and found[0] in PER_LINE_TROPES and line is not None:
+                if (found[0], line) in seen:
+                    continue
+                seen.add((found[0], line))
+            named.append(r)
+        if not named:
+            continue
+        counted += 1
         costs = [rule_class(r, catalog) for r in named]
-        cls = min(costs, key=CLASSES.index)
-        classes[cls] += 1
-        placed.append((line, cls))
-        strong = any(is_ai_typical(r, discount_weak=True) for r in named)
-        weak = not strong and any(is_ai_typical(r) for r in named)
-        kinds.append((line, 'strong' if strong else 'weak' if weak else None))
-        for r, c in zip(named, costs):
-            count, _ = rules.get(r, (0, c))
-            rules[r] = (count + 1, c)
+        classes[min(costs, key=CLASSES.index)] += 1
+        effects = [affects(r, c) for r, c in zip(named, costs)]
+        patterns += any(effects)
+        for r, c, e in zip(named, costs, effects):
+            entry = rules.setdefault(r, [0, 0, c])
+            entry[0] += 1
+            entry[1] += e
+            if e:
+                quotes.setdefault(r, []).append((line or 0, index, quote))
 
     lines = prose_lines(root, path)
-    words = level = share = ai_rewrite = '-'
-    para_out = []
-    heavy = classes['obscures'] + classes['delays']
-    discount = signs >= MIN_HUMAN_SIGNS
-    ai_lines = [line for line, kind in kinds if kind == 'strong' or (kind == 'weak' and not discount)]
-    if lines is not None:
-        words = sum(len(t.split()) for _, t in lines)
-        paras = paragraphs(lines)
+    if lines is not None and scope:
+        lines = [(ln, t) for ln, t in lines if any(a <= ln <= b for a, b in scope)]
+    words = '-' if lines is None else sum(len(t.split()) for _, t in lines)
+    feedback = 'yes' if patterns >= MIN_FEEDBACK_PATTERNS else 'n/a'
 
-        def para_of(line):
-            return next((i for i, (first, last, _) in enumerate(paras)
-                         if line is not None and first <= line <= last), None)
-        signed = {para_of(line) for line in sign_lines} - {None}
-        ai_lines = [line for line, kind in kinds
-                    if kind == 'strong' or (kind == 'weak' and para_of(line) not in signed)]
-        hits = [Counter() for _ in paras]
-        for line, cls in placed:
-            if line is None or cls == 'distracts':
-                continue
-            for i, (first, last, _) in enumerate(paras):
-                if first <= line <= last:
-                    hits[i][cls] += 1
-                    break
-        rewrite = [i for i, h in enumerate(hits)
-                   if h['obscures'] + h['delays']
-                   >= max(2, -(-paras[i][2] // REWRITE_WORDS))]
-        prose = sum(p[2] for i, p in enumerate(paras)
-                    if p[2] >= MIN_PARAGRAPH_WORDS or i in rewrite)
-        ratio = sum(paras[i][2] for i in rewrite) / prose if prose else 0
-        share = f"{round(100 * ratio)}%"
-        level = 'None' if heavy == 0 else next(
-            name for bound, name in LEVELS if ratio >= bound)
-        if level in ('Major', 'Severe') and len(rewrite) < MIN_REWRITE_PARAGRAPHS:
-            level = 'Moderate'
-        for i in rewrite:
-            para_out.append(f"para\t{path}\t{paras[i][0]}-{paras[i][1]}\t"
-                            f"{hits[i]['obscures']}\t{hits[i]['delays']}")
-        ai_rewrite = sum(1 for line in ai_lines if line is not None and any(
-            paras[i][0] <= line <= paras[i][1] for i in rewrite))
-    elif heavy == 0:
-        level = 'None'
+    out = [f"file\t{path}\t{counted}\t{words}\t{classes['obscures']}\t"
+           f"{classes['delays']}\t{classes['distracts']}\t{patterns}\t{feedback}"]
+    ranked = sorted(rules.items(), key=lambda kv: rank_key(kv[0], kv[1][0], kv[1][1], kv[1][2]))
+    out += [f"rule\t{path}\t{n}\t{a}\t{c}\t{r}" for r, (n, a, c) in ranked]
+    used = set()  # finding indexes that an earlier bullet quotes
+    bullets = 0
+    for r, (_, a, _) in ranked:
+        if not a or bullets == MAX_BULLETS:
+            continue
+        free = [(ln, i, q) for ln, i, q in sorted(quotes.get(r, [])) if i not in used and q]
+        if not free:
+            continue
+        used.add(free[0][1])
+        bullets += 1
+        out.append(f"bullet\t{path}\t{a}\t{label(r)}\t{short_quote(free[0][2])}")
+    return out
 
-    sparse = words != '-' and len(ai_lines) < MIN_AI_DENSITY * words / PAGE_WORDS
-    if len(ai_lines) < MIN_AI_FINDINGS or sparse:
-        verdict = 'Little sign of AI tools'
-    elif ai_rewrite == '-':
-        verdict = '-'
-    elif level in MODERATE_OR_ABOVE and ai_rewrite >= 1:
-        verdict = 'Harder to read'
-    else:
-        verdict = 'Reasonable'
 
-    out = [f"file\t{path}\t{len(entries)}\t{words}\t{classes['obscures']}\t"
-           f"{classes['delays']}\t{classes['distracts']}\t{level}\t{share}\t"
-           f"{len(ai_lines)}\t{ai_rewrite}\t{signs}\t{verdict}"]
-    ranked = sorted(rules.items(),
-                    key=lambda kv: (-kv[1][0] * WEIGHT[kv[1][1]], -kv[1][0], kv[0]))
-    out += [f"rule\t{path}\t{n}\t{c}\t{r}" for r, (n, c) in ranked]
-    return out + para_out
+SCOPE_RE = re.compile(r'^(.+):((?:\d+-\d+)(?:,\d+-\d+)*)$')
 
 
 def parse_args(argv):
-    """Return (report, root, tropes), or None on a usage error."""
-    report, root, tropes = None, Path('.'), None
+    """Return (report, root, tropes, scopes), or None on a usage error.
+    `scopes` maps a path to its list of (first, last) line ranges."""
+    report, root, tropes, scopes = None, Path('.'), None, {}
     for arg in argv[1:]:
-        if arg.startswith('--root='):
+        if arg.startswith('--scope='):
+            m = SCOPE_RE.match(arg.split('=', 1)[1])
+            if not m or m.group(1) in scopes:
+                return None
+            ranges = [tuple(int(n) for n in r.split('-')) for r in m.group(2).split(',')]
+            if any(a > b for a, b in ranges):
+                return None
+            scopes[m.group(1)] = ranges
+        elif arg.startswith('--root='):
             root = Path(arg.split('=', 1)[1] or '.')
         elif arg.startswith('--tropes='):
             tropes = Path(arg.split('=', 1)[1])
@@ -512,16 +488,17 @@ def parse_args(argv):
             report = Path(arg)
         else:
             return None
-    return (report or Path('ai-slop-report.md'), root, tropes)
+    return (report or Path('ai-slop-report.md'), root, tropes, scopes)
 
 
 def main(argv):
     parsed = parse_args(argv)
     if parsed is None:
         print("count_findings: usage: count_findings.py [REPORT] [--root=DIR] "
-              "[--tropes=PATH]", file=sys.stderr)
+              "[--tropes=PATH] [--scope=PATH:FIRST-LAST[,FIRST-LAST...] ...]",
+              file=sys.stderr)
         return 2
-    report, root, tropes = parsed
+    report, root, tropes, scopes = parsed
     try:
         text = report.read_text(encoding='utf-8')
         catalog = parse_catalog(tropes.read_text(encoding='utf-8')) if tropes else {}
@@ -530,22 +507,18 @@ def main(argv):
         return 2
     paper, findings = parse_report(text)
     per_file = {}
-    for rule, location in findings:
+    for rule, location, quote in findings:
         path, line = place(location, paper)
-        per_file.setdefault(path, []).append((rule, line))
-    signs = {}
-    for location in parse_signs(text):
-        path, line = place(location, paper)
-        signs.setdefault(path, []).append(line)
+        per_file.setdefault(path, []).append((rule, line, quote))
     order = sorted(per_file, key=lambda f: (-len(per_file[f]), f))
     out = []
     for path in order:
-        out += summarize(path, per_file[path], root, catalog, signs.get(path, []))
+        out += summarize(path, per_file[path], root, catalog, scopes.get(path))
     if out:
         sys.stdout.write('\n'.join(out) + '\n')
     print(f"counted {len(findings)} finding(s) across {len(per_file)} file(s)",
           file=sys.stderr)
-    missing = sum(1 for rule, _ in findings if not rule)
+    missing = sum(1 for rule, _, _ in findings if not rule)
     if missing:
         print(f"warning: {missing} finding(s) have no Rule field and are "
               f"counted under `-`", file=sys.stderr)

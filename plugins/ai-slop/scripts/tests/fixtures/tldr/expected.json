@@ -1,47 +1,38 @@
 {
   "human-terse": {
-    "case": "A terse human review with grammar slips and a few mechanical findings.",
-    "level": "Minor",
-    "verdict": "Little sign of AI tools"
+    "case": "A terse review with grammar slips and no catalog trope.",
+    "patterns": null
   },
   "curly-quotes": {
-    "case": "A clean human review whose only tells are the curly quotes of a word processor.",
-    "level": "None",
-    "verdict": "Little sign of AI tools"
+    "case": "A clean review whose only findings are the curly quotes of a word processor, which do not affect readability.",
+    "patterns": 0
   },
   "nonnative-idioms": {
-    "case": "A human review by a non-native writer, with idioms and padding phrases next to grammar slips.",
-    "level": "Moderate",
-    "verdict": "Little sign of AI tools"
+    "case": "A review by a non-native writer, with idioms and filler phrases next to grammar slips.",
+    "patterns": 4
   },
   "pasted-fields": {
-    "case": "A human review that pastes its weaknesses into the detailed comments.",
-    "level": "Minor",
-    "verdict": "Reasonable"
+    "case": "A review that pastes its weaknesses into the detailed comments.",
+    "patterns": 3
   },
   "light-polish": {
-    "case": "A clean review polished by a tool, with restricted words and em-dash glyphs.",
-    "level": "None",
-    "verdict": "Reasonable"
+    "case": "A clean review with em-dash glyphs and words such as \"leverage\", which are minor and need no feedback.",
+    "patterns": 0
   },
   "ai-written": {
-    "case": "A review written with an AI tool: a formulaic opening, negative parallelism, restatement, and a formulaic closing.",
-    "level": "Major",
-    "verdict": "Harder to read"
+    "case": "A review with an inflated opening, negative parallelism, duplicated content, and a signposted conclusion.",
+    "patterns": 6
   },
   "short-dense": {
-    "case": "A short review of two paragraphs, both dense with AI-typical patterns.",
-    "level": "Moderate",
-    "verdict": "Harder to read"
+    "case": "A short review of two paragraphs, both dense with catalog tropes.",
+    "patterns": 3
   },
   "mixed-reviewers": {
-    "case": "One submission with three reviews: a human review with slips, an AI-written review, and a clean human review.",
-    "level": "Moderate",
-    "verdict": "Harder to read"
+    "case": "One submission with three reviews, of which only the second has catalog tropes.",
+    "patterns": 4
   },
   "ai-with-slips": {
-    "case": "An AI-written review with two typos, whose AI-typical patterns outweigh the slips.",
-    "level": "Severe",
-    "verdict": "Harder to read"
+    "case": "A review dense with catalog tropes that also has two typos.",
+    "patterns": 5
   }
 }

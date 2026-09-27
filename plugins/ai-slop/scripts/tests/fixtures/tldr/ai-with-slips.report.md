@@ -4,7 +4,7 @@
 
 ## Summary
 
-Synthetic fixture. An AI-written review with two typos, whose AI-typical patterns outweigh the slips.
+Synthetic fixture. A review dense with catalog tropes that also has two typos.
 
 ## Findings by file
 
@@ -12,7 +12,7 @@ Synthetic fixture. An AI-written review with two typos, whose AI-typical pattern
 
 #### Finding 1
 
-- **Rule:** No formulaic section openings (G.no-formulaic-openings)
+- **Rule:** Grandiose stakes inflation (tropes.fyi, rising)
 - **Location:** `ai-with-slips.txt:17`
 - **Quote:** `In today's fast-paced world of continuous deployment, database migrations have become a critical bottleneck.`
 - **Suggested revision:** `Failed migrations block deployments.`
@@ -33,28 +33,28 @@ Synthetic fixture. An AI-written review with two typos, whose AI-typical pattern
 
 #### Finding 4
 
-- **Rule:** No rule-of-three defaults (G.no-rule-of-three)
+- **Rule:** Rule of Three pattern (tropes.fyi, consistent)
 - **Location:** `ai-with-slips.txt:21`
 - **Quote:** `comprehensive, rigorous, and insightful`
 - **Suggested revision:** `thorough`
 
 #### Finding 5
 
-- **Rule:** No figurative language (G.no-figurative-language)
+- **Rule:** Forced figurative language (tropes.fyi, new)
 - **Location:** `ai-with-slips.txt:21`
 - **Quote:** `a safety net for the entire deployment pipeline`
 - **Suggested revision:** `a check before deployment`
 
 #### Finding 6
 
-- **Rule:** Refer back instead of repeating (G.refer-back)
+- **Rule:** Self-echo (tropes.fyi, new)
 - **Location:** `ai-with-slips.txt:25`
 - **Quote:** `As mentioned above, the tool is a safety net for deployments`
 - **Suggested revision:** ``
 
 #### Finding 7
 
-- **Rule:** Cut padding at the sentence level (G.sentence-padding)
+- **Rule:** "It's worth noting" (tropes.fyi, fading)
 - **Location:** `ai-with-slips.txt:25`
 - **Quote:** `it is important to note that`
 - **Suggested revision:** ``
@@ -62,8 +62,3 @@ Synthetic fixture. An AI-written review with two typos, whose AI-typical pattern
 ## Items requiring author judgment
 
 None.
-
-## Signs of unassisted writing
-
-- `ai-with-slips.txt:17` typo: `producton`
-- `ai-with-slips.txt:25` typo: `resuls`
