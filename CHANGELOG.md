@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev35] - 2026-09-27
+
+- **Changed:** the file that `/ai-slop:init` writes is about 15k characters smaller (69k instead of 84k with the current catalog). Claude Code warns when the instruction files of a session add up to more than 150k characters, and this file loads in every session next to the project's own `CLAUDE.md`. The file leaves out each layer's self-check, which restates the layer's rules item by item, and its opening paragraph asks for the check instead. It also drops each catalog entry's status and category line, its `**Avoid patterns like:**` label, and the `---` line after it, none of which is an instruction. The sentence that introduces the catalog says that each entry lists examples. The layer files keep their self-checks for the review modes.
+- **Changed:** the details that only a self-check item stated are now in their rules, so the exported file loses no test by leaving the self-check out. `G.american-english` names favor, center, defense, and license. `G.restricted-words` gains the limit of 2 to 3 per paragraph. `G.em-dashes` excludes en dashes in ranges, minus signs, and `--` in code listings from the count. `G.em-dash-glyphs` names `---` for LaTeX and keeps a `—` inside a quotation or a code listing. `G.parenthetical-lists` defaults to "e.g.," when a list is not obviously exhaustive, and `G.plain-language` asks for a scan for the sample words even when nothing reads wrong. In the STE layer, `T.one-topic` gains the test of naming a paragraph's topic, and `T.verbs-not-nouns` names the light verb form. Self-check item 14 lists "licence" without the "(verb)" note, since American English writes "license" for both the noun and the verb.
+
 ## [2026-09_rev34] - 2026-09-27
 
 - **Changed:** `/ai-slop:export` is now `/ai-slop:init`, and the former `/ai-slop:init`, which writes a project's `WRITING.md`, is now `/ai-slop:writing`. The new init replaces a rules file from `/ai-slop:export` without `--force`.

@@ -3,7 +3,7 @@ name: init
 description: Write the general writing rules and the AI trope catalog into one Markdown file that Claude Code loads at the start of every session, so that Claude's replies in chat, the files it edits, its code comments, and its commit messages follow the rules. Use when the user wants the writing rules applied to everything Claude writes, in every project, or asks for the rules as one file to load at startup or to add to a system prompt, or runs `/ai-slop:init`. Writes `~/.claude/rules/ai-slop.md` by default. For the editable WRITING.md of one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev34"
+  version: "2026-09_rev35"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -35,7 +35,7 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 1. **Resolve the output path.** Take the positional path, or `~/.claude/rules/ai-slop.md` when there is none.
 
-2. **Write the file.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/export_rules.py <output> [--ste] [--tropes=<path> ...]`. The script builds the file from `../../shared/rules-general.md` (and `rules-ste.md` with `--ste`) and the catalog, each under its own heading, and writes it in one step, so do not compose or edit the file by hand. The next step depends on its exit code:
+2. **Write the file.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/export_rules.py <output> [--ste] [--tropes=<path> ...]`. The script builds the file from `../../shared/rules-general.md` (and `rules-ste.md` with `--ste`) and the catalog, each under its own heading. It leaves out each layer's self-check, which restates the rules, and each catalog entry's status line, label, and `---` line. The script writes the file in one step, so do not compose or edit the file by hand. The next step depends on its exit code:
    - `0`: the file is written. The stderr line says whether it was created or replaced, and gives its size in bytes and approximate tokens.
    - `1`: there is no catalog. tropes.fyi is the only source and there is no bundled fallback, so stop and tell the user that fetching the catalog failed and that `--tropes=<path>` writes the file from a local copy.
    - `2`: a usage error, or a file that could not be read. Pass the message on and stop.
