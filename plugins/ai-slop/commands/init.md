@@ -1,15 +1,15 @@
 ---
-description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in CLAUDE.md (creating CLAUDE.md if it does not exist).
+description: Write the general writing rules and the AI trope catalog into one Markdown file that Claude Code loads at the start of every session, so that Claude's replies, edited files, code comments, and commit messages follow the rules.
 ---
 
 Use the `ai-slop:init` skill.
 
-The skill builds a `WRITING.md` file in the working directory from the bundled writing rules and the AI trope catalog, which it fetches live from tropes.fyi and from no other source. `scripts/detect_scope.py` selects the rule layers from the target directory. A LaTeX project gets `shared/rules-general.md`, `shared/rules-scientific.md`, and `shared/rules-latex.md`, and any other project gets the general layer. `--scientific` adds the scientific layer, `--general` forces the general layer alone, and `--ste` adds `shared/rules-ste.md`. The skill then creates a `CLAUDE.md` that references `WRITING.md`, or appends a reference to an existing one. The result is a repository where any Agent Skills client sees both the rules and the trope catalog through the standard CLAUDE.md mechanism, even if the user has not installed this plugin and even when offline.
+The skill's workflow is in `skills/init/SKILL.md`. It runs `scripts/export_rules.py`, which combines `shared/rules-general.md` with the AI trope catalog, fetched live from tropes.fyi and from no other source, under an instruction to apply the rules to all prose that Claude writes, and writes the result to `~/.claude/rules/ai-slop.md`. Claude Code reads every Markdown file in that directory at launch, in every project, so no `CLAUDE.md` needs an import. The file carries no rules for a single genre or file format. `/ai-slop:writing` writes the scientific and LaTeX layers into a paper project's `WRITING.md`, which serves a different purpose.
 
-WRITING.md is meant to be edited freely after generation. It is a project-local copy of the rules and catalog at the moment of generation, not a synced replica.
+The output path is positional. Examples:
 
-If `WRITING.md` already exists, the skill asks before overwriting. CLAUDE.md is updated idempotently. If it already references `WRITING.md`, nothing is appended.
+- `/ai-slop:init`: write `~/.claude/rules/ai-slop.md` for every session in every project.
+- `/ai-slop:init .claude/rules/ai-slop.md`: write the file into the current repository, where it loads for that project only.
+- `/ai-slop:init ~/Downloads/ai-slop-writing.md`: write the file elsewhere, for example to add it to a claude.ai Project's knowledge.
 
-The skill's workflow is in `skills/init/SKILL.md`. By default the skill writes into the current working directory. A target directory can be passed as an argument to override the default.
-
-Run this once per project repository. Re-run it only to refresh `WRITING.md` from a newer skill release.
+`--ste` adds the Simplified Technical English layer, and `--tropes=<path>` (repeatable) reads the catalog from local files. Running the mode again replaces the file with the current rules and catalog. The mode also replaces a file from `/ai-slop:export`, its former name. The skill asks before replacing any other file, does not modify `CLAUDE.md`, and does not commit. The file takes effect in the next session.
