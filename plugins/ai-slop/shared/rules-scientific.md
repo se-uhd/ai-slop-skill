@@ -11,22 +11,22 @@ is in `rules-rationale.md`, which the skills do not load.
 
 **Research-coded phrases** (`S.research-coded-phrases`). Tropes.fyi covers general AI vocabulary. The phrases below recur specifically in academic abstracts, introductions, and discussions. Do not use them.
 
-- "aims to explore"
-- "sheds light on"
-- "provides valuable insights into" (state the actual finding)
-- "this highlights the fact that"
-- "has emerged as"
-- "extends far beyond"
-- "navigating the complexities of"
-- "plays a crucial / pivotal / significant role"
-- "paving the way for"
-- "keyed to" (use "specific to" or "for")
-- "a growing body of work" (cite the actual works)
-- "recent studies suggest" (say who found what)
+- "aims to explore", as in "This study aims to explore how teams review generated code" -> "We study how teams review generated code"
+- "sheds light on", as in "sheds light on review delays" -> "explains review delays"
+- "provides valuable insights into" (state the actual finding), as in "provides valuable insights into review delays" -> "shows that reviews of generated code take twice as long"
+- "this highlights the fact that", as in "This highlights the fact that most projects lack tests" -> "Most projects lack tests"
+- "has emerged as", as in "Code review has emerged as a core practice" -> "Code review is a core practice"
+- "extends far beyond", as in "The impact extends far beyond code quality" -> "The change also affects onboarding and release planning"
+- "navigating the complexities of", as in "navigating the complexities of dependency management" -> "managing dependencies"
+- "plays a crucial / pivotal / significant role", as in "Testing plays a crucial role in reliability" -> "Reliability depends on testing"
+- "paving the way for", as in "paving the way for automated repair" -> "which enables automated repair"
+- "keyed to" (use "specific to" or "for"), as in "a threshold keyed to each project" -> "a threshold specific to each project"
+- "a growing body of work" (cite the actual works), as in "A growing body of work studies flaky tests" -> "Two studies [12, 15] classify flaky tests by root cause"
+- "recent studies suggest" (say who found what), as in "Recent studies suggest that flaky tests are common" -> "Smith et al. [8] found flaky tests in 40% of the projects that they studied"
 
 ## The word "significant"
 
-**Reserve "significant" for statistics** (`S.significant`). In empirical SE, "significant" has a precise statistical meaning. Using it as a generic intensifier ("a significant contribution," "significant improvements") creates ambiguity about whether a statistical test was performed. Reserve "significant / significantly / significance" for reporting statistical results (e.g., "statistically significant at *p* < 0.05"). For non-statistical emphasis, use large, substantial, considerable, or important.
+**Reserve "significant" for statistics** (`S.significant`). In empirical SE, "significant" has a precise statistical meaning. Using it as a generic intensifier ("a significant contribution," "significant improvements") creates ambiguity about whether a statistical test was performed. Reserve "significant / significantly / significance" for reporting statistical results (e.g., "statistically significant at *p* < 0.05"). For non-statistical emphasis, use large, substantial, considerable, or important, as in "a significant contribution" -> "an important contribution" and "significant improvements" -> "large improvements".
 
 ## Voice
 
@@ -74,14 +74,14 @@ Structured abstracts (e.g., EMSE with Context / Objective / Method / Results / C
 
 ## Citations
 
-- **No vague citation clusters** (`S.citation-clusters`). Never write "several studies have shown [1,2,3,4,5]" or "prior work has found [X to Z]." If citing more than two works together, state what each contributes. A citation that does not tell the reader why it is there adds nothing.
-- **Cite specific works** (`S.cite-specific-works`). Replace "a growing body of work" with the actual works. Replace "recent studies suggest" with who found what. A quantity word has to match the citations that carry it: "several studies" in front of two references, or "widely reported" in front of one, inflates the evidence. Count the references and pick the word that fits, or name the works.
+- **No vague citation clusters** (`S.citation-clusters`). Never write "several studies have shown [1,2,3,4,5]" or "prior work has found [X to Z]." If citing more than two works together, state what each contributes, as in "Several studies have shown that tests are flaky [1,2,3,4,5]." -> "Two surveys found flaky tests in most projects [1, 2], and three tool studies traced the failures to timing [3, 4, 5]." A citation that does not tell the reader why it is there adds nothing.
+- **Cite specific works** (`S.cite-specific-works`). Replace "a growing body of work" with the actual works. Replace "recent studies suggest" with who found what. A quantity word has to match the citations that carry it: "several studies" in front of two references, or "widely reported" in front of one, inflates the evidence. Count the references and pick the word that fits, or name the works, as in "several studies [3, 4]" -> "two studies [3, 4]".
 - **Ground every claim you attribute to a citation** (`S.ground-claims`). Verify that the cited work actually says what you claim. Read the whole paper when its full text is available, not just the abstract. The abstract compresses away the caveats, scope conditions, and negative results that decide whether a claim holds. Fall back to the relevant section only when the full text cannot be obtained.
 - **Avoid citations in the abstract** (`S.no-abstract-citations`). ACM, EMSE, and many IEEE-journal author guidelines prohibit references in abstracts. The abstract is intended to stand alone without bibliographic dependencies. When a proposed rewrite would put a reference into the abstract, rephrase to drop it. The underlying claim can move to the introduction. Check the venue's author guidelines before adding any reference to an abstract. The safe default is to keep abstracts citation-free.
 
 ## Related work
 
-- **Analyze, do not compliment** (`S.analyze-prior-work`). Say what prior work did, how it relates to this paper, and where gaps remain. No complimentary summaries ("X et al. present a comprehensive framework for...").
+- **Analyze, do not compliment** (`S.analyze-prior-work`). Say what prior work did, how it relates to this paper, and where gaps remain. No complimentary summaries ("X et al. present a comprehensive framework for test selection" -> "X et al. select tests by coverage, which misses tests that fail only under load").
 - **State the gap you fill** (`S.state-the-gap`). Every related work discussion should make clear why the cited work leaves room for the current paper.
 
 ## References

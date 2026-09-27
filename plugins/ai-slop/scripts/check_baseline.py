@@ -12,7 +12,7 @@ Exit codes
 ----------
   0  baseline satisfied.
   1  one or more baseline mismatches.
-  2  could not read or parse the yaml, or the yaml has the wrong shape
+  2  could not read or parse the yaml, or the yaml has the wrong structure
      (the document or its extensions/plugins sections are not mappings).
 """
 import argparse
@@ -59,7 +59,7 @@ def check(yaml_path):
         doc = {}
     if not isinstance(doc, dict):
         # No `or {}` shortcuts here or below, because they would coerce
-        # falsy non-mappings (e.g., [], "", false) past the shape check.
+        # falsy non-mappings (e.g., [], "", false) past the mapping check.
         sys.stderr.write(
             f"check_baseline.py: top level of {yaml_path} must be a "
             f"mapping, not {type(doc).__name__}\n"

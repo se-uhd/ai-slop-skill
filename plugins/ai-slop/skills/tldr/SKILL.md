@@ -3,7 +3,7 @@ name: tldr
 description: Run a regular AI slop review and condense it into a TL;DR with one short assessment per scanned file of whether the authors used AI tools in a reasonable way or in a way that makes the text harder to read, plus up to three bullets naming the worst patterns that the review found. Use when the user asks for a tl;dr or a quick verdict on a draft, a thesis, a paper, or a repository, or asks whether the AI use in a text is reasonable, or runs `/ai-slop:tldr`. Reviews a document like `/ai-slop:review` and a directory like `/ai-slop:review-repo`, with the same flags. Writes `ai-slop-report.md` and `ai-slop-tldr.md`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev31"
+  version: "2026-09_rev32"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -110,7 +110,7 @@ Use `/ai-slop:review` or `/ai-slop:review-repo` when the user wants the full lis
 
 ## Commit messages
 
-<Repository reviews only, when the commit messages have findings. Same shape as a file's block.>
+<Repository reviews only, when the commit messages have findings. Same format as a file's block.>
 
 ## Files without findings
 
@@ -169,7 +169,7 @@ The second reviewer used AI tools in a way that makes the review harder to read,
 ## Bundled files
 
 - The rule layers and scripts of `/ai-slop:review` and `/ai-slop:review-repo`, which step 1 runs.
-- `../../scripts/count_findings.py` counts a report's findings per file and per rule, sorts them by their cost to the reader, ranks the rules, finds the paragraphs that need a rewrite, and gives each file's impact level and AI-use verdict. `../../scripts/lint_markdown.py` lints the TL;DR, including the shape of each block. Their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../scripts/count_findings.py` counts a report's findings per file and per rule, sorts them by their cost to the reader, ranks the rules, finds the paragraphs that need a rewrite, and gives each file's impact level and AI-use verdict. `../../scripts/lint_markdown.py` lints the TL;DR, including the structure of each block. Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 

@@ -107,7 +107,7 @@ def test_find_latex_root_root_with_includes():
 
 # ---------- fetch_tropes.py ----------
 
-# A catalog-shaped body: an H1 first, then enough `## ` trope headings for
+# A body with the catalog's structure: an H1 first, then enough `## ` trope headings for
 # fetch_tropes.looks_like_catalog. One trope carries an apostrophe so the
 # HTML unwrapping is exercised.
 CATALOG = '# AI Writing Tropes to Avoid\n\nintro\n\n' + ''.join(
@@ -194,7 +194,7 @@ def test_fetch_tropes_rejects_page_without_markdown():
     assert fetch_tropes.extract_markdown(page) is None, "extract: HTML accepted"
 
 
-def test_fetch_tropes_rejects_bodies_without_the_catalog_shape():
+def test_fetch_tropes_rejects_bodies_without_the_catalog_structure():
     # A plain-text error, a JSON error body, and an error page that happens to
     # carry a <pre> block must all be rejected. Only a body with an H1 and the
     # trope headings is the catalog.
@@ -1538,7 +1538,7 @@ def test_insert_grounding_bad_json_exits_2():
 
 
 def test_insert_grounding_non_dict_extract_exits_2():
-    # Well-formed JSON of the wrong shape (a list) must exit 2, not crash with 1.
+    # Well-formed JSON of the wrong type (a list) must exit 2, not crash with 1.
     with tempfile.TemporaryDirectory() as d:
         extract = Path(d) / 'e.json'
         write(extract, '[]')
@@ -2368,14 +2368,16 @@ def test_check_quotes_sources_dir_and_bad_json():
 # ---------- the bundle follows its own rules ----------
 
 def test_first_party_prose_avoids_the_plain_words_seeds():
-    """`G.plain-words` names "lives in" as a colorful synonym for "is in". The
-    bundle's own Markdown, docstrings, and comments must not use it or a
-    variant such as "lives under", except inside double quotes or a code span.
+    """`G.plain-words` names "lives in" as a colorful synonym for "is in" and
+    "shape" as one for "structure" or "format". The bundle's own Markdown,
+    docstrings, and comments must not use them or a variant such as "lives
+    under" or "shaped", except inside double quotes or a code span.
     CHANGELOG.md, this file, and the upstream-owned files are skipped."""
     repo_root = SCRIPTS.parent.parent.parent
     rc, out, err = run('scan_repo.py', str(repo_root), '--no-commits')
     assert rc == 0, f"self-scan: rc={rc} err={err!r}"
-    seed = re.compile(r'\blives? (?:in|here|under|outside|inside|on|at)\b')
+    seed = re.compile(r'\blives? (?:in|here|under|outside|inside|on|at)\b'
+                      r'|(?<!\w)[Ss]hap(?:e|es|ed|ing)\b')
     skip = ('CHANGELOG.md', 'lint_markdown.py', 'check_baseline.py', 'refresh_vendor.py',
             'run_smoke.py', '_vendor/', 'bundled_licenses/')
     offenders = []
@@ -2389,7 +2391,7 @@ def test_first_party_prose_avoids_the_plain_words_seeds():
         text = re.sub(r'"[^"]*"', '', re.sub(r'`[^`]*`', '', text))
         if seed.search(text):
             offenders.append(line[:120])
-    assert not offenders, "\"lives in\" (G.plain-words) in first-party prose:\n  " + "\n  ".join(offenders)
+    assert not offenders, "\"lives in\" or \"shape\" (G.plain-words) in first-party prose:\n  " + "\n  ".join(offenders)
 
 
 # ---------- runner ----------
@@ -2508,7 +2510,7 @@ def test_count_findings_usage_and_unreadable_report():
         assert '1 finding(s) have no Rule field' in err, err
 
 
-def test_lint_markdown_tldr_block_shape():
+def test_lint_markdown_tldr_block_format():
     good = ("# AI Slop TL;DR\n\n**Target:** `paper/`\n\n"
             "## intro.tex\n\n**Impact on readability:** Major (40% of the prose needs a rewrite)\n\n**AI use:** Harder to read\n\n"
             "The use of AI tools makes the introduction harder to read, e.g., in its opening. "
@@ -2530,15 +2532,15 @@ def test_lint_markdown_tldr_block_shape():
         write(Path(d) / 'ai-slop-tldr.md', bad)
         rc, out, err = run('lint_markdown.py', str(Path(d) / 'ai-slop-tldr.md'))
         assert rc != 0, (rc, out)
-        shape = [l for l in out.splitlines() if 'tldr-block-shape' in l]
-        assert any("'Mixed' is not one of" in l for l in shape), out
-        assert any('6 sentences' in l for l in shape), out
-        assert any('4 bullets' in l for l in shape), out
-        assert any('no **Impact on readability:** line' in l for l in shape), out
-        assert any('no assessment' in l for l in shape), out
-        assert any("verdict 'Some' is not one of" in l for l in shape), out
-        assert any('no **AI use:** line' in l for l in shape), out
-        assert any('bullets without the **Patterns that most affect readability:** line' in l for l in shape), out
+        found = [l for l in out.splitlines() if 'tldr-block-format' in l]
+        assert any("'Mixed' is not one of" in l for l in found), out
+        assert any('6 sentences' in l for l in found), out
+        assert any('4 bullets' in l for l in found), out
+        assert any('no **Impact on readability:** line' in l for l in found), out
+        assert any('no assessment' in l for l in found), out
+        assert any("verdict 'Some' is not one of" in l for l in found), out
+        assert any('no **AI use:** line' in l for l in found), out
+        assert any('bullets without the **Patterns that most affect readability:** line' in l for l in found), out
 
 
 def test_tldr_fixtures_levels_and_verdicts():
@@ -2762,7 +2764,7 @@ TESTS = [
     test_fetch_tropes_unwraps_markdown_from_rendered_page,
     test_fetch_tropes_unwraps_markdown_from_pre_block,
     test_fetch_tropes_rejects_page_without_markdown,
-    test_fetch_tropes_rejects_bodies_without_the_catalog_shape,
+    test_fetch_tropes_rejects_bodies_without_the_catalog_structure,
     test_fetch_tropes_decodes_base64_data_uri,
     test_check_bib_fields_flags_only_missing,
     test_check_bib_fields_summary_on_clean_input,
@@ -2882,7 +2884,7 @@ TESTS = [
     test_scan_repeats_lists_pasted_and_partial_copies,
     test_scan_repeats_usage_and_unreadable_paths,
     test_count_findings_usage_and_unreadable_report,
-    test_lint_markdown_tldr_block_shape,
+    test_lint_markdown_tldr_block_format,
     test_export_rules_writes_general_layer_and_catalog,
     test_export_rules_replaces_only_an_earlier_export,
     test_export_rules_usage_and_bad_catalog,

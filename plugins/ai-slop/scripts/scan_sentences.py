@@ -434,7 +434,7 @@ def markdown_paragraphs(text):
 
 
 def tex_paragraphs(text):
-    """Return the paragraphs of a LaTeX file in the same shape as
+    """Return the paragraphs of a LaTeX file in the same format as
     markdown_paragraphs."""
     lines = text.splitlines()
     paragraphs, para = [], []
