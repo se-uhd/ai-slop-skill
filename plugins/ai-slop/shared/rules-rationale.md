@@ -138,7 +138,14 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   symptom. Where the generator reached past what it had, the specific noun was never available, and
   substituting one hides the gap instead of closing it, which is why an unfillable blank goes to
   author judgment. No density signal applies, because thing, element, item, and factor are ordinary
-  technical vocabulary.
+  technical vocabulary. A vague change verb leaves the same gap. "The requirements shifted"
+  does not say whether a requirement was added, removed, or revised. Replacing "shifted" with
+  "changed" keeps that ambiguity. The revision must name the operation or resulting behavior,
+  and a reviewer must flag an unknown operation for author judgment rather than invent it.
+  Version history belongs where the reader needs a comparison, an upgrade instruction, or
+  enough detail to reproduce or understand a change. Current-use instructions usually need
+  the current behavior alone. Actual relocation names its source and destination, while
+  physical movement and established technical senses remain precise uses of the words.
 
 ## Voice and verb tense
 

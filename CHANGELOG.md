@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev37] - 2026-09-30
+
+- **Changed:** `G.be-concrete` now flags vague uses of "moved" and "shifted" in revision descriptions. State the actual change or current behavior, and include version history only when it helps comparison, upgrading, reproduction, or understanding a change. Actual relocation, physical movement, and established technical senses remain valid. The self-check and rationale carry the same distinction, and the maintainer guide names tag retargeting explicitly.
+
 ## [2026-09_rev36] - 2026-09-30
 
 - **Changed:** all eight skills resolve bundled helpers from their installed `SKILL.md` location in both Codex and Claude Code, without requiring a Claude-specific environment variable. Claude slash commands and plugin manifests remain compatible, and the README documents Codex installation and invocation.
