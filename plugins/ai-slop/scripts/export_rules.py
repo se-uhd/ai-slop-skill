@@ -2,9 +2,9 @@
 """export_rules.py OUTPUT [--ste] [--tropes=PATH ...] [--force]
 
 Write the writing rules and the AI trope catalog to OUTPUT as one Markdown
-file for Claude Code to load at the start of every session. `/ai-slop:init`
-runs it and writes to `~/.claude/rules/` by default, a directory that Claude
-Code reads at launch for every project. The file opens with an instruction to
+file for a coding agent to read. The init skill selects the client-specific
+output path and arranges loading through Claude Code rules or Codex global
+instructions. This helper only writes OUTPUT. The file opens with an instruction to
 apply the rules to the text that the model writes, including its replies in
 chat, so its wording addresses the model, where WRITING.md from
 `/ai-slop:writing` addresses the contributors of one project.

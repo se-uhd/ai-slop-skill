@@ -1,9 +1,9 @@
 ---
 name: ground
-description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify -- <reason>` stub when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
+description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify` stub with a reason when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev35"
+  version: "2026-09_rev36"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -14,6 +14,12 @@ This skill fills the grounding comments that review mode flags as missing. `/ai-
 **Audience and tone.** The default user is an author who has citations to ground before submission. The result is an audit trail in the source: a quote that co-authors and reviewers can check against each citation. Frame the summary as work completed and work still needing the author's attention, not as a verdict.
 
 **The anti-fabrication rule.** A quote is written into the paper *only* when the source text was actually retrieved (fetched from the web or read from a local file). If it was not retrieved, the comment is `TODO verify -- <reason>`, never an approximation, paraphrase, or remembered quote. This rule matches the skill's principle of verifying rather than asserting. The grounding comment certifies that the cited source says what the paper claims, so a fabricated quote is worse than an honest TODO. Hold every grounding agent to this rule, and do not rely on the agents alone. Step 6 re-reads each named source and checks that the quote occurs in it before anything is written.
+
+## Client and paths
+
+This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+
+In Claude Code, invoke `/ai-slop:ground`. In Codex, select the `ai-slop:ground` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
 
 ## When to use
 
@@ -28,8 +34,8 @@ Do not invoke for a fresh review (use `/ai-slop:review`), to apply a review repo
 
 The skill operates on the LaTeX paper in the current working directory. No arguments are required.
 
-- **Paper.** Auto-detect by running `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 means that the printed path is the root. Exit 2 means multiple candidate roots, so list them and ask which to ground. Exit 1 means no `.tex` root, so stop. A `.tex` path can be passed as the first argument to override the scan.
-- **Scope check.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <resolved-path>`. Proceed only on `latex`. On `general`, stop and tell the user that grounding is LaTeX-only.
+- **Paper.** Auto-detect by running `python3 "<skill-dir>/../../scripts/find_latex_root.py"`. Exit 0 means that the printed path is the root. Exit 2 means multiple candidate roots, so list them and ask which to ground. Exit 1 means no `.tex` root, so stop. A `.tex` path can be passed as the first argument to override the scan.
+- **Scope check.** Run `python3 "<skill-dir>/../../scripts/detect_scope.py" <resolved-path>`. Proceed only on `latex`. On `general`, stop and tell the user that grounding is LaTeX-only.
 - **Local sources (optional).** Paywalled articles, books, and other sources that the web does not expose can be grounded from files that the user supplies. If the user names PDFs or a directory of them, pass those paths to the grounding agents so they can read the source text directly. Mention this option when sources come back `paywalled` or `book`.
 - **Data sent off the machine.** Each agent searches the web with the claim sentence and the source metadata, so sentences of an unpublished manuscript reach search engines and publisher sites. Say so when the user asks about confidentiality, and use local sources for a draft that must not leave the machine.
 
@@ -37,7 +43,7 @@ The skill operates on the LaTeX paper in the current working directory. No argum
 
 1. **Resolve and check the scope.** Auto-detect the LaTeX root (or use the supplied path) and confirm that `detect_scope.py` reports `latex`. Stop on a non-LaTeX target.
 
-2. **Extract the citations.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/extract_cites.py <path>` and capture stdout to `grounding-cites.json` in the working directory. The JSON holds:
+2. **Extract the citations.** Run `python3 "<skill-dir>/../../scripts/extract_cites.py" <path>` and capture stdout to `grounding-cites.json` in the working directory. The JSON holds:
    - `sites`: every citation call, with `file`, `line`, `command`, `keys`, the enclosing-sentence `claim`, and `groundable` / `grounded` flags.
    - `by_key`: per unique key, the de-duplicated `claims` and the `sites` that cite it.
    - `meta`: per key, the `.bib` metadata (`type`, `title`, `author`, `year`, `doi`, `url`, `eprint`, `howpublished`) needed to identify and locate the source.
@@ -52,13 +58,13 @@ The skill operates on the LaTeX paper in the current working directory. No argum
    - Find a short verbatim quote from the source that supports the claim(s). Return it only if the source was actually retrieved and the quote is copied from it, together with the URL or local path that it read as `source`, so step 6 can check the quote against it.
    - Otherwise return a TODO with a reason: `paywalled`, `abstract-only` (only the abstract was reachable and it does not contain the support), `book` (no digital full text), `not-found` (the source could not be located), or `source-does-not-support` (the source was read but does not back the claim).
 
-   Run the agents in slices of about 8 at a time so a burst does not trip server-side rate limits. The run is resumable. Any source that errored or was skipped simply stays without a quote, so its site keeps the missing comment or the `TODO verify` stub and a later `/ai-slop:ground` picks it up and fills it.
+   Run the agents in slices of at most 8, staying within the client's available agent slots, so a burst does not trip server-side rate limits. If delegation is unavailable, process the same per-source prompts sequentially. The run is resumable. Any source that errored or was skipped simply stays without a quote, so its site keeps the missing comment or the `TODO verify` stub and a later `/ai-slop:ground` picks it up and fills it.
 
 5. **Assemble the quotes file.** Collect the agents' results into `grounding-quotes.json`, mapping each key to either `{"quote": "<verbatim text>", "source": "<url or path>"}` or `{"todo": "<reason>"}`. Write nothing for a key if its agent failed entirely. Leaving it absent keeps it for a future run.
 
-6. **Check the quotes against their sources.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/check_quotes.py grounding-quotes.json --apply [--sources-dir <dir>]`. For each quote it re-reads the named source (a local text file, or an HTML or plain-text URL) and confirms that the quote occurs in it after whitespace and punctuation normalization. A quote that does not occur is downgraded in place to `{"todo": "unverified", "source": "<the same source>"}`, and each verdict is printed as `<key>\t<verdict>\t<detail>`. A PDF, a binary, or an unreachable source comes back `unverifiable` or `unreachable`. Open that source yourself (Read for a local PDF, WebFetch for a URL), confirm the quote, and downgrade it by hand the same way when you cannot. Nothing goes into the paper that neither the script nor you have seen in the source.
+6. **Check the quotes against their sources.** Run `python3 "<skill-dir>/../../scripts/check_quotes.py" grounding-quotes.json --apply [--sources-dir <dir>]`. For each quote it re-reads the named source (a local text file, or an HTML or plain-text URL) and confirms that the quote occurs in it after whitespace and punctuation normalization. A quote that does not occur is downgraded in place to `{"todo": "unverified", "source": "<the same source>"}`, and each verdict is printed as `<key>\t<verdict>\t<detail>`. A PDF, a binary, or an unreachable source comes back `unverifiable` or `unreachable`. Open that source yourself with the client's PDF reader or web tools, confirm the quote, and downgrade it by hand the same way when you cannot. Nothing goes into the paper that neither the script nor you have seen in the source.
 
-7. **Insert the comments.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/insert_grounding.py grounding-cites.json grounding-quotes.json`. It writes `% GROUNDING: <key> -- "<quote>"` (or the `TODO verify -- <reason>` form) after each groundable, ungrounded citation line, matching the line's indentation. An existing quote-less `TODO verify` stub for the key is replaced in place. A site with a quote-backed comment for the key is left alone (idempotent), and each line is re-checked against the file before editing, so any site that moved is skipped. Use `--dry-run` first if the user wants to preview the edits.
+7. **Insert the comments.** Run `python3 "<skill-dir>/../../scripts/insert_grounding.py" grounding-cites.json grounding-quotes.json`. It writes `% GROUNDING: <key> -- "<quote>"` (or the `TODO verify -- <reason>` form) after each groundable, ungrounded citation line, matching the line's indentation. An existing quote-less `TODO verify` stub for the key is replaced in place. A site with a quote-backed comment for the key is left alone (idempotent), and each line is re-checked against the file before editing, so any site that moved is skipped. Use `--dry-run` first if the user wants to preview the edits.
 
 8. **Summarize.** Tell the user, in plain terms:
    - How many citations were grounded with a retrieved quote, and how many of those quotes step 6 confirmed mechanically.

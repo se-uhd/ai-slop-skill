@@ -1,17 +1,23 @@
 ---
 name: writing
-description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the repository's CLAUDE.md (creating CLAUDE.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", or `/ai-slop:writing`. Writes WRITING.md and creates or amends CLAUDE.md, and does not modify your content. For rules that Claude applies to its own output in every project, use `/ai-slop:init`.
+description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the repository's AGENTS.md (creating AGENTS.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", or `/ai-slop:writing`. Writes WRITING.md, updates AGENTS.md, and preserves Claude Code loading through a CLAUDE.md import. Does not modify your content. For rules that the assistant applies to its own output in every project, use `/ai-slop:init`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev35"
+  version: "2026-09_rev36"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
 # AI Slop Review: Writing Mode
 
-This skill builds a project-local `WRITING.md` by concatenating the layered writing rules with the AI trope catalog (fetched live from tropes.fyi), then either creates a `CLAUDE.md` that references it or appends a reference to an existing one. The result is a repository where any Agent Skills client sees both the rules and the trope catalog through the standard CLAUDE.md mechanism, even if the user has not installed this plugin and even when offline.
+This skill builds a project-local `WRITING.md` by concatenating the layered writing rules with the AI trope catalog (fetched live from tropes.fyi), then either creates an `AGENTS.md` that references it or appends a reference to an existing one. Codex reads the reference through `AGENTS.md`, and Claude Code reads it through a `CLAUDE.md` import. Both can use the generated rules without this plugin installed and when offline.
 
 **Audience and tone.** The default user is an author setting up a new project repository or retrofitting an existing one. After this mode runs, the user may edit WRITING.md to add project-specific conventions. The file is a starting point, not a synced replica of the bundled rules.
+
+## Client and paths
+
+This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+
+In Claude Code, invoke `/ai-slop:writing`. In Codex, select the `ai-slop:writing` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
 
 ## When to use
 
@@ -21,7 +27,7 @@ Invoke this skill when the user:
 2. Runs `/ai-slop:writing`.
 3. Wants the writing rules visible to co-authors and to other Agent Skills clients without requiring this plugin to be installed.
 
-Do not invoke when the user wants to audit a draft (use `/ai-slop:review` or `/ai-slop:review-diff`), to apply review findings (`/ai-slop:revise`), or to have Claude follow the rules in every project (`/ai-slop:init`).
+Do not invoke when the user wants to audit a draft (use `/ai-slop:review` or `/ai-slop:review-diff`), to apply review findings (`/ai-slop:revise`), or to have the assistant follow the rules in every project (`/ai-slop:init`).
 
 ## Inputs
 
@@ -33,9 +39,9 @@ The skill operates on the current working directory. No arguments are required.
 
 1. **Resolve the target directory.** Default is the working directory. If the user passed a directory argument, use that. Verify that it exists and is writable.
 
-2. **Determine which rule layers to include.** The layers under `../../shared/` are `rules-general.md` (always), `rules-scientific.md` (research article conventions), `rules-latex.md` (LaTeX-source mechanics), and `rules-ste.md` (the optional Simplified Technical English layer). Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/detect_scope.py <target-directory>`. `latex` (the directory has a LaTeX root) includes the general, scientific, and LaTeX layers. `general` includes `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research article project). `--general` overrides the detection and includes `rules-general.md` alone, for a code repository that happens to contain a paper under a subdirectory. `--ste` adds `rules-ste.md` to whatever the detection or `--general` chose, for a project that writes in Simplified Technical English. From each selected layer file, take everything from its first `##` heading onward (skip the H1 title and the intro paragraph). These bodies, concatenated in the order general, scientific, latex, ste, form the rules section of WRITING.md.
+2. **Determine which rule layers to include.** The layers under `../../shared/` are `rules-general.md` (always), `rules-scientific.md` (research article conventions), `rules-latex.md` (LaTeX-source mechanics), and `rules-ste.md` (the optional Simplified Technical English layer). Run `python3 "<skill-dir>/../../scripts/detect_scope.py" <target-directory>`. `latex` (the directory has a LaTeX root) includes the general, scientific, and LaTeX layers. `general` includes `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research article project). `--general` overrides the detection and includes `rules-general.md` alone, for a code repository that happens to contain a paper under a subdirectory. `--ste` adds `rules-ste.md` to whatever the detection or `--general` chose, for a project that writes in Simplified Technical English. From each selected layer file, take everything from its first `##` heading onward (skip the H1 title and the intro paragraph). These bodies, concatenated in the order general, scientific, latex, ste, form the rules section of WRITING.md.
 
-3. **Load the AI trope catalog.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py`. tropes.fyi is the only source and there is no bundled fallback, so the script exits 1 with an empty stdout when it cannot fetch the catalog. Stop there and tell the user, rather than writing a `WRITING.md` with no trope catalog in it. The script accepts only a body with the catalog's structure and prints the size, heading count, and content hash of what it accepted to stderr.
+3. **Load the AI trope catalog.** Run `python3 "<skill-dir>/../../scripts/fetch_tropes.py"`. tropes.fyi is the only source and there is no bundled fallback, so the script exits 1 with an empty stdout when it cannot fetch the catalog. Stop there and tell the user, rather than writing a `WRITING.md` with no trope catalog in it. The script accepts only a body with the catalog's structure and prints the size, heading count, and content hash of what it accepted to stderr.
 
 4. **Normalize the trope catalog for inlining.** The fetched catalog is a standalone document with its own H1 and a leading preamble that points readers at system-prompt usage. Neither belongs inside WRITING.md. To inline it cleanly:
    - Drop everything before the first H2 (a line starting with `##`) in the trope content (the original H1 `# AI Writing Tropes to Avoid`, the "Add this file to your AI assistant's system prompt..." paragraph, and the leading `---` separator).
@@ -50,11 +56,11 @@ The skill operates on the current working directory. No arguments are required.
     # Writing rules for this project
 
     <!-- maintainer: bump the version string below on every release (see README "Maintainer notes") -->
-    These rules apply to all prose in this repository. They were generated by `/ai-slop:writing` from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) (skill version 2026-09_rev35) and combine the writing rules maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd) with a general AI trope catalog from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is).
+    These rules apply to all prose in this repository. They were generated by `/ai-slop:writing` from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) (skill version 2026-09_rev36) and combine the writing rules maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd) with a general AI trope catalog from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is).
 
     Edit this file freely to add project-specific conventions. The sections below are a starting point. Once you edit them, this file is yours.
 
-    To audit a draft against everything below, run `/ai-slop:review` (or `/ai-slop:review-diff` to scope the audit to git-modified lines).
+    To audit a draft against everything below, use the `ai-slop:review` skill (or `ai-slop:review-diff` to scope the audit to git-modified lines). In Claude Code, invoke `/ai-slop:review`. In Codex, select the skill through `/skills` or a `$` mention.
     ````
 
     Then concatenate the rules bodies from the layer files selected in step 2 (each from its first `##` heading onward, in the order general, scientific, latex, ste), followed by:
@@ -70,34 +76,38 @@ The skill operates on the current working directory. No arguments are required.
 
     Then concatenate the normalized trope body from step 4.
 
-6. **Write WRITING.md.** If `<target>/WRITING.md` does not exist, write the new content. If it exists, ask the user before overwriting (e.g., "`WRITING.md` already exists in this directory. Overwrite (y/n)?"). Do not silently overwrite. The user may have local edits that matter. If the user declines, leave WRITING.md alone and continue to the CLAUDE.md step.
+6. **Write WRITING.md.** If `<target>/WRITING.md` does not exist, write the new content. If it exists, ask the user before overwriting (e.g., "`WRITING.md` already exists in this directory. Overwrite (y/n)?"). Do not silently overwrite. The user may have local edits that matter. If the user declines, leave WRITING.md alone and continue to the AGENTS.md step.
 
-7. **Update CLAUDE.md.**
+7. **Update AGENTS.md.**
 
-    **If `<target>/CLAUDE.md` does not exist**, create it with this content:
+    **If `<target>/AGENTS.md` does not exist**, create it with this content:
 
     ````markdown
-    # CLAUDE.md
+    # AGENTS.md
 
-    This file is loaded by Claude Code (and other Agent Skills clients) to guide work in this repository.
+    This file guides coding agents working in this repository.
 
     ## Writing conventions
 
-    Apply the rules in [`WRITING.md`](./WRITING.md) to all prose in this repository. The file is derived from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) and can be edited to add project-specific conventions. Run `/ai-slop:review` or `/ai-slop:review-diff` to audit a draft against these rules.
+    Read [`WRITING.md`](./WRITING.md) and apply its rules to all prose in this repository. The file is derived from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) and can be edited to add project-specific conventions. Use the `ai-slop:review` or `ai-slop:review-diff` skill to audit a draft against these rules.
     ````
 
-    **If `<target>/CLAUDE.md` exists**, check whether it already references `WRITING.md` (a substring match for `WRITING.md` is sufficient). If found, leave CLAUDE.md alone. The reference is already in place. If not found, append the following section to the end of the file, preceded by a blank line:
+    **If `<target>/AGENTS.md` exists**, check whether it already references `WRITING.md` (a substring match for `WRITING.md` is sufficient). If found, leave AGENTS.md alone. The reference is already in place. If not found, append the following section to the end of the file, preceded by a blank line:
 
     ````markdown
 
     ## Writing conventions
 
-    Apply the rules in [`WRITING.md`](./WRITING.md) to all prose in this repository. The file is derived from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) and can be edited to add project-specific conventions. Run `/ai-slop:review` or `/ai-slop:review-diff` to audit a draft against these rules.
+    Read [`WRITING.md`](./WRITING.md) and apply its rules to all prose in this repository. The file is derived from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) and can be edited to add project-specific conventions. Use the `ai-slop:review` or `ai-slop:review-diff` skill to audit a draft against these rules.
     ````
 
-8. **Lint and finalize.** For each file written or modified in steps 6 and 7 (WRITING.md, and CLAUDE.md if created or appended), run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/lint_markdown.py --fix <path>`. If the linter exits non-zero on any file, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise that file in place to address each, and re-run. Repeat at most three iterations per file. After the third pass, proceed regardless of the linter's state. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
+    **Preserve Claude Code loading.** If `<target>/CLAUDE.md` does not exist, create it with `# CLAUDE.md`, a blank line, and `@AGENTS.md` on its own line. If it exists, preserve its contents and append `@AGENTS.md` on a separate line unless it already imports `AGENTS.md` or references `WRITING.md`. If it is a symlink to `AGENTS.md`, leave it alone and do not append a self-import. This keeps older Claude Code versions working and avoids depending on the client's instruction-file setting.
 
-9. **Print a summary.** Tell the user, in two lines, what happened to each file: WRITING.md (created / overwritten / left alone / declined), CLAUDE.md (created / appended / left alone because already referenced).
+    **Respect Codex overrides.** If a nonempty `<target>/AGENTS.override.md` exists, Codex reads it instead of `AGENTS.md`. Preserve it and append the same writing-conventions section there if it does not already reference `WRITING.md`.
+
+8. **Lint and finalize.** For each file written or modified in steps 6 and 7 (WRITING.md and any instruction files created or appended), run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix <path>`. If the linter exits non-zero on any file, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise that file in place to address each, and re-run. Repeat at most three iterations per file. After the third pass, proceed regardless of the linter's state. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
+
+9. **Print a summary.** Tell the user what happened to WRITING.md and each instruction file (created / appended / overwritten / left alone / declined).
 
 10. **Stop.** Do not run a review. The user can invoke `/ai-slop:review` separately when ready, and is expected to inspect the new files with `git diff` and commit when satisfied.
 
@@ -110,7 +120,7 @@ The skill operates on the current working directory. No arguments are required.
 ## Constraints
 
 - **Do not silently overwrite WRITING.md.** Always confirm before replacing an existing file. The user may have edited it.
-- **Idempotent CLAUDE.md updates.** If CLAUDE.md already references `WRITING.md`, do not append a duplicate section. Re-running this skill must be safe.
+- **Idempotent AGENTS.md updates.** If AGENTS.md already references `WRITING.md`, do not append a duplicate section. Re-running this skill must be safe.
 - **Demote trope catalog headings cleanly.** Inline the trope catalog under a single `## AI Writing Tropes to Avoid` section in WRITING.md, with all sub-headings shifted one level deeper than in the source. Do not produce two H1s or sibling H2 trees in the same document.
-- **Do not modify the paper itself.** This mode writes only `WRITING.md` and `CLAUDE.md` in the target directory.
+- **Do not modify the paper itself.** This mode writes only `WRITING.md`, `AGENTS.md`, the Claude compatibility import in `CLAUDE.md`, and the reference in an existing `AGENTS.override.md` in the target directory.
 - **No commits.** Leave the new files in the working tree. The user inspects the result with `git diff` and commits when satisfied.

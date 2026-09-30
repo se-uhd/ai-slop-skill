@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-09_rev36] - 2026-09-30
+
+- **Changed:** all eight skills resolve bundled helpers from their installed `SKILL.md` location in both Codex and Claude Code, without requiring a Claude-specific environment variable. Claude slash commands and plugin manifests remain compatible, and the README documents Codex installation and invocation.
+- **Changed:** writing setup references `WRITING.md` from `AGENTS.md` and keeps Claude Code loading through a `CLAUDE.md` import. Existing instructions and references are preserved. The repository's maintainer guide uses the same arrangement.
+- **Added:** init setup for Codex exports its rules to the Codex home directory and adds a reference in the effective global instruction file. Claude Code retains its rules-directory default, and explicit export paths still write only the requested file.
+
 ## [2026-09_rev35] - 2026-09-27
 
 - **Changed:** the file that `/ai-slop:init` writes is about 15k characters smaller (69k instead of 84k with the current catalog). Claude Code warns when the instruction files of a session add up to more than 150k characters, and this file loads in every session next to the project's own `CLAUDE.md`. The file leaves out each layer's self-check, which restates the layer's rules item by item, and its opening paragraph asks for the check instead. It also drops each catalog entry's status and category line, its `**Avoid patterns like:**` label, and the `---` line after it, none of which is an instruction. The sentence that introduces the catalog says that each entry lists examples. The layer files keep their self-checks for the review modes.

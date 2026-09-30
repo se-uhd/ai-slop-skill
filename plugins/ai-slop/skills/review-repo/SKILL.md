@@ -3,7 +3,7 @@ name: review-repo
 description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research article layer, and `--ste` adds the Simplified Technical English layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev35"
+  version: "2026-09_rev36"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -12,6 +12,12 @@ metadata:
 This skill reviews the natural-language text spread across a whole repository, rather than a single document (`/ai-slop:review`) or the changed lines of one (`/ai-slop:review-diff`). It extracts every Markdown and plain-text file in full, the comments and doc-comments of the source and config files, and the repository's commit messages, then scans that prose against the general rules and the AI trope catalog and writes an `ai-slop-report.md` grouped by file (and by commit). It is the right mode for problems that build up over many commits and that a diff review never revisits, such as a British spelling, an em-dash, or a trope in a committed comment or a commit message.
 
 **Audience and tone.** The default user maintains a codebase and wants a sweep of its prose: READMEs, changelogs, design notes, and the comments in code and config. Frame findings as suggestions, not violations.
+
+## Client and paths
+
+This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+
+In Claude Code, invoke `/ai-slop:review-repo`. In Codex, select the `ai-slop:review-repo` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
 
 ## When to use
 
@@ -40,11 +46,11 @@ The skill scans the repository rooted at the current working directory by defaul
 
 1. **Resolve the repo root.** Use the path argument if given, otherwise the current working directory. Confirm that it is a directory. If not, stop and tell the user.
 
-2. **Extract the repository's prose.** Run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_repo.py <repo-root>`, appending the user's commit-scanning flag (`--commits=<spec>` or `--no-commits`) when one was given. Each stdout line is `<relpath>:<line>:<text>`: a Markdown or plain-text line, an extracted comment, or a commit message line. File lines come first, grouped by file and sorted. Commit messages follow under a `commit <short-sha>` pseudo-path, newest first. The script prints a one-line summary to stderr (files scanned, prose vs comment-bearing, commit messages, total lines). If stdout is empty, write an empty report (Summary: "No natural-language text found to review.") and stop. A `--commits` range that git cannot resolve stops the script with exit 2 and git's message, so report that to the user instead of writing a report with an empty commit section. The stderr summary also names each file skipped as generated. The script's module docstring documents what is scanned and its heuristic limits (how comment detection handles strings, which files count as generated, and how commit messages are selected and their trailer lines dropped).
+2. **Extract the repository's prose.** Run `python3 "<skill-dir>/../../scripts/scan_repo.py" <repo-root>`, appending the user's commit-scanning flag (`--commits=<spec>` or `--no-commits`) when one was given. Each stdout line is `<relpath>:<line>:<text>`: a Markdown or plain-text line, an extracted comment, or a commit message line. File lines come first, grouped by file and sorted. Commit messages follow under a `commit <short-sha>` pseudo-path, newest first. The script prints a one-line summary to stderr (files scanned, prose vs comment-bearing, commit messages, total lines). If stdout is empty, write an empty report (Summary: "No natural-language text found to review.") and stop. A `--commits` range that git cannot resolve stops the script with exit 2 and git's message, so report that to the user instead of writing a report with an empty commit section. The stderr summary also names each file skipped as generated. The script's module docstring documents what is scanned and its heuristic limits (how comment detection handles strings, which files count as generated, and how commit messages are selected and their trailer lines dropped).
 
 3. **Determine which rule layers to load.** Read `../../shared/rules-general.md` always. Read `../../shared/rules-scientific.md` too when the user passed `--scientific`, and `../../shared/rules-ste.md` when the user passed `--ste`. Repo mode never loads the dedicated LaTeX layer (see Rule layers). Each layer contributes its own rules and self-check. A finding's `Rule` field carries the rule's name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name and its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
 
-4. **Load the AI trope catalog.** Same as `/ai-slop:review` step 3. If `--tropes=<path>` was passed, read each named file and concatenate them in order. Otherwise run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/fetch_tropes.py` and read its stdout, stopping as review does when fetching the catalog fails.
+4. **Load the AI trope catalog.** Same as `/ai-slop:review` step 3. If `--tropes=<path>` was passed, read each named file and concatenate them in order. Otherwise run `python3 "<skill-dir>/../../scripts/fetch_tropes.py"` and read its stdout, stopping as review does when fetching the catalog fails.
 
 5. **Review file by file.** Group the scan output by `<relpath>` and review each group's extracted text against the rules and the trope catalog. The `commit <short-sha>` groups are reviewed the same way as files. A repository can be large, so be systematic. Take one group's lines at a time and record only real findings. For each violation record:
    - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name with its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
@@ -57,16 +63,16 @@ The skill scans the repository rooted at the current working directory by defaul
    In STE mode, list a sentence that an STE rewrite would weaken under **Items requiring author judgment** instead of reporting it, as `/ai-slop:review` step 4 does.
 
 6. **Cross-cutting metrics, repo-wide.** Compute the following metrics over the extracted text and report raw counts with locations, since per-page densities do not apply to a repository:
-   - Dashes, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_glyphs.py` run over the Markdown, plain-text, and LaTeX files that the scan listed. Take the counts from the scan, and treat the rows as `/ai-slop:review` step 5 does.
+   - Dashes, from `python3 "<skill-dir>/../../scripts/scan_glyphs.py"` run over the Markdown, plain-text, and LaTeX files that the scan listed. Take the counts from the scan, and treat the rows as `/ai-slop:review` step 5 does.
    - American-vs-British spelling, a frequent source of drift in code comments.
    - Restricted-word occurrences.
    - The "significant" audit and verb tense, when the scientific layer is in scope.
-   - Repeated sentences, from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_repeats.py` run over the same Markdown, plain-text, and LaTeX files, with the rows tested per **Refer back instead of repeating** (`G.refer-back`) as `/ai-slop:review` step 5 does. The scan compares sentences within one file, not across files.
-   - STE sentence candidates (STE mode only), from `python3 ${CLAUDE_SKILL_DIR}/../../scripts/scan_sentences.py` run over the same Markdown, plain-text, and LaTeX files, with the rows tested as `/ai-slop:review` step 5 does.
+   - Repeated sentences, from `python3 "<skill-dir>/../../scripts/scan_repeats.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested per **Refer back instead of repeating** (`G.refer-back`) as `/ai-slop:review` step 5 does. The scan compares sentences within one file, not across files.
+   - STE sentence candidates (STE mode only), from `python3 "<skill-dir>/../../scripts/scan_sentences.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested as `/ai-slop:review` step 5 does.
 
    A single punctuation mark that is the wrong choice (a semicolon joining two independent clauses, an em-dash standing in for a period, a colon used as a generic mid-sentence pause) is a per-file finding under step 5. Read comments and commit messages for the same rules without the scan.
 
-7. **Write the report.** Save `ai-slop-report.md` in the working directory. It is a generated artifact and must never be committed, so resolve the repository root with `git rev-parse --show-toplevel` and add the report's name to the root's `.gitignore` if that file does not already list it. Then run `python3 ${CLAUDE_SKILL_DIR}/../../scripts/lint_markdown.py --fix ai-slop-report.md` and iterate up to three times exactly as in `/ai-slop:review` step 7, then read the file back and echo it verbatim. Use the report template from `../review/SKILL.md` "Report template" with `### <relpath>` headings under "Findings by file" in place of section names, and one extra header line under `**Reviewed:**`:
+7. **Write the report.** Save `ai-slop-report.md` in the working directory. It is a generated artifact and must never be committed, so resolve the repository root with `git rev-parse --show-toplevel` and add the report's name to the root's `.gitignore` if that file does not already list it. Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md` and iterate up to three times exactly as in `/ai-slop:review` step 7, then read the file back and echo it verbatim. Use the report template from `../review/SKILL.md` "Report template" with `### <relpath>` headings under "Findings by file" in place of section names, and one extra header line under `**Reviewed:**`:
 
    ```text
    **Repo scope:** root=<repo root>, files=<N scanned>, commits=<N scanned>, prose lines=<N>
