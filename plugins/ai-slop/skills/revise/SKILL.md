@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev35"
+  version: "2026-09_rev36"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -12,6 +12,12 @@ metadata:
 This skill applies a previous `/ai-slop:review` report to the document that the review read, whether LaTeX, Markdown, or plain text. For each finding, it locates the quoted text in the document and replaces it with the suggested revision. A repo-mode report is applied one file at a time.
 
 **Audience and tone.** The user has already reviewed the report and wants it applied. Trust the report's `Suggested revision` fields. Do not second-guess them unless the surrounding context makes the suggestion unsafe (e.g., the suggestion would break LaTeX syntax or change the meaning of a result).
+
+## Client and paths
+
+This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+
+In Claude Code, invoke `/ai-slop:revise`. In Codex, select the `ai-slop:revise` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
 
 ## When to use
 
@@ -27,7 +33,7 @@ Do not invoke when the user wants a fresh review (use `/ai-slop:review` instead)
 Both inputs default to the current working directory. No arguments are required.
 
 - **Report.** Defaults to `ai-slop-report.md` in the working directory. If that file does not exist, ask the user to point to the report (or to run `/ai-slop:review` first). The report must match the schema produced by `/ai-slop:review` (i.e., Findings by section or, for a repo-mode report, Findings by file, then Cross-cutting metrics and Items requiring author judgment).
-- **Document.** The report's `**Paper:**` header names the file that the review read. Use that path when it exists. Otherwise auto-detect a LaTeX root by running `python3 ${CLAUDE_SKILL_DIR}/../../scripts/find_latex_root.py`. Exit 0 means that the printed path is the paper. Exit 2 means that multiple candidates were printed, so ask the user. Exit 1 with no path in the report means there is nothing to edit, so stop. A Markdown or plain-text document is edited the same way as LaTeX, minus the LaTeX-only steps (following `\input`, the syntax check in step 3, and the grounding stubs in step 4). PDF input is not supported, since revise mode edits source text.
+- **Document.** The report's `**Paper:**` header names the file that the review read. Use that path when it exists. Otherwise auto-detect a LaTeX root by running `python3 "<skill-dir>/../../scripts/find_latex_root.py"`. Exit 0 means that the printed path is the paper. Exit 2 means that multiple candidates were printed, so ask the user. Exit 1 with no path in the report means there is nothing to edit, so stop. A Markdown or plain-text document is edited the same way as LaTeX, minus the LaTeX-only steps (following `\input`, the syntax check in step 3, and the grounding stubs in step 4). PDF input is not supported, since revise mode edits source text.
 
 **Optional path overrides.** Paths can still be passed as arguments. The first argument is the report path, and the second is the document path. For a repo-mode report, the second argument selects which file's `### <relpath>` findings to apply.
 
@@ -39,12 +45,12 @@ Both inputs default to the current working directory. No arguments are required.
 
 3. **Apply each finding.** For each finding, in document order:
    - Locate the `Quote` text in the paper. Use the `Location` hint (`file:line`) to disambiguate if the same text appears multiple times.
-   - If the quote is found exactly, replace it with `Suggested revision` using the Edit tool. One Edit call per finding (do not bundle multiple findings into one edit, which makes diffs harder to review).
+   - If the quote is found exactly, replace it with `Suggested revision` using the client's edit or patch tool. One edit or patch hunk per finding (do not bundle multiple findings into one edit, which makes diffs harder to review).
    - If the quote is not found (the paper may have been edited since review), log it as a skipped finding with the reason. Do not attempt fuzzy matching that could change the wrong text.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one, prefer the location closest to the hint and log the ambiguity in the summary.
    - For a LaTeX document, if the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys), log it as skipped with the reason rather than apply it.
 
-4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment on its own line directly below the line on which that `\cite{}` call ends (one Edit per citation, matching the indentation of the `\cite{}` line). A stub placed inside the line would comment out the rest of it, and `/ai-slop:ground` never edits a stub on the citation's own line. These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any citation if its location cannot be matched.
+4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment on its own line directly below the line on which that `\cite{}` call ends (one edit or patch hunk per citation, matching the indentation of the `\cite{}` line). A stub placed inside the line would comment out the rest of it, and `/ai-slop:ground` never edits a stub on the citation's own line. These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any citation if its location cannot be matched.
 
 5. **Cross-cutting metrics.** These metrics are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section" (or "Findings by file" in a repo-mode report). Do not invent new edits to balance a metric.
 
@@ -67,6 +73,6 @@ Revise mode does not load the trope catalog at runtime. The report already conta
 - **Trust the report's suggested revisions.** Do not re-derive them from the rule layers or tropes.fyi. If a suggestion looks wrong, flag it in the "Skipped" list with the reason rather than silently substituting your own.
 - **Edit only what the report asks for.** Do not "improve" prose that was not flagged. Do not add or remove citations, change figures, or restructure sections.
 - **Reformulate, do not delete.** Apply each suggested revision as written. If a finding's suggested revision would delete a substantive statement (a claim, example, or qualification, not mere filler) and nothing indicates that the author asked for a cut, treat it as a suggestion that looks wrong. Log it in the "Skipped" list with the reason rather than delete. Genuine filler flagged by the concision rules may be removed.
-- **One Edit call per finding.** Bundling makes diffs harder to review.
+- **One edit or patch hunk per finding.** Bundling makes diffs harder to review.
 - **Preserve formatting.** Match the surrounding context (line breaks, indentation, comment placement) when replacing.
 - **Do not commit.** Leave the changes in the working tree. The user owns the commit.

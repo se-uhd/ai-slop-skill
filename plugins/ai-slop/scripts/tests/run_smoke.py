@@ -7,6 +7,8 @@ the end.
 """
 import os
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -27,6 +29,55 @@ def run(script, *args):
 
 def write(p, content):
     Path(p).write_text(content, encoding='utf-8')
+
+
+# ---------- portable skill commands ----------
+
+def test_skill_commands_from_another_project():
+    """Installed helpers keep finding their bundle without a client env var,
+    and document discovery stays in the user's project, even with spaces."""
+    with tempfile.TemporaryDirectory() as d:
+        bundle = Path(d) / 'installed plugin'
+        shutil.copytree(SCRIPTS.parent, bundle)
+        project = Path(d) / 'user project'
+        project.mkdir()
+        write(project / 'main.tex', LATEX_BODY)
+        write(bundle / 'main.tex', LATEX_BODY)
+        catalog = project / 'catalog.md'
+        write(catalog, '# Test catalog\n\n## Test trope\n\nAvoid this example.\n')
+        env = os.environ.copy()
+        env.pop('CLAUDE_SKILL_DIR', None)
+        env.pop('CLAUDE_PLUGIN_ROOT', None)
+        helpers = set()
+        for skill in sorted((bundle / 'skills').glob('*/SKILL.md')):
+            content = skill.read_text(encoding='utf-8')
+            for path in re.findall(r'"(<skill-dir>/../../scripts/[\w.-]+)"', content):
+                resolved = Path(path.replace('<skill-dir>', str(skill.parent)))
+                assert resolved.is_file(), f'{skill}: missing helper {resolved}'
+                helpers.add(resolved.name)
+        assert 'find_latex_root.py' in helpers and 'export_rules.py' in helpers
+        review = bundle / 'skills' / 'review' / 'SKILL.md'
+        command = re.search(r'`(python3 "<skill-dir>/../../scripts/find_latex_root.py")`',
+                            review.read_text(encoding='utf-8')).group(1)
+        command = command.replace('<skill-dir>', str(review.parent))
+        command = shlex.quote(PYTHON) + command[len('python3'):]
+        result = subprocess.run(command, shell=True, cwd=project, env=env,
+                                capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        found = Path(result.stdout.strip())
+        assert (project / found).resolve() == (project / 'main.tex').resolve(), result.stdout
+        init = bundle / 'skills' / 'init' / 'SKILL.md'
+        command = re.search(r'`(python3 "<skill-dir>/../../scripts/export_rules.py")',
+                            init.read_text(encoding='utf-8')).group(1)
+        command = command.replace('<skill-dir>', str(init.parent))
+        command = shlex.quote(PYTHON) + command[len('python3'):]
+        output = project / 'exported rules.md'
+        command += ' ' + shlex.quote(str(output)) + ' ' + shlex.quote(f'--tropes={catalog}')
+        result = subprocess.run(command, shell=True, cwd=project, env=env,
+                                capture_output=True, text=True)
+        assert result.returncode == 0, result.stderr
+        exported = output.read_text(encoding='utf-8')
+        assert 'General rules' in exported and 'Test trope' in exported
 
 
 # ---------- find_latex_root.py ----------
@@ -2927,6 +2978,7 @@ TESTS = [
     test_scan_sentences_skips_non_prose,
     test_scan_sentences_usage_and_unreadable_paths,
     test_rule_keys_unique_and_resolvable,
+    test_skill_commands_from_another_project,
     test_find_latex_root_empty,
     test_find_latex_root_single,
     test_find_latex_root_prefer_main,
