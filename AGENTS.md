@@ -20,7 +20,7 @@ have been broken before:
    into one commit, restore the version strings and merge the CHANGELOG entries
    so the record describes the settled change rather than the route to it,
    delete the extra tag locally and on the remote, and force-push `main` and the
-   moved tag. Once the session has moved on, or anyone may have pulled the tag,
+   retargeted tag. Once the session has ended, or anyone may have pulled the tag,
    rule 3 governs instead and the fix is a new rev. (Shipping a new rule and
    then correcting its design minutes later is what produced the squashed
    release now numbered `2026-09_rev24`.)
@@ -37,7 +37,7 @@ have been broken before:
    numbered `2026-05_rev15`.) A history repair that the maintainer asks for is
    an exception, and so is the same-session squash in rule 1, which uses its own
    procedure. A repair comes with obligations. Rewrite with `git filter-branch
-   --tag-name-filter cat -- --branches --tags` so every tag moves with its
+   --tag-name-filter cat -- --branches --tags` so every tag points to its corresponding rewritten
    commit. Verify against `refs/original` that the trees are unchanged and that
    no tag is left off `main`. Force-push `main` and `--tags` together, because a
    forced branch push alone leaves every tag on a commit that the branch no
