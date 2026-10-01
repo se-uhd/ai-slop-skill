@@ -3,7 +3,7 @@ name: tldr
 description: Review a text against the tropes.fyi catalog of AI writing tropes and condense the review into a TL;DR that gives, per scanned file, the number of patterns that affect readability and up to five bullets, each with a plain label, a count, and a quote. Use when the user asks for a tl;dr or a quick assessment of a draft, a thesis, a paper, or a repository, or asks how the AI writing patterns in a text affect its readability, or runs `/ai-slop:tldr`. Reviews a document or a directory against the catalog only, with the rule layers serving only for their exceptions, and takes free-text instructions after the path, such as which part to review or who wrote the text. Writes `ai-slop-report.md` and `ai-slop-tldr.md`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-09_rev37"
+  version: "2026-10"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
