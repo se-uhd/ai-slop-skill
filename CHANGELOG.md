@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10] - 2026-10-01
+
+- **Changed:** `G.plain-words` now includes examples for replacing vague uses of "gate" with wording that names what must pass and, when it matters, before which action. The wording depends on context. The self-check and rationale follow the same guidance and retain established technical senses.
+
 ## [2026-09_rev37] - 2026-09-30
 
 - **Changed:** `G.be-concrete` now flags vague uses of "moved" and "shifted" in revision descriptions. State the actual change or current behavior, and include version history only when it helps comparison, upgrading, reproduction, or understanding a change. Actual relocation, physical movement, and established technical senses remain valid. The self-check and rationale carry the same distinction, and the maintainer guide names tag retargeting explicitly.
