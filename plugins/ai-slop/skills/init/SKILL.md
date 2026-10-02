@@ -3,7 +3,7 @@ name: init
 description: Set up the general writing rules and AI trope catalog for Claude Code or Codex across projects, or export them as one Markdown file for a system prompt. Use when the user wants the assistant's replies, edits, comments, and commit messages to follow these rules, or runs `/ai-slop:init`. Claude Code uses ~/.claude/rules/ai-slop.md. Codex uses ai-slop.md in its home directory with a reference in its global instructions. For an editable WRITING.md in one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10"
+  version: "2026-10_rev1"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 

@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev1] - 2026-10-02
+
+- **Changed:** `G.plain-words` now treats a vague "checkpoint" like a vague "gate": Name the build, test, or command that must pass and, when it matters, before which action. The word stays for a saved state that a process resumes from, such as a model checkpoint or a database checkpoint. The self-check and rationale follow the same guidance.
+
 ## [2026-10] - 2026-10-01
 
 - **Changed:** `G.plain-words` now includes examples for replacing vague uses of "gate" with wording that names what must pass and, when it matters, before which action. The wording depends on context. The self-check and rationale follow the same guidance and retain established technical senses.
