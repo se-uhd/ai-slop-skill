@@ -3,7 +3,7 @@ name: review-repo
 description: Review a whole code repository's natural-language text for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research article layer, and `--ste` adds the Simplified Technical English layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev1"
+  version: "2026-10_rev2"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -52,11 +52,12 @@ The skill scans the repository rooted at the current working directory by defaul
 
 4. **Load the AI trope catalog.** Same as `/ai-slop:review` step 3. If `--tropes=<path>` was passed, read each named file and concatenate them in order. Otherwise run `python3 "<skill-dir>/../../scripts/fetch_tropes.py"` and read its stdout, stopping as review does when fetching the catalog fails.
 
-5. **Review file by file.** Group the scan output by `<relpath>` and review each group's extracted text against the rules and the trope catalog. The `commit <short-sha>` groups are reviewed the same way as files. A repository can be large, so be systematic. Take one group's lines at a time and record only real findings. For each violation record:
+5. **Review file by file.** Group the scan output by `<relpath>` and review each group's extracted text against the rules and the trope catalog. Apply `G.context-first` before reporting a candidate: read the surrounding context, identify the sentence's function, and require a concrete benefit from the proposed edit. Word matches and counts are not findings by themselves. Preserve purpose, distinctions, logical relations, scope, emphasis, and voice. The `commit <short-sha>` groups are reviewed the same way as files. A repository can be large, so be systematic. Take one group's lines at a time and record only real findings. For each violation record:
    - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name with its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
    - The location (`<relpath>:<line>`, or `commit <short-sha>:<line>` for a commit message).
    - A short verbatim quote of the offending text. The scan strips comment markers, so read the file at that line when an exact quote matters. For a commit message use `git show <short-sha>`.
    - A concrete suggested replacement.
+   - A **Reason** explaining the problem in context and the benefit of the replacement, or naming the explicit convention being corrected.
 
    When unsure whether a flagged line is prose or code that the extractor emitted by accident, open the file for context and drop the finding if it is not natural language.
 

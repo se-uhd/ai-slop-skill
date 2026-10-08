@@ -22,6 +22,41 @@ LaTeX layer (markup mechanics), or the STE layer (Simplified Technical English,
 on request), and several cross-cutting topics state a
 principle in a lower layer and its mechanics in the LaTeX layer.
 
+## Context before replacement
+
+**Judge the passage before changing it** (`G.context-first`) protects the
+argument from edits that satisfy a local wording test but weaken the passage.
+A sentence does more than report facts: it can state a purpose, distinguish
+competing claims, connect evidence to an inference, or establish the level of
+abstraction for what follows. Preserving the facts alone does not preserve
+those functions.
+
+For example, "Our goal is to move loop engineering from a practitioner term to
+an empirically grounded object of study, through three research questions"
+states a research purpose. Replacing it with "We ask how loop engineering is
+defined, where it is adopted, and how loop autonomy affects development"
+removes that purpose and repeats the questions below it. The original's
+abstraction contributes meaning; it is not empty filler under `G.be-concrete`.
+Likewise, "an ecosystem formed" can summarize publications and tools that
+the next sentences identify, and "despite believing the opposite" can clearly
+refer to a slowdown stated in the same sentence. Neither requires expansion
+just because a more explicit alternative exists.
+
+The test still identifies real problems. If "its aspects" follows a discussion
+of both the method and the practice, and the paragraph does not establish which
+one is meant, the competing readings warrant a finding. If a generic summary
+stands alone without the promised particulars, the missing referent matters.
+A contrast that corrects a competing claim carries argumentative content; a
+formulaic contrast with an alternative nobody raised may add only rhetoric.
+The context determines the difference.
+
+Counts and catalog frequency ratings help a reviewer decide where to look.
+They do not establish that an individual passage is unclear or that its author
+used an LLM. Concrete conventions, such as American spelling or required
+citation syntax, remain requirements, but a correction for a convention should
+be identified as such. It need not be presented as a defect in meaning or
+reading flow.
+
 ## Sources
 
 The rules draw on these bodies of evidence:
@@ -70,7 +105,7 @@ Several pressures converge on one connective (`G.consequence-connectives`). In g
 
 Which word the concentration lands on follows the register that the prompt sets. A chat answer or a blog draft gets "so", and a prompt for a paper gets "therefore" and "thus", because the same preference for the locally most likely option operates inside whichever register the model has adopted. A rule that replaced every "so" would therefore replace one monotony with another in an academic draft. That is why the rule counts the family together, treats substitution as the last fix, and puts deleting the connective and recasting with because or since first.
 
-The **Use plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to classes that the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision that the plain form loses) and carry a short seed list for recall. The seed list also catches words that a reviewer with the writer's habit would miss. A literal match flags a known word even when the prose reads fine to a model with the same habit. "Shape" is on the seed list although it is an everyday word. In prose about documents and rules, the noun and the verb stand for a property that the text does not name, such as a format, an order, or a wording, and the plain word names that property. Statistics and array code use "shape" in a defined sense, which the rule keeps. "Cut" is on the seed list in the sense of creating or publishing, as in "cut a release", a common phrase in release engineering. Its first meaning is "remove", the sense of **Cut padding at the sentence level** (`G.sentence-padding`), so "cut a new reference" can mean that a reference was deleted.
+The **Use plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to classes that the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision that the plain form loses) and carry a short seed list for recall. The seed list also catches words that a reviewer with the writer's habit would miss. A literal match identifies a candidate that the reviewer might otherwise miss. The reviewer must still explain its effect in context under `G.context-first`; familiar wording is not a defect by itself. "Shape" is on the seed list although it is an everyday word. In prose about documents and rules, the noun and the verb stand for a property that the text does not name, such as a format, an order, or a wording, and the plain word names that property. Statistics and array code use "shape" in a defined sense, which the rule keeps. "Cut" is on the seed list in the sense of creating or publishing, as in "cut a release", a common phrase in release engineering. Its first meaning is "remove", the sense of **Cut padding at the sentence level** (`G.sentence-padding`), so "cut a new reference" can mean that a reference was deleted.
 
 "Gate" and "checkpoint" used vaguely for checks (`G.plain-words`) leave the reader to infer what must pass. A "green checkpoint" says only that some check passed at some point, and the reader cannot tell which build, test, or command ran. Naming the check or requirement makes the statement more informative. The examples illustrate this choice without prescribing a fixed replacement. Established technical senses, such as a logic gate or a model checkpoint that training resumes from, remain covered by the precision exception.
 

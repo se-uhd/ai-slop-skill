@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev2] - 2026-10-08
+
+- **Added:** `G.context-first` requires a reason for stylistic edits based on the surrounding passage. Word matches, trope statuses, and counts prompt inspection rather than automatic replacements. Edits preserve purpose, logical relations, distinctions, scope, emphasis, evidence, and author voice.
+- **Changed:** the general rules and self-checks keep useful abstractions, familiar metaphors, clear references, and natural sentence rhythm. The rationale explains why a research-purpose statement should not be replaced with a preview of research topics. Explicit conventions such as spelling, terminology, citations, and statistical reporting still apply.
+- **Changed:** review, diff, repository, and TL;DR workflows require a problem in context before reporting a stylistic finding. Review findings include a reason for the proposed replacement. Revision checks preserve the argument as well as the facts and skip a loss of meaning unless the user explicitly approved it.
+
 ## [2026-10_rev1] - 2026-10-02
 
 - **Changed:** `G.plain-words` now treats a vague "checkpoint" like a vague "gate": Name the build, test, or command that must pass and, when it matters, before which action. The word stays for a saved state that a process resumes from, such as a model checkpoint or a database checkpoint. The self-check and rationale follow the same guidance.
