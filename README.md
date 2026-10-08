@@ -4,6 +4,8 @@ An [Agent Skill](https://agentskills.io/home) bundle that catches AI slop in pro
 
 The skill keeps its writing rules in layers (listed under Rule layers below) and fetches a general AI trope catalog (named patterns such as negative parallelism, em-dash addiction, and rule-of-three groupings, each tagged with a status) at runtime from [tropes.fyi](https://tropes.fyi) and from no other source. The table under Rule layers shows which layers each input loads, and `review-repo` never loads the LaTeX layer. The same bundle therefore reviews a Markdown blog draft, a non-LaTeX manuscript (with `--scientific`), or a full LaTeX paper.
 
+Stylistic checks require a problem in context and a replacement that preserves the argument, including purpose, distinctions, emphasis, and voice. Word matches, catalog statuses, and counts prompt inspection; they do not require rewriting a passage that already works. Explicit conventions such as spelling and citation syntax still apply, and reviews identify those corrections separately from clarity problems.
+
 ## Rule layers
 
 The writing rules ship as four layers. Which of the first three load depends on whether the input is LaTeX source (detected automatically by `scripts/detect_scope.py`) and whether you pass `--scientific`:

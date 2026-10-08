@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev1"
+  version: "2026-10_rev2"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -11,7 +11,7 @@ metadata:
 
 This skill applies a previous `/ai-slop:review` report to the document that the review read, whether LaTeX, Markdown, or plain text. For each finding, it locates the quoted text in the document and replaces it with the suggested revision. A repo-mode report is applied one file at a time.
 
-**Audience and tone.** The user has already reviewed the report and wants it applied. Trust the report's `Suggested revision` fields. Do not second-guess them unless the surrounding context makes the suggestion unsafe (e.g., the suggestion would break LaTeX syntax or change the meaning of a result).
+**Audience and tone.** The user has already reviewed the report and wants it applied. Trust the report's `Suggested revision` fields. Do not re-derive a review or substitute your own style preference. Check that applying a suggestion in its current context preserves the argument as well as the facts. Removing a purpose statement, a meaningful contrast, an essential qualification, or an inference counts as a meaning change even when all reported numbers remain. Skip and explain such a change unless the user explicitly approved that specific change in meaning.
 
 ## Client and paths
 
@@ -45,7 +45,8 @@ Both inputs default to the current working directory. No arguments are required.
 
 3. **Apply each finding.** For each finding, in document order:
    - Locate the `Quote` text in the paper. Use the `Location` hint (`file:line`) to disambiguate if the same text appears multiple times.
-   - If the quote is found exactly, replace it with `Suggested revision` using the client's edit or patch tool. One edit or patch hunk per finding (do not bundle multiple findings into one edit, which makes diffs harder to review).
+   - Before replacing, check the surrounding paragraph for a loss of purpose, distinctions, logical relations, emphasis, scope, or evidential strength. Skip a suggestion that causes such a loss unless the user explicitly approved that specific change in meaning.
+   - If the quote is found exactly and that check passes, replace it with `Suggested revision` using the client's edit or patch tool. One edit or patch hunk per finding (do not bundle multiple findings into one edit, which makes diffs harder to review).
    - If the quote is not found (the paper may have been edited since review), log it as a skipped finding with the reason. Do not attempt fuzzy matching that could change the wrong text.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one, prefer the location closest to the hint and log the ambiguity in the summary.
    - For a LaTeX document, if the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys), log it as skipped with the reason rather than apply it.
