@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev3] - 2026-10-21
+
+- **Removed:** `/ai-slop:tldr` and its command, skill, counting helper, schema check, recall helper, and synthetic fixtures. Use `/ai-slop:review` for a document, `/ai-slop:review-diff` for changed lines, or `/ai-slop:review-repo` for a repository.
+- **Changed:** the README, maintainer guidance loaded through `CLAUDE.md`, rule rationale, and ignore rules describe the seven remaining modes and eleven version callsites.
+
 ## [2026-10_rev2] - 2026-10-08
 
 - **Added:** `G.context-first` requires a reason for stylistic edits based on the surrounding passage. Word matches, trope statuses, and counts prompt inspection rather than automatic replacements. Edits preserve purpose, logical relations, distinctions, scope, emphasis, evidence, and author voice.

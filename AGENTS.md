@@ -43,7 +43,7 @@ have been broken before:
    forced branch push alone leaves every tag on a commit that the branch no
    longer reaches. The commit message cleanups recorded in the 2026-09_rev15 and
    2026-09_rev23 changelog entries are the precedent.
-4. **Keep the 12 version callsites in sync.** The version string is in
+4. **Keep the 11 version callsites in sync.** The version string is in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
    `.claude-plugin/marketplace.json`, the `version:` frontmatter of each
    `SKILL.md`, the `**Skill version:**` line in `review/SKILL.md`'s report
@@ -101,10 +101,8 @@ have been broken before:
 - **The bundle follows its own rules.** When a rule is added or tightened, sweep
   the repository's own prose for the pattern in the same rev: the Markdown
   files, the skill and command files, and the Python docstrings and comments.
-  The synthetic reviews under `scripts/tests/fixtures/` are sloppy on purpose
-  and exempt, and `scan_repo.py` skips them. The opt-in STE layer is the other
-  exception. The bundle's prose does not follow it, so an STE rule change needs
-  no sweep. Between sweeps,
+  The opt-in STE layer is an exception. The bundle's prose does not follow it,
+  so an STE rule change needs no sweep. Between sweeps,
   `test_first_party_prose_avoids_the_plain_words_seeds` runs `scan_repo.py` over
   the repository and fails when "lives in", "shape", or "cut" before a release,
   tag, branch, or reference appears outside a quoted example.
@@ -112,6 +110,6 @@ have been broken before:
   since a count cannot tell them from list separators. Released `CHANGELOG.md`
   entries are edited only to correct or complete the record, never to restate
   it. Upstream-owned files are left to their own repo.
-- Generated artifacts (`ai-slop-report.md`, `ai-slop-tldr.md`,
-  `grounding-cites.json`, `grounding-quotes.json`) are never committed. The
-  skills add them to the target repo's `.gitignore`.
+- Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
+  `grounding-quotes.json`) are never committed. The skills add them to the
+  target repo's `.gitignore`.
