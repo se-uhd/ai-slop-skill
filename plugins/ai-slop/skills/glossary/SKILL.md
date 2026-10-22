@@ -1,6 +1,6 @@
 ---
 name: glossary
-description: Extract or maintain a document's GLOSSARY.md and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text. Writes a glossary and a terminology report, or validates an existing glossary with --check. Does not rewrite the document.
+description: Extract or maintain a document's GLOSSARY.md and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text, and finds the main document when no filename is supplied. Writes a glossary and a terminology report, or validates an existing glossary with --check. Does not rewrite the document.
 license: CC-BY-4.0
 metadata:
   version: "2026-10_rev3"
@@ -29,10 +29,10 @@ entries as well.
 ## Inputs and outputs
 
 The optional positional argument names a `.tex`, `.pdf`, `.md`, or plain-text
-document. Without a path, use `python3 "<skill-dir>/../../scripts/find_latex_root.py"`
-to find the LaTeX root in the working directory. If none exists, use the sole PDF
-in that directory. Ask the user to select a document only when the candidates
-are ambiguous or no document was found.
+document. When it is omitted, search the working directory and relevant
+subdirectories for the main document as described below. Once a clear candidate
+is found, read it and build the glossary without asking the user to supply a
+filename. The same discovery applies in `--check` mode.
 
 The default glossary is `GLOSSARY.md` in the working directory. A
 `--glossary=<path>` argument selects another path, resolved from that directory.
@@ -44,6 +44,32 @@ With `--check`, read the existing glossary and write only `ai-slop-report.md`.
 Do not create or update a glossary in this mode. If the selected glossary does not
 exist, explain that a normal invocation creates it and stop. The source document
 stays unchanged in both modes.
+
+## Find the main document
+
+Use `rg --files` to locate candidate documents, including LaTeX sources, PDFs,
+Markdown, and plain text. Examine project instructions, the README, and build
+configuration for pointers to the main manuscript or document. Search relevant
+subdirectories, such as `paper/`, `manuscript/`, or `docs/`, when the root directory
+does not contain it. Use filenames, titles, and document structure to distinguish
+the main work from supporting material, and read enough context to make the
+selection.
+
+For LaTeX, run `python3 "<skill-dir>/../../scripts/find_latex_root.py"` to identify
+root candidates. Treat the returned path or candidate list as evidence alongside
+the project context, and inspect alternatives when several manuscripts are
+present. Select the root that builds the main manuscript, then follow its
+`\input{}` and `\include{}` files as part of reading it. Prefer editable source,
+including Markdown or plain text, over a generated PDF of the same work.
+
+Do not mistake `GLOSSARY.md`, `WRITING.md`, instruction files, review reports,
+bibliographies, vendored examples, archived drafts, or downloaded literature for
+the main document. A README can be the main document when it contains the
+project's primary exposition rather than just instructions for building a paper.
+A sole PDF is a candidate, not proof that it is the main work. Ask the user only
+if no document can be found after this search or several candidates remain
+plausible without a clear basis for selecting one. Record the selected document
+and the files actually read in the glossary's scope and the report.
 
 ## Establish the concepts
 
