@@ -104,7 +104,7 @@ statistical results.
 
 Several pressures converge on one connective (`G.consequence-connectives`). In general English corpora "so" outnumbers therefore, hence, and thus by a wide margin, and those three concentrate in academic, legal, and mathematical prose, a thin slice of the training text. Preference tuning adds to the base rate, because raters comparing two answers favor the one that reads as approachable and "therefore" reads as stiff. Post-training also narrows the variety of the choice, which means the top-ranked option is selected almost every time, where a human writer uses several for the same relation without deciding to. "So" is also the loosest in meaning, covering strict entailment, loose consequence, and a plain change of topic, where "therefore" asserts that the conclusion follows and can be shown wrong. Because "so" is rarely wrong in any one position, training leaves it with high probability in many. Sentence-initial "So," has a separate source, the spoken answer opener of the interview transcripts and question-and-answer text that instruction tuning is trained on.
 
-Which word the concentration lands on follows the register that the prompt sets. A chat answer or a blog draft gets "so", and a prompt for a paper gets "therefore" and "thus", because the same preference for the locally most likely option operates inside whichever register the model has adopted. A rule that replaced every "so" would therefore replace one monotony with another in an academic draft. That is why the rule counts the family together, treats substitution as the last fix, and puts deleting the connective and recasting with because or since first.
+Which word the concentration lands on follows the register that the prompt sets. A chat answer or a blog draft gets "so", and a prompt for a paper gets "therefore" and "thus", because the same preference for the locally most likely option operates inside whichever register the model has adopted. A rule that replaced every "so" would therefore replace one monotony with another in an academic draft. That is why the rule counts the family together and treats substitution as the last fix. Deletion helps only when the relation remains clear without extra effort. A consequence marker can distinguish an inference from a chronological sequence, and removing it can make the argument harder to follow. Sentence-initial position alone does not make a connective empty.
 
 The **Use plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to classes that the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision that the plain form loses) and carry a short seed list for recall. The seed list also catches words that a reviewer with the writer's habit would miss. A literal match identifies a candidate that the reviewer might otherwise miss. The reviewer must still explain its effect in context under `G.context-first`; familiar wording is not a defect by itself. "Shape" is on the seed list although it is an everyday word. In prose about documents and rules, the noun and the verb stand for a property that the text does not name, such as a format, an order, or a wording, and the plain word names that property. Statistics and array code use "shape" in a defined sense, which the rule keeps. "Cut" is on the seed list in the sense of creating or publishing, as in "cut a release", a common phrase in release engineering. Its first meaning is "remove", the sense of **Cut padding at the sentence level** (`G.sentence-padding`), so "cut a new reference" can mean that a reference was deleted.
 
@@ -116,7 +116,8 @@ Personification (`G.no-figurative-language`) comes from the conversational regis
 
 A reader who sees "code review," "code inspection," and
 "review process" cannot tell whether these name one concept or three. One term
-per concept (`G.one-term`) removes the doubt.
+per concept (`G.one-term`) removes the doubt. Where terms name distinct concepts,
+define the difference and retain both (`G.distinct-synonyms`).
 
 ## Reference and clause boundaries
 
@@ -249,9 +250,11 @@ cannot tell a well-placed dash from a misplaced one.
   a construction that AI text under-uses, and the under-use is itself a tell. The rule is deliberately
   dependent on meaning (illustrates vs. renames vs. sets up a payoff clause) so it does not
   become a mechanical swap of each dash for `e.g.` that merely shifts the load onto a new formula.
-- **Sentence length** (`G.sentence-length`). Because AI text is detectable by its uniformity (roughly
-  15 to 25 words per sentence, low burstiness), deliberate variation is itself a
-  signal of human editing.
+- **Sentence length** (`G.sentence-length`). Uniform length can make a passage
+  monotonous, but length variation is useful only when it improves the reading.
+  A longer sentence can express a relation that a sequence of short sentences
+  leaves implicit. Inspect the rhythm in context rather than alternating lengths
+  to satisfy a metric (`G.connected-prose`).
 - **Hyphenation of compound modifiers** (`G.compound-hyphens`). AI text over-hyphenates noun-noun stacks
   placed before another noun ("code-generation benchmarks"). The hyphen is needed
   only when dropping it invites a real misread, typically when one element
@@ -259,6 +262,27 @@ cannot tell a well-placed dash from a misplaced one.
 
 ## Structure
 
+- **Connected prose** (`G.connected-prose`). Local edits can preserve every fact
+  while removing the explanation of how the facts relate. Replacing pause marks
+  with periods and deleting transitions can produce a chain of short statements
+  that forces readers to reconstruct the argument. Keeping a useful conjunction
+  or carrying an established topic into the next sentence can make a passage
+  easier to follow than shortening each sentence independently.
+
+  For example, "Earlier studies examined Java projects. Then we added Python
+  projects. The purpose was to test whether the findings hold in another
+  language" becomes "Earlier studies examined Java projects. To test whether
+  their findings hold in another language, we added Python projects." The
+  revision connects the existing evidence to the stated purpose without adding
+  a motivation that the original did not give. Merely substituting "next" for
+  "then" would leave the purpose detached from the action.
+
+  Across paragraphs, the same principle connects the question to the method and
+  the evidence to the conclusion. A research article's storyline comes from that
+  development, with uncertainty and limitations intact. The genre determines the
+  order. Procedures can still use chronological steps, and independent items can
+  still form a list. The check concerns a missing connection that readers need,
+  not the presence of a particular transition word.
 - **Formulaic openings and closings** (`G.no-formulaic-openings`, `G.no-formulaic-closings`). "In today's...", "In summary," and similar
   stock phrases appear often in AI text and add no content. They are allowed
   only where they consolidate content.
@@ -275,22 +299,34 @@ cannot tell a well-placed dash from a misplaced one.
 - **Prose listicles** (`G.no-prose-listicle`). A model that is told to stop
   emitting bullet lists produces a chain of paragraphs opened by ordinals ("The
   first wall is... The second wall is..."), so banning lists alone displaces
-  the list into the paragraphs instead of removing it. The rule has to name the scale, because the
-  list-cramming rule prescribes `First, ... Second, ...` as the fix for a
-  clause pile-up inside one sentence.
+  the list into the paragraphs instead of removing it. Dropping the ordinals
+  alone can leave the same disconnected claims. Where the material develops an
+  argument, the revision must explain how the claims relate. Ordinals remain
+  useful for actual stages and numbered items within a paragraph.
 - **No list-cramming in a single sentence** (`G.no-list-cramming`). AI text maximizes information per
   sentence, flattening what should be several sentences into one colon- or
   dash-led chain of semicolon-joined clauses. The pile-up reads as machine prose
-  and makes the reader hold several claims in one sentence. Splitting restores
-  burstiness and lets each claim carry its own citation cleanly. It also
+  and makes the reader hold several claims in one sentence. Splitting lets each
+  claim carry its own citation cleanly, but the new sentences must retain the
+  relations among the claims. Adding `First, ... Second, ...` by default would
+  replace the crowded sentence with a mechanical sequence. Splitting also
   resolves an edge case of the rule on capitalization after a colon, where a
   colon introducing a series of independent clauses falls
   between the two halves of that rule (capitalize a sentence, lowercase a list).
   Once the clauses are separate sentences, the question does not arise.
-- **One-sentence paragraphs** (`G.paragraph-length`). AI text breaks prose into one-sentence paragraphs
-  for manufactured emphasis. They are kept only where a single sentence has a
-  structural purpose (e.g., opening a section, introducing a list or figure, marking a
-  transition).
+- **Short paragraphs** (`G.paragraph-length`). A sequence of one- or two-sentence
+  paragraphs can separate a claim from the explanation, evidence, or qualification
+  that develops it. Extending the rule to two-sentence paragraphs prevents a
+  two-sentence pattern from becoming the default. Short paragraphs remain useful
+  for a distinct structural purpose, such as a transition or an introduction to a
+  figure. The purpose must explain what the paragraph break contributes. A topic
+  sentence alone does not establish a reason to separate it from its development.
+  Paragraphs should therefore develop a point fully, with short paragraphs as
+  exceptions. Adding a filler sentence or splitting an existing sentence to meet
+  a minimum would preserve the same fragmentation. The rule instead calls for
+  combining related material or developing a point with information already
+  present, and leaves list items, captions, and complete short replies to their
+  own formats.
 - **Section openers, generic truths, and evaluative sentences** (`G.paragraph-padding`). The windup rule
   targets a sentence that announces what its own paragraph then does. Read at
   section level, it would remove every orienting paragraph and leave a heading
@@ -303,6 +339,12 @@ cannot tell a well-placed dash from a misplaced one.
   hedges, and one-sentence paragraphs. In each case, density is a signal, and a
   single use is not banned. One such sentence can open a section or mark that
   a result matters. Several in one paragraph are filler.
+- **Concision and continuity** (`G.sentence-padding`, `G.paragraph-padding`).
+  A transition can connect an established claim to the next point without
+  introducing a new fact. That function is substantive when readers need it to
+  understand the progression. The subtractive test therefore includes continuity
+  alongside meaning, emphasis, and precision. A shorter passage is worse when
+  readers must supply connections that the original explained.
 - **Reformulate, do not delete** (`G.reformulate`). The concision and hedging rules license
   deletion, which a model can over-apply by resolving any flagged statement
   through removal. This rule limits deletion. Deletion is for content that says

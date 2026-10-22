@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [Unreleased]
+
+- **Added:** `G.connected-prose` requires a line of argument that readers can follow across sentences and paragraphs, with useful transitions and supported relations between ideas. A self-check and rationale explain how the guidance applies to research writing.
+- **Changed:** concision, consequence-connective, and list-splitting rules preserve continuity. Review modes check the development of the argument, and revise mode skips suggestions that break the connection between sentences or paragraphs.
+- **Changed:** `G.paragraph-length` treats both one- and two-sentence paragraphs as exceptions in sustained prose. Paragraphs develop their point fully, and the self-check distinguishes useful structural breaks from fragmentation without requiring filler or artificial sentence splitting.
+
 ## [2026-10_rev3] - 2026-10-21
 
 - **Removed:** `/ai-slop:tldr` and its command, skill, counting helper, schema check, recall helper, and synthetic fixtures. Use `/ai-slop:review` for a document, `/ai-slop:review-diff` for changed lines, or `/ai-slop:review-repo` for a repository.

@@ -64,9 +64,7 @@ To pick up a new release, refresh the marketplace catalog and reload plugins:
 /reload-plugins
 ```
 
-The marketplace update reports `(1 plugin bumped)` when a new version is found and installs it. `/reload-plugins` activates the new commands and skills in the running session.
-
-To skip the manual refresh, enable auto-update for the marketplace: run `/plugin`, open the **Marketplaces** tab, select `ai-slop`, and choose **Enable auto-update**. Claude Code then refreshes the marketplace and installs the latest plugin version at startup.
+The marketplace update reports `(1 plugin bumped)` when a new version is found and installs it. `/reload-plugins` activates the new commands and skills in the running session. To skip the manual refresh, enable auto-update for the marketplace: run `/plugin`, open the **Marketplaces** tab, select `ai-slop`, and choose **Enable auto-update**. Claude Code then refreshes the marketplace and installs the latest plugin version at startup.
 
 ## Install in Codex
 

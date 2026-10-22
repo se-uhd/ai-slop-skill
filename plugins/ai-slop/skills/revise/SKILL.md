@@ -45,8 +45,8 @@ Both inputs default to the current working directory. No arguments are required.
 
 3. **Apply each finding.** For each finding, in document order:
    - Locate the `Quote` text in the paper. Use the `Location` hint (`file:line`) to disambiguate if the same text appears multiple times.
-   - Before replacing, check the surrounding paragraph for a loss of purpose, distinctions, logical relations, emphasis, scope, or evidential strength. Skip a suggestion that causes such a loss unless the user explicitly approved that specific change in meaning.
-   - If the quote is found exactly and that check passes, replace it with `Suggested revision` using the client's edit or patch tool. One edit or patch hunk per finding (do not bundle multiple findings into one edit, which makes diffs harder to review).
+   - Before replacing, check the surrounding paragraph and its connection to adjacent paragraphs for a loss of purpose, distinctions, logical relations, emphasis, scope, evidential strength, or continuity. Skip a suggestion that causes such a loss unless the user explicitly approved that specific change.
+   - If the quote is found exactly and that check passes, replace it with `Suggested revision` using the client's edit or patch tool. One edit or patch hunk per finding (do not bundle multiple findings into one edit, which makes diffs harder to review). Check the passage again after replacement, especially after splitting sentences or removing transitions. If the revision causes a loss that the user did not explicitly approve, restore the original and log the finding as skipped.
    - If the quote is not found (the paper may have been edited since review), log it as a skipped finding with the reason. Do not attempt fuzzy matching that could change the wrong text.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one, prefer the location closest to the hint and log the ambiguity in the summary.
    - For a LaTeX document, if the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys), log it as skipped with the reason rather than apply it.
