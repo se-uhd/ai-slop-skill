@@ -44,6 +44,8 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 **Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning. A path to a plain-text file (`.md`, `.txt`, or similar) is also accepted and reviewed with the general layer (add `--scientific`, described in step 2, to include the research article rules), so the skill works on prose that is not a LaTeX or PDF paper.
 
+**Project glossary.** Read the applicable project `GLOSSARY.md`, or the glossary named by project instructions, before checking terminology. Preserve its concept boundaries, accepted variants, and scope exceptions when applying `G.one-term` and `G.distinct-synonyms`. Propose glossary creation or a dedicated `/ai-slop:glossary` pass when definitions or competing names need a fuller audit.
+
 **Trope catalog override.** `--tropes=<path>` (repeatable) replaces the catalog download with one or more user-supplied files. Paths can be absolute or relative to the working directory. Each file is read as-is and the contents are concatenated in the order given to form the catalog for this run. When `--tropes` is not passed (the common case), the catalog is fetched live (see step 3).
 
 **STE mode.** `--ste` adds the Simplified Technical English layer (`rules-ste.md`) on top of the layers that the scope selects (see step 2). It works with every input type.

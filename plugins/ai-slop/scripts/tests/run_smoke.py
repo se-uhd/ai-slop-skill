@@ -33,6 +33,23 @@ def write(p, content):
 
 # ---------- portable skill commands ----------
 
+def test_slash_commands_resolve_to_packaged_skills():
+    """Each slash command routes to its packaged skill, with no orphaned entries."""
+    plugin = SCRIPTS.parent
+    skills = {path.parent.name: path for path in (plugin / 'skills').glob('*/SKILL.md')}
+    commands = {path.stem: path for path in (plugin / 'commands').glob('*.md')}
+    assert skills and skills.keys() == commands.keys(), (
+        f"unpaired skills or commands: {skills.keys() ^ commands.keys()}"
+    )
+    for name, skill in skills.items():
+        frontmatter = skill.read_text(encoding='utf-8').split('---', 2)[1]
+        declared = re.search(r'^name:\s*(\S+)\s*$', frontmatter, re.M)
+        assert declared and declared.group(1) == name, f'{skill}: wrong skill name'
+        command = commands[name].read_text(encoding='utf-8')
+        routed = re.search(r'`ai-slop:([a-z0-9-]+)`', command)
+        assert routed and routed.group(1) == name, f'{commands[name]}: wrong skill route'
+
+
 def test_skill_commands_from_another_project():
     """Installed helpers keep finding their bundle without a client env var,
     and document discovery stays in the user's project, even with spaces."""
@@ -2652,6 +2669,7 @@ TESTS = [
     test_scan_sentences_skips_non_prose,
     test_scan_sentences_usage_and_unreadable_paths,
     test_rule_keys_unique_and_resolvable,
+    test_slash_commands_resolve_to_packaged_skills,
     test_skill_commands_from_another_project,
     test_find_latex_root_empty,
     test_find_latex_root_single,

@@ -4,6 +4,8 @@ Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-m
 
 ## [Unreleased]
 
+- **Added:** `/ai-slop:glossary` extracts or maintains `GLOSSARY.md`, proposes definitions with source evidence, and validates a document for synonyms, conflicting meanings, undefined terms, and new labels for existing concepts. `--check` validates without changing the glossary, and `--glossary=<path>` selects another glossary. Source suggestions use the report schema that revise mode accepts.
+- **Changed:** document, diff, and repository reviews consult applicable project glossaries, preserving distinct concepts, accepted variants, and scoped exceptions. The bundle now has eight skills and matching slash commands, with twelve version callsites.
 - **Added:** `G.connected-prose` requires a line of argument that readers can follow across sentences and paragraphs, with useful transitions and supported relations between ideas. A self-check and rationale explain how the guidance applies to research writing.
 - **Changed:** concision, consequence-connective, and list-splitting rules preserve continuity. Review modes check the development of the argument, and revise mode skips suggestions that break the connection between sentences or paragraphs.
 - **Changed:** `G.paragraph-length` treats both one- and two-sentence paragraphs as exceptions in sustained prose. Paragraphs develop their point fully, and the self-check distinguishes useful structural breaks from fragmentation without requiring filler or artificial sentence splitting.

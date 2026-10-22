@@ -8,8 +8,9 @@ documentation only. The `ai-slop:review`, `ai-slop:review-diff`,
 catalog, which `fetch_tropes.py` fetches from tropes.fyi.
 `ai-slop:revise` and `ai-slop:ground` reference only
 the layers (revise applies a finished report, so it needs no trope source, and
-ground reads the LaTeX layer's grounding convention). None of them read this
-file. Keeping the
+ground reads the LaTeX layer's grounding convention). `ai-slop:glossary` reads
+the general terminology rules and the project's glossary without the trope
+catalog. None of them read this file. Keeping the
 justification here lets the layers carry only the operative directive, example,
 and exception for each rule, while the explanatory background that does not
 change how a rule is applied is kept in one place that a maintainer can consult.
