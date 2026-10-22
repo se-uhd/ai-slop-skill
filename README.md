@@ -24,7 +24,7 @@ When an STE rewrite of an existing sentence would lose meaning, precision, or fo
 
 ## Versioning
 
-The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string appears in eleven callsites, kept in sync by the smoke suite: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `version` field of each of the seven `SKILL.md` files, the `**Skill version:**` line in `review/SKILL.md`'s report template, and the `skill version` reference in `writing/SKILL.md`'s WRITING.md header. Git tags follow the same scheme.
+The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string appears in twelve callsites, kept in sync by the smoke suite: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `version` field of each of the eight `SKILL.md` files, the `**Skill version:**` line in `review/SKILL.md`'s report template, and the `skill version` reference in `writing/SKILL.md`'s WRITING.md header. Git tags follow the same scheme.
 
 ## Dependencies
 
@@ -41,7 +41,7 @@ No other runtime dependencies. Three helpers reach the network: the reference ch
 /plugin install ai-slop
 ```
 
-Seven slash commands become available:
+Eight slash commands become available:
 
 ```text
 /ai-slop:review
@@ -49,13 +49,14 @@ Seven slash commands become available:
 /ai-slop:review-repo
 /ai-slop:revise
 /ai-slop:ground
+/ai-slop:glossary
 /ai-slop:writing
 /ai-slop:init
 ```
 
 `review`, `review-diff`, and `writing` detect LaTeX source automatically and load all three rule layers for it. Any other input loads the general layer. Add `--scientific` to also apply the research article rules to a non-LaTeX manuscript (a Markdown or PDF paper). `review-repo` is the whole-codebase mode and always loads the general layer (`--scientific` optional). It never loads the LaTeX layer, since it reviews a repository's prose and code comments rather than a single paper. `--ste` adds the STE layer in `review`, `review-diff`, `review-repo`, `writing`, and `init`.
 
-Run them from your project directory. `/ai-slop:review` finds the document to review in the current directory (a LaTeX root or a PDF, while a Markdown or plain-text draft needs an explicit path), walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines that you changed in the git working tree (default base `HEAD`, or any git ref passed as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:review-repo` sweeps a whole repository instead of one document: its Markdown, plain-text, and LaTeX files, the comments in its source and config files, and its commit messages, with findings grouped by file and by commit (see `/ai-slop:review-repo` below). `/ai-slop:revise` reads the report and applies its suggested revisions to the source. All three review modes write the same report schema. For LaTeX papers, `/ai-slop:ground` fills the grounding comments that the review flags as missing. Review *finds* the `\cite{}` calls missing a grounding comment, and ground *fills* them by fetching each cited source and inserting a retrieved verbatim quote (or a `TODO verify -- <reason>` stub when the source cannot be retrieved). `/ai-slop:writing` is a one-shot setup command. It copies the bundled writing rules into a project-local `WRITING.md` and adds a reference to it in the repository's `AGENTS.md`, with a `CLAUDE.md` import for Claude Code so collaborators and any Agent Skills client see the conventions even without this plugin installed. `/ai-slop:init` sets up the general rules and the trope catalog for the current client across projects, using Claude Code's rules directory or a file referenced by Codex's global instructions (see `/ai-slop:init` below). Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "ground the citations", "set up writing rules in this repo").
+Run them from your project directory. `/ai-slop:review` finds the document to review in the current directory (a LaTeX root or a PDF, while a Markdown or plain-text draft needs an explicit path), walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines that you changed in the git working tree (default base `HEAD`, or any git ref passed as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:review-repo` sweeps a whole repository instead of one document: its Markdown, plain-text, and LaTeX files, the comments in its source and config files, and its commit messages, with findings grouped by file and by commit (see `/ai-slop:review-repo` below). `/ai-slop:revise` reads the report and applies its suggested revisions to the source. The review modes write the same report schema. `/ai-slop:glossary` creates or maintains `GLOSSARY.md` from a document, proposes definitions, and checks the document for competing terms and new names for existing concepts, using that report schema for source suggestions. For LaTeX papers, `/ai-slop:ground` fills the grounding comments that the review flags as missing. Review *finds* the `\cite{}` calls missing a grounding comment, and ground *fills* them by fetching each cited source and inserting a retrieved verbatim quote (or a `TODO verify -- <reason>` stub when the source cannot be retrieved). `/ai-slop:writing` is a one-shot setup command. It copies the bundled writing rules into a project-local `WRITING.md` and adds a reference to it in the repository's `AGENTS.md`, with a `CLAUDE.md` import for Claude Code so collaborators and any Agent Skills client see the conventions even without this plugin installed. `/ai-slop:init` sets up the general rules and the trope catalog for the current client across projects, using Claude Code's rules directory or a file referenced by Codex's global instructions (see `/ai-slop:init` below). Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "ground the citations", "set up writing rules in this repo").
 
 To pick up a new release, refresh the marketplace catalog and reload plugins:
 
@@ -75,15 +76,15 @@ codex plugin marketplace add se-uhd/ai-slop-skill
 codex plugin add ai-slop@ai-slop
 ```
 
-For a local checkout, pass its absolute path instead of `se-uhd/ai-slop-skill` to the marketplace command. In Codex, use `/skills` or type `$` to select one of the seven `ai-slop:` skills, then provide the path and flags. For example, select `ai-slop:review` and add `draft.md --ste`. The `/ai-slop:` examples throughout this README are Claude Code slash commands. In Codex they refer to the corresponding skill. Natural-language requests can activate the skills in both clients.
+For a local checkout, pass its absolute path instead of `se-uhd/ai-slop-skill` to the marketplace command. In Codex, use `/skills` or type `$` to select one of the eight `ai-slop:` skills, then provide the path and flags. For example, select `ai-slop:review` and add `draft.md --ste`. The `/ai-slop:` examples throughout this README are Claude Code slash commands. In Codex they refer to the corresponding skill. Natural-language requests can activate the skills in both clients.
 
 See the official [plugin installation guidance](https://developers.openai.com/plugins/build/plugins) and [Codex skill invocation guidance](https://learn.chatgpt.com/docs/build-skills). Python 3 and the network requirements listed above apply to both clients.
 
 ## Use in other Agent Skills clients
 
-The skills follow the [Agent Skills specification](https://agentskills.io/specification). The `plugins/ai-slop/` bundle contains seven workflows under `skills/`, with shared content in `shared/` and helper scripts in `scripts/`. Keep the whole bundle together. Copying a single skill directory omits its shared dependencies. Each workflow resolves bundled paths from the location of its own `SKILL.md` supplied by the client, and runs helpers by absolute path while keeping the user's project as the working directory. No Claude-specific environment variable is needed.
+The skills follow the [Agent Skills specification](https://agentskills.io/specification). The `plugins/ai-slop/` bundle contains eight workflows under `skills/`, with shared content in `shared/` and helper scripts in `scripts/`. Keep the whole bundle together. Copying a single skill directory omits its shared dependencies. Each workflow resolves bundled paths from the location of its own `SKILL.md` supplied by the client, and runs helpers by absolute path while keeping the user's project as the working directory. No Claude-specific environment variable is needed.
 
-For Codex and Claude Code, use the plugin installation instructions above. For another client, register the seven skill directories while preserving their relative paths to `shared/` and `scripts/`. The [Agent Skills client list](https://agentskills.io/clients) links to each client's installation instructions.
+For Codex and Claude Code, use the plugin installation instructions above. For another client, register the eight skill directories while preserving their relative paths to `shared/` and `scripts/`. The [Agent Skills client list](https://agentskills.io/clients) links to each client's installation instructions.
 
 ## Use as a system prompt
 
@@ -104,6 +105,36 @@ Given a document (LaTeX, PDF, or plain text), the review skill:
 5. **Writes `ai-slop-report.md`** in the working directory with a stable schema so revise mode can act on it.
 
 Review mode does not modify the document. The report is the only output, apart from adding its name to the repository's `.gitignore` when that line is missing.
+
+### `/ai-slop:glossary`
+
+Glossary mode reads a paper or document, groups its terms by concept, and creates
+or maintains `GLOSSARY.md`. Definitions carry source locations and supporting
+passages, with inferred definitions and naming preferences marked as proposed.
+Existing definitions, distinctions, accepted abbreviations, and scoped vocabulary
+restrictions are preserved rather than replaced by newly extracted preferences.
+
+The same invocation validates the document against the glossary and writes
+`ai-slop-report.md` with concrete source suggestions and questions for the author.
+The check includes synonyms, conflicting meanings, undefined technical terms,
+and newly invented names for concepts that already have a term. It compares
+meanings in context, so a glossary need not enumerate every future coinage and a
+word's ordinary sense is not automatically forbidden. The document stays
+unchanged, and `/ai-slop:revise` can apply concrete source suggestions.
+
+```text
+/ai-slop:glossary main.tex
+/ai-slop:glossary draft.md
+/ai-slop:glossary draft.md --check
+/ai-slop:glossary paper.pdf --glossary=terminology/GLOSSARY.md
+```
+
+`--check` validates against an existing glossary without editing it.
+`--glossary=<path>` selects a glossary instead of `GLOSSARY.md` in the working
+directory. Glossary mode works offline and loads the general terminology rules
+without fetching the trope catalog. The glossary is maintained project content,
+while the generated report is ignored by git. Ordinary review, diff, and repository
+reviews also consult the applicable project glossary when checking terminology.
 
 ### `/ai-slop:review-diff`
 
@@ -162,7 +193,7 @@ An explicit output path exports the file without changing Codex's global instruc
 
 ## Repository layout
 
-The plugin is under `plugins/ai-slop/`: `commands/` holds the seven slash commands, `skills/` the seven `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, writing, init), and `shared/` the four rule layers plus the rationale doc. `scripts/` holds the vendored Markdown linter under `_vendor/` and the stdlib Python helpers for scope and LaTeX root detection, repository prose extraction (`scan_repo.py`), the glyph, reference, repeat, and sentence scans (`scan_glyphs.py`, `scan_reference.py`, `scan_repeats.py`, `scan_sentences.py`), the trope catalog download, the export of the rules as one file (`export_rules.py`), the citation, BibTeX, and reference checks, citation extraction, the grounding quote check, and grounding-comment insertion. The marketplace manifest is at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
+The plugin is under `plugins/ai-slop/`: `commands/` holds the eight slash commands, `skills/` the eight `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, glossary, writing, init), and `shared/` the four rule layers plus the rationale doc. `scripts/` holds the vendored Markdown linter under `_vendor/` and the stdlib Python helpers for scope and LaTeX root detection, repository prose extraction (`scan_repo.py`), the glyph, reference, repeat, and sentence scans (`scan_glyphs.py`, `scan_reference.py`, `scan_repeats.py`, `scan_sentences.py`), the trope catalog download, the export of the rules as one file (`export_rules.py`), the citation, BibTeX, and reference checks, citation extraction, the grounding quote check, and grounding-comment insertion. The marketplace manifest is at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`.
 
 ## Maintainer notes
 
@@ -176,7 +207,7 @@ python3 plugins/ai-slop/scripts/refresh_vendor.py
 
 The script creates a clean venv, installs `pymarkdownlnt` with `--no-binary :all:` so every dep is built from source (pure-Python where the package supports it), copies the resolved tree into `_vendor/`, replaces `pyjson5/` with a stdlib shim (PyMarkdown is always invoked with `--no-json5`, so the C-extension is never reached), asserts that no compiled extensions end up in the tree, and regenerates `_vendor/NOTICE` from each package's dist-info. Pin to a specific version with `--version pymarkdownlnt==0.9.37`.
 
-Bump the version at the eleven callsites listed in the Versioning section. The next rev is the highest existing rev for the month plus one, with the bare `YYYY-MM` tag as rev0. After committing the bump, create the matching tag (`git tag YYYY-MM_revN`) and push it. Every release commit gets one, and tags must stay ancestors of `main`. Never amend or rebase a commit that has already been tagged or pushed. Additional work goes into a new rev with its own commit and tag.
+Bump the version at the twelve callsites listed in the Versioning section. The next rev is the highest existing rev for the month plus one, with the bare `YYYY-MM` tag as rev0. After committing the bump, create the matching tag (`git tag YYYY-MM_revN`) and push it. Every release commit gets one, and tags must stay ancestors of `main`. Never amend or rebase a commit that has already been tagged or pushed. Additional work goes into a new rev with its own commit and tag.
 
 ### Validating the manifests
 
