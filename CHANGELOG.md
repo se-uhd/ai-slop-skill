@@ -2,13 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
-## [Unreleased]
+## [2026-10_rev4] - 2026-10-22
 
-- **Added:** `/ai-slop:glossary` extracts or maintains `GLOSSARY.md`, proposes definitions with source evidence, and validates a document for synonyms, conflicting meanings, undefined terms, and new labels for existing concepts. Without a filename, the mode searches the working directory and relevant subdirectories for the main LaTeX, PDF, Markdown, or plain-text document, using project context and preferring editable source over its generated PDF. `--check` validates without changing the glossary, and `--glossary=<path>` selects another glossary. Source suggestions use the report schema that revise mode accepts.
-- **Changed:** document, diff, and repository reviews consult applicable project glossaries, preserving distinct concepts, accepted variants, and scoped exceptions. The bundle now has eight skills and matching slash commands, with twelve version callsites.
-- **Added:** `G.connected-prose` requires a line of argument that readers can follow across sentences and paragraphs, with useful transitions and supported relations between ideas. A self-check and rationale explain how the guidance applies to research writing.
-- **Changed:** concision, consequence-connective, and list-splitting rules preserve continuity. Review modes check the development of the argument, and revise mode skips suggestions that break the connection between sentences or paragraphs.
-- **Changed:** `G.paragraph-length` treats both one- and two-sentence paragraphs as exceptions in sustained prose. Paragraphs develop their point fully, and the self-check distinguishes useful structural breaks from fragmentation without requiring filler or artificial sentence splitting.
+- **Added:** `/ai-slop:glossary` creates or updates `GLOSSARY.md`, proposes definitions, and flags competing names or inconsistent meanings. It finds the main document when no filename is supplied. `--check` validates without updating the glossary, and `--glossary=<path>` selects another glossary.
+- **Changed:** `review`, `review-diff`, and `review-repo` use project glossaries for terminology checks.
+- **Added:** `G.connected-prose` requires a clear progression across sentences and paragraphs. Concision and punctuation edits preserve useful transitions.
+- **Changed:** `G.paragraph-length` treats one- and two-sentence paragraphs as exceptions in sustained prose.
 
 ## [2026-10_rev3] - 2026-10-21
 
