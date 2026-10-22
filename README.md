@@ -108,6 +108,14 @@ Review mode does not modify the document. The report is the only output, apart f
 
 ### `/ai-slop:glossary`
 
+Run `/ai-slop:glossary` without a filename to search the working directory and
+relevant subdirectories for the main document. The skill uses project
+instructions, the README, build configuration, and document content to identify
+the main LaTeX, PDF, Markdown, or plain-text work. It prefers editable source
+over a PDF of the same document and follows a LaTeX root's included files. A clear
+candidate is used directly, with a question only when discovery finds no document
+or leaves genuine ambiguity.
+
 Glossary mode reads a paper or document, groups its terms by concept, and creates
 or maintains `GLOSSARY.md`. Definitions carry source locations and supporting
 passages, with inferred definitions and naming preferences marked as proposed.
@@ -123,6 +131,7 @@ word's ordinary sense is not automatically forbidden. The document stays
 unchanged, and `/ai-slop:revise` can apply concrete source suggestions.
 
 ```text
+/ai-slop:glossary
 /ai-slop:glossary main.tex
 /ai-slop:glossary draft.md
 /ai-slop:glossary draft.md --check

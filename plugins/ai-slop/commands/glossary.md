@@ -1,5 +1,5 @@
 ---
-description: Extract GLOSSARY.md from a paper or document, propose definitions, and check for synonyms, conflicting meanings, and new labels for existing concepts. Use --check to validate against an existing glossary without updating it.
+description: Find the main document when no filename is supplied, extract GLOSSARY.md, propose definitions, and check for synonyms, conflicting meanings, and new labels for existing concepts. Use --check to validate against an existing glossary without updating it.
 ---
 
 Use the `ai-slop:glossary` skill.
@@ -12,13 +12,16 @@ writes source suggestions to `ai-slop-report.md`, with uncertain distinctions
 listed for author judgment. The source document stays unchanged.
 
 ```text
+/ai-slop:glossary
 /ai-slop:glossary main.tex
 /ai-slop:glossary draft.md
 /ai-slop:glossary draft.md --check
 /ai-slop:glossary paper.pdf --glossary=terminology/GLOSSARY.md
 ```
 
-Without a document path, the skill finds the LaTeX root or the sole PDF in the
-working directory. The default glossary is `GLOSSARY.md` in that directory, and
-`--glossary=<path>` selects another. `--check` leaves the existing glossary
-unchanged and writes only the report.
+Without a document path, the skill searches the working directory and relevant
+subdirectories for the main LaTeX, PDF, Markdown, or plain-text document. It uses
+project context to select the main work and prefers editable source over a PDF
+of the same document. The default glossary is `GLOSSARY.md` in the working
+directory, and `--glossary=<path>` selects another. `--check` leaves the existing
+glossary unchanged and writes only the report.
