@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev5] - 2026-10-23
+
+- **Added:** `G.possessive-on-things` flags the possessive 's on a thing or an abstraction ("the sentence's purpose") and prefers the of-phrase, a preposition, or a noun adjunct that names the relation. The form stays for a person, group, organization, or named tool, for a document standing for its authors, in fixed phrases, and where the possessor is the topic under discussion. The self-check and rationale carry the same test.
+- **Changed:** the README, maintainer guide, command and skill files, rule layers, and Python docstrings and comments follow the new rule. The smoke suite checks the first-party prose for 's on the text and repository units that the bundle writes about most.
+
 ## [2026-10_rev4] - 2026-10-22
 
 - **Added:** `/ai-slop:glossary` creates or updates `GLOSSARY.md`, proposes definitions, and flags competing names or inconsistent meanings. It finds the main document when no filename is supplied. `--check` validates without updating the glossary, and `--glossary=<path>` selects another glossary.

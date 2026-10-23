@@ -175,7 +175,7 @@ def test_find_latex_root_root_with_includes():
 
 # ---------- fetch_tropes.py ----------
 
-# A body with the catalog's structure: an H1 first, then enough `## ` trope headings for
+# A body structured like the catalog: an H1 first, then enough `## ` trope headings for
 # fetch_tropes.looks_like_catalog. One trope carries an apostrophe so the
 # HTML unwrapping is exercised.
 CATALOG = '# AI Writing Tropes to Avoid\n\nintro\n\n' + ''.join(
@@ -239,8 +239,8 @@ def test_fetch_tropes_passes_plain_markdown_through():
 
 
 def test_fetch_tropes_unwraps_markdown_from_rendered_page():
-    # The site serves the catalog inside an HTML page. The download link's
-    # data URI carries the same bytes that the <pre> block renders.
+    # The site serves the catalog inside an HTML page. The data URI of the
+    # download link carries the same bytes that the <pre> block renders.
     import fetch_tropes
     got = fetch_tropes.extract_markdown(RENDERED_PAGE)
     assert got == CATALOG, f"extract data-uri: {got!r}"
@@ -983,7 +983,7 @@ def test_scan_repo_respects_gitignore():
 
 def test_scan_repo_excludes_committed_vendor_dir():
     # A vendored/third-party directory that is committed (so `git ls-files` lists
-    # it) must still be excluded, because it is not the repository's own prose.
+    # it) must still be excluded, because it is not the prose of the repository itself.
     import subprocess as sp
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'own.md', 'first-party prose\n')
@@ -1105,7 +1105,7 @@ def _git_repo_with_commit(d, subject, body):
 
 
 def test_scan_repo_commit_messages_scanned():
-    # A commit's subject and body are reviewed under a `commit <sha>` pseudo-
+    # The subject and body of a commit are reviewed under a `commit <sha>` pseudo-
     # path. The trailer line is metadata and must be dropped.
     body = ('This delivers a comprehensive solution.\n\n'
             'Co-authored-by: Someone <s@e.x>')
@@ -1639,7 +1639,7 @@ def test_insert_grounding_blank_quote_becomes_todo():
 
 def test_insert_grounding_key_match_ignores_quote_body():
     # grounds_key must look only at the comment header, not the quote body. A key
-    # named inside another key's quote must still be groundable on a later run.
+    # named inside the quote of another key must still be groundable on a later run.
     import json
     with tempfile.TemporaryDirectory() as d:
         tex = Path(d) / 'main.tex'
@@ -1816,8 +1816,8 @@ def test_insert_grounding_replaces_todo_stubs():
 
 def test_grounding_comment_block_read_write_agree():
     # The read side (find_citation_issues / extract_cites) and the write side
-    # (insert_grounding) share one definition of the citation's attached comment
-    # block. An unrelated % comment between the citation and its grounding comment
+    # (insert_grounding) share one definition of the comment block attached to
+    # the citation. An unrelated % comment between the citation and its grounding comment
     # does not hide the grounding. A TODO stub marks the citation as not-missing
     # but still fillable. A comment beyond intervening code is not credited.
     import json
@@ -2184,8 +2184,8 @@ SELF_CHECK_HEADING_RE = re.compile(r'^## Self-check', re.I | re.M)
 
 
 def test_rule_keys_unique_and_resolvable():
-    """Every rule bullet in the four layers defines one key with its layer's
-    prefix, and keys are unique across the layers. Every self-check item cites
+    """Every rule bullet in the four layers defines one key with the prefix
+    of its layer, and keys are unique across the layers. Every self-check item cites
     a key, and every key cited in the layers, the rationale, or a SKILL.md is
     defined. Keys are the stable handle that survives renames and insertions."""
     shared = SCRIPTS.parent / 'shared'
@@ -2275,7 +2275,7 @@ def test_scan_repo_skips_front_matter_indented_code_and_pins():
 
 
 def test_scan_glyphs_ignores_tex_comments_and_banners():
-    # The ` -- ` separator of the bundle's own grounding comments, and a
+    # The ` -- ` separator in the grounding comments that the bundle writes, and a
     # comment banner of many dashes, must not count toward the dash density.
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / 'g.tex'
@@ -2438,7 +2438,7 @@ def test_check_quotes_sources_dir_and_bad_json():
 def test_first_party_prose_avoids_the_plain_words_seeds():
     """`G.plain-words` names "lives in" as a colorful synonym for "is in",
     "shape" as one for "structure" or "format", and "cut" as one for "publish"
-    or "create". The bundle's own Markdown, docstrings, and comments must not
+    or "create". The Markdown, docstrings, and comments of the bundle itself must not
     use them or a variant such as "lives under", "shaped", or "re-cut", except
     inside double quotes or a code span. "Cut" counts only before a release, a
     tag, a branch, or a reference, since the rules use it for removing text.
@@ -2465,6 +2465,36 @@ def test_first_party_prose_avoids_the_plain_words_seeds():
         if seed.search(text):
             offenders.append(line[:120])
     assert not offenders, "\"lives in\", \"shape\", or \"cut\" (G.plain-words) in first-party prose:\n  " + "\n  ".join(offenders)
+
+
+def test_first_party_prose_avoids_possessives_on_text_units():
+    """`G.possessive-on-things` prefers the of-phrase, a preposition, or a noun
+    adjunct over 's on a thing. The heads below are the text and repository
+    units that the bundle writes about most, and the sweep for 2026-10_rev5
+    removed every 's on them outside double quotes and code spans. A person,
+    a named tool, a fixed phrase, and a document standing for its authors keep
+    's and are not listed. CHANGELOG.md, this file, and the upstream-owned
+    files are skipped."""
+    repo_root = SCRIPTS.parent.parent.parent
+    rc, out, err = run('scan_repo.py', str(repo_root), '--no-commits')
+    assert rc == 0, f"self-scan: rc={rc} err={err!r}"
+    seed = re.compile(r"\b(?:sentence|paragraph|section|document|report|repository|repo"
+                      r"|layer|catalog|file|rule|finding|skill|branch|root|project|bundle"
+                      r"|entry|citation|script|linter|glossary|line)'s\b")
+    skip = ('CHANGELOG.md', 'lint_markdown.py', 'check_baseline.py', 'refresh_vendor.py',
+            'run_smoke.py', '_vendor/', 'bundled_licenses/')
+    offenders = []
+    for line in out.split('\n'):
+        if not line or line.startswith('commit '):
+            continue
+        rel, _, rest = line.partition(':')
+        if any(s in rel for s in skip):
+            continue
+        _, _, text = rest.partition(':')
+        text = re.sub(r'"[^"]*"', '', re.sub(r'`[^`]*`', '', text))
+        if seed.search(text):
+            offenders.append(line[:120])
+    assert not offenders, "'s on a text or repository unit (G.possessive-on-things) in first-party prose:\n  " + "\n  ".join(offenders)
 
 
 # ---------- scan_repeats.py ----------
@@ -2603,7 +2633,7 @@ def test_export_rules_drops_only_the_self_check_section():
 
 def test_export_rules_replaces_only_an_earlier_export():
     """A second export replaces the first without --force, and so does an
-    export from `/ai-slop:export`, the mode's name up to 2026-09_rev33. A file
+    export from `/ai-slop:export`, the name of the mode up to 2026-09_rev33. A file
     that is not an export is left alone (exit 3) until --force is passed."""
     with tempfile.TemporaryDirectory() as d:
         catalog = Path(d) / 'tropes.md'
@@ -2798,6 +2828,7 @@ TESTS = [
     test_check_quotes_confirms_and_downgrades,
     test_check_quotes_sources_dir_and_bad_json,
     test_first_party_prose_avoids_the_plain_words_seeds,
+    test_first_party_prose_avoids_possessives_on_text_units,
     test_scan_repeats_lists_pasted_and_partial_copies,
     test_scan_repeats_usage_and_unreadable_paths,
     test_export_rules_writes_general_layer_and_catalog,

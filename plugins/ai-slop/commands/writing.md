@@ -10,6 +10,6 @@ WRITING.md is meant to be edited freely after generation. It is a project-local 
 
 If `WRITING.md` already exists, the skill asks before overwriting. AGENTS.md is updated idempotently. If it already references `WRITING.md`, nothing is appended. Existing instruction files are preserved, including a nonempty `AGENTS.override.md`, which also receives the reference because Codex loads it instead of `AGENTS.md`.
 
-The skill's workflow is in `skills/writing/SKILL.md`. By default the skill writes into the current working directory. A target directory can be passed as an argument to override the default.
+The workflow is in `skills/writing/SKILL.md`. By default the skill writes into the current working directory. A target directory can be passed as an argument to override the default.
 
 Run this once per project repository. Re-run it only to refresh `WRITING.md` from a newer skill release.

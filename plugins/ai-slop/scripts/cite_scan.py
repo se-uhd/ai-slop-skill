@@ -32,7 +32,7 @@ citation is marked, not missing), but grounding_quality classifies them 'todo'
 rather than 'quote', so a grounding run can still pick the site up and fill the
 quote.
 
-A comment "belongs" to a citation when it is on the citation's own line or in the
+A comment "belongs" to a citation when it is on the same line as the citation or in the
 contiguous run of blank and `%`-comment lines directly below it. The first code
 line ends that block. iter_comment_block is the single walker for this block. The
 read side (has_grounding / grounding_quality, used by find_citation_issues.py
@@ -53,7 +53,7 @@ Capitalized sentence-start variants (\Cite, \Textcite, \Citeauthor, ...) are
 matched too. The command is lowercased before any set lookup.
 
 Limitations inherited by every caller (find_citation_issues.py,
-extract_cites.py, and insert_grounding.py's key re-check):
+extract_cites.py, and the key re-check in insert_grounding.py):
   - Plural multi-cite forms (\textcites, \autocites, ...) use several {key}
     groups. Only the first group is read, so their keys are undercounted.
   - Cite calls inside \verb, listings, or other non-`%`-comment constructs are
@@ -236,7 +236,7 @@ def iter_cite_calls(lines):
 
 def resolve_ref(ref, including_dir, base, suffix):
     """Resolve an \\input / \\bibliography reference to an existing file, trying
-    the main-file directory then the including file's directory, with and
+    the main-file directory then the directory of the including file, with and
     without the given suffix (LaTeX adds it when absent)."""
     names = [ref] if ref.lower().endswith(suffix) else [ref + suffix, ref]
     for d in (base, including_dir):

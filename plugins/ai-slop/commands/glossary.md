@@ -4,7 +4,7 @@ description: Find the main document when no filename is supplied, extract GLOSSA
 
 Use the `ai-slop:glossary` skill.
 
-The skill's workflow and inputs are in `skills/glossary/SKILL.md`. It reads a
+The workflow and inputs are in `skills/glossary/SKILL.md`. It reads a
 LaTeX, PDF, Markdown, or plain-text document and creates or maintains
 `GLOSSARY.md`, preserving established definitions and distinguishing proposed
 ones. It validates the document against the glossary in the same invocation and

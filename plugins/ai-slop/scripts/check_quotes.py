@@ -126,7 +126,7 @@ def fetch_url(url):
 
 
 def load_source(source, sources_dir=None):
-    """Dispatch on the source's form: URL, local path, or path under
+    """Dispatch on the form of the source: URL, local path, or path under
     sources_dir."""
     if re.match(r'https?://', source, re.IGNORECASE):
         return fetch_url(source)

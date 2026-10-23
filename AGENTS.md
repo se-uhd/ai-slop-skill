@@ -1,8 +1,8 @@
 # AGENTS.md
 
-Maintainer guidance for the `ai-slop` skill bundle. (This file is the repo's own
-development guide, not the `WRITING.md` that `/ai-slop:writing` generates for
-project repositories.)
+Maintainer guidance for the `ai-slop` skill bundle. (This file is the
+development guide for the repo itself, not the `WRITING.md` that
+`/ai-slop:writing` generates for project repositories.)
 
 ## Release protocol (read before bumping the version)
 
@@ -13,7 +13,7 @@ have been broken before:
 
 1. **Release once the change is settled, not once per iteration.** A rev is a
    published release, so make one only when the work is finished and has been
-   checked against the bundle's main use (academic writing) and against the
+   checked against the main use of the bundle (academic writing) and against the
    existing rule layers, rather than at the first version that passes the smoke
    suite. A correction to a release made in the same session is a squash into
    that rev, not a new rev. Soft-reset to the previous release, fold the work
@@ -72,7 +72,7 @@ have been broken before:
 - **Changing the rules is an edit in three places.** A new or reworded rule in
   `shared/rules-general.md`, `shared/rules-scientific.md`,
   `shared/rules-latex.md`, or `shared/rules-ste.md` also needs its numbered
-  item in that layer's self-check section, and an entry in
+  item in the self-check section of that layer, and an entry in
   `shared/rules-rationale.md` whenever a reader could push back on it. Every
   rule carries a stable key (`G.`/`S.`/`L.`/`T.` plus a slug) that reports and
   cross-references cite. `test_rule_keys_unique_and_resolvable` in the smoke
@@ -99,17 +99,20 @@ have been broken before:
   2026-09_rev16. `--tropes=<path>` supplies the catalog for an offline or
   pinned run.
 - **The bundle follows its own rules.** When a rule is added or tightened, sweep
-  the repository's own prose for the pattern in the same rev: the Markdown
-  files, the skill and command files, and the Python docstrings and comments.
-  The opt-in STE layer is an exception. The bundle's prose does not follow it,
-  so an STE rule change needs no sweep. Between sweeps,
+  the prose of the repository itself for the pattern in the same rev: the
+  Markdown files, the skill and command files, and the Python docstrings and
+  comments. The opt-in STE layer is an exception. The prose of the bundle does
+  not follow it, so an STE rule change needs no sweep. Between sweeps,
   `test_first_party_prose_avoids_the_plain_words_seeds` runs `scan_repo.py` over
   the repository and fails when "lives in", "shape", or "cut" before a release,
-  tag, branch, or reference appears outside a quoted example.
+  tag, branch, or reference appears outside a quoted example, and
+  `test_first_party_prose_avoids_possessives_on_text_units` fails when 's follows
+  a text or repository unit such as "report" or "sentence" outside a quoted
+  example or code span.
   `/ai-slop:review-repo` finds clause-joining semicolons on the next sweep,
   since a count cannot tell them from list separators. Released `CHANGELOG.md`
   entries are edited only to correct or complete the record, never to restate
   it. Upstream-owned files are left to their own repo.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
   `grounding-quotes.json`) are never committed. The skills add them to the
-  target repo's `.gitignore`.
+  `.gitignore` of the target repo.

@@ -19,7 +19,7 @@ the authoritative lists):
 
   - em-dash:     U+2014 (—). An editor never autocorrects `-`/`--` into `—`, so a
                  literal one in code-edited Markdown, plain text, a comment, or
-                 `.tex` is a tell. Replace with the format's ASCII form (`:`, a
+                 `.tex` is a tell. Replace with the ASCII form for the format (`:`, a
                  comma, a period, or `---` in LaTeX).
   - en-dash:     U+2013 (–). A tell as a `term – gloss` separator, but legitimate
                  in a numeric or page range (`pp. 12–18`). The caller judges.
@@ -39,7 +39,7 @@ the authoritative lists):
                  four or more dashes (a comment banner or rule), a fenced
                  block, the contents of an inline code span, and, in a `.tex`
                  file, anything after an unescaped `%`, so the ` -- ` separator
-                 in the bundle's own `% GROUNDING:` comments never counts.
+                 in the `% GROUNDING:` comments that the bundle writes never counts.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like find_citation_issues.py.
 It flags every occurrence of the listed glyphs and of the ASCII dash sequences
