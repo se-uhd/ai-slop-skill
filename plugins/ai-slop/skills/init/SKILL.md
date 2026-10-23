@@ -3,7 +3,7 @@ name: init
 description: Set up the general writing rules and AI trope catalog for Claude Code or Codex across projects, or export them as one Markdown file for a system prompt. Use when the user wants the assistant's replies, edits, comments, and commit messages to follow these rules, or runs `/ai-slop:init`. Claude Code uses ~/.claude/rules/ai-slop.md. Codex uses ai-slop.md in its home directory with a reference in its global instructions. For an editable WRITING.md in one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev4"
+  version: "2026-10_rev5"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -37,13 +37,13 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 **Output path.** A positional path sets the file to write and skips the automatic Codex registration step. With no path, Claude Code uses `~/.claude/rules/ai-slop.md`. Codex uses `<codex-home>/ai-slop.md`, where `<codex-home>` is the configured `CODEX_HOME` or `~/.codex` when unset. Expand these paths before passing them to the helper. Never export the full rules into an existing `AGENTS.md` or `AGENTS.override.md` as part of automatic setup.
 
-**Flags.** `--ste` adds the Simplified Technical English layer (`../../shared/rules-ste.md`), which applies to any prose. `--tropes=<path>` (repeatable) reads the catalog from local files instead of tropes.fyi, concatenated in the order given, as in `/ai-slop:review`. The scientific and LaTeX layers are not available here, since they apply to research articles and LaTeX source. `/ai-slop:writing` writes them into a paper project's `WRITING.md`.
+**Flags.** `--ste` adds the Simplified Technical English layer (`../../shared/rules-ste.md`), which applies to any prose. `--tropes=<path>` (repeatable) reads the catalog from local files instead of tropes.fyi, concatenated in the order given, as in `/ai-slop:review`. The scientific and LaTeX layers are not available here, since they apply to research articles and LaTeX source. `/ai-slop:writing` writes them into the `WRITING.md` of a paper project.
 
 ## Workflow
 
 1. **Resolve the output path.** Take the positional path, or select the default for the target client as described in Inputs. Record whether the path was explicit.
 
-2. **Write the file.** Run `python3 "<skill-dir>/../../scripts/export_rules.py" <output> [--ste] [--tropes=<path> ...]`. The script builds the file from `../../shared/rules-general.md` (and `rules-ste.md` with `--ste`) and the catalog, each under its own heading. It leaves out each layer's self-check, which restates the rules, and each catalog entry's status line, label, and `---` line. The script writes the file in one step, so do not compose or edit the file by hand. The next step depends on its exit code:
+2. **Write the file.** Run `python3 "<skill-dir>/../../scripts/export_rules.py" <output> [--ste] [--tropes=<path> ...]`. The script builds the file from `../../shared/rules-general.md` (and `rules-ste.md` with `--ste`) and the catalog, each under its own heading. It leaves out the self-check of each layer, which restates the rules, and the status line, label, and `---` line of each catalog entry. The script writes the file in one step, so do not compose or edit the file by hand. The next step depends on its exit code:
    - `0`: the file is written. The stderr line says whether it was created or replaced, and gives its size in bytes and approximate tokens.
    - `1`: there is no catalog. tropes.fyi is the only source and there is no bundled fallback, so stop and tell the user that fetching the catalog failed and that `--tropes=<path>` writes the file from a local copy.
    - `2`: a usage error, or a file that could not be read. Pass the message on and stop.
@@ -59,7 +59,7 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 4. **Print a summary** in two or three lines:
    - The file: created or replaced at `<output>`, with the layers and its size in tokens, rounded to the nearest thousand. The whole file stays in the context of every session that loads it.
-   - How it loads. For the Codex default, name the global instruction file updated or already referencing the export. For Claude Code, its user rules directory loads in every project and a repository's `.claude/rules/` loads in that project. An explicit path outside those Claude directories is an export only. Explain how to load it in the target client: an explicit read instruction in Codex's `AGENTS.md`, an `@<path>` import in Claude's `CLAUDE.md`, or a system prompt attachment.
+   - How it loads. For the Codex default, name the global instruction file updated or already referencing the export. For Claude Code, its user rules directory loads in every project and `.claude/rules/` in a repository loads in that project. An explicit path outside those Claude directories is an export only. Explain how to load it in the target client: an explicit read instruction in Codex's `AGENTS.md`, an `@<path>` import in Claude's `CLAUDE.md`, or a system prompt attachment.
    - Start a new session to use the setup automatically. The exported rules occupy context when read.
 
 5. **Stop.** Do not review the project or edit files beyond the export and the Codex registration described above. Do not commit.
@@ -72,7 +72,7 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 ## Constraints
 
-- **Do not edit the file by hand.** The next run replaces it. The file's header tells the user to keep their own additions in a separate file, such as another Markdown file under `~/.claude/rules/`.
+- **Do not edit the file by hand.** The next run replaces it. Its header tells the user to keep their own additions in a separate file, such as another Markdown file under `~/.claude/rules/`.
 - **Ask before replacing a file that this mode did not write.** It may hold the user's own rules.
 - **Preserve existing instructions.** Claude setup and explicit exports write only the output file. Automatic Codex setup also appends its reference to the effective global instruction file without replacing existing content. Do not change Codex configuration or instruction-size limits.
 - **No commits.** A file written into a repository stays in the working tree for the user to inspect and commit.

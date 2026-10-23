@@ -29,7 +29,7 @@ On a set of 126 peer-review files, the scan listed about eight candidates per
 file, and about half of them were form labels that the review skips.
 
 This scan is a CANDIDATE finder, not a verdict, like scan_reference.py. The
-caller applies the rule's test before reporting: a brief reminder that the
+caller applies the test in the rule before reporting: a brief reminder that the
 argument needs is acceptable, and a second copy is a finding. The paragraph and
 sentence splitting come from scan_sentences.py, so the same text is skipped:
 fenced code blocks, YAML front matter, Markdown headings, tables, block quotes,

@@ -1,9 +1,9 @@
 ---
 name: glossary
-description: Extract or maintain a document's GLOSSARY.md and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text, and finds the main document when no filename is supplied. Writes a glossary and a terminology report, or validates an existing glossary with --check. Does not rewrite the document.
+description: Extract or maintain GLOSSARY.md for a document and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text, and finds the main document when no filename is supplied. Writes a glossary and a terminology report, or validates an existing glossary with --check. Does not rewrite the document.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev4"
+  version: "2026-10_rev5"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -65,11 +65,11 @@ including Markdown or plain text, over a generated PDF of the same work.
 Do not mistake `GLOSSARY.md`, `WRITING.md`, instruction files, review reports,
 bibliographies, vendored examples, archived drafts, or downloaded literature for
 the main document. A README can be the main document when it contains the
-project's primary exposition rather than just instructions for building a paper.
+primary exposition of the project rather than just instructions for building a paper.
 A sole PDF is a candidate, not proof that it is the main work. Ask the user only
 if no document can be found after this search or several candidates remain
 plausible without a clear basis for selecting one. Record the selected document
-and the files actually read in the glossary's scope and the report.
+and the files actually read in the scope of the glossary and the report.
 
 ## Establish the concepts
 
@@ -114,7 +114,7 @@ as **Proposed**, and state any uncertainty that affects its scope. A definition
 must preserve what counts as an instance, what it excludes, and how it differs
 from neighboring concepts, without adding facts that the source does not give.
 
-Keep an existing glossary's format, including prose definitions and tables of
+Keep the format of an existing glossary, including prose definitions and tables of
 retired vocabulary. Add inferred entries under a clearly marked proposed section,
 and leave established entries intact. Keep uncertain synonym groups and missing
 information under author judgment instead of adding each competing name as a
@@ -189,7 +189,7 @@ belongs under author judgment and receives no automatic replacement.
 
 Read the Report template in `../review/SKILL.md` for its schema, without running
 the review workflow. Write `ai-slop-report.md` in that format. Include the
-`**Paper:**` path, the version from this skill's metadata, the review date, and a
+`**Paper:**` path, the version from the metadata of this skill, the review date, and a
 `**Glossary:**` path and status. Use `Findings by section` for a single document
 or `Findings by file` for source spread across files. Each `#### Finding N`
 contains `Rule`, `Location`, `Quote`, `Suggested revision`, and `Reason`, with a

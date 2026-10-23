@@ -39,13 +39,13 @@ Behavior:
     (`% GROUNDING: TODO verify <key>`) or by an earlier run of this script,
     does NOT count as grounded. The run replaces the stub line in place with
     the new comment. Replacing a stub with identical content is a no-op. A
-    stub on the citation's own line is never edited, because an edit in the
+    stub on the same line as the citation is never edited, because an edit in the
     middle of a line could damage the LaTeX before the `%`. The new comment is
     inserted below, and the author removes the inline stub.
   - Each comment matches the indentation of the line the call starts on and is
     inserted on its own line directly after the line the call ends on
     (`end_line` in the extract, the same line as `line` unless the key list
-    spans lines). A `%` comment's trailing newline is consumed by LaTeX, so the
+    spans lines). The trailing newline of a `%` comment is consumed by LaTeX, so the
     surrounding markup still renders unchanged.
   - The lines of each citation are re-checked against the file before editing.
     If the source changed since extraction (the lines no longer hold a call
@@ -130,8 +130,8 @@ def already_grounded(lines, idx, key):
 
 def find_todo_stub(lines, idx, key):
     """Return the index of the first quote-less GROUNDING comment line for
-    `key` attached to the citation on line `idx`, or None. The citation's own
-    line is excluded, since an inline stub is never edited and the replacement
+    `key` attached to the citation on line `idx`, or None. The citation
+    line itself is excluded, since an inline stub is never edited and the replacement
     logic only rewrites whole comment lines."""
     _, same_comment = split_code_and_comment(lines[idx])
     for j, text in iter_comment_block(lines, idx, same_comment):
@@ -225,7 +225,7 @@ def apply_changes(lines, inserts, replacements):
 
 
 def main(argv):
-    p = argparse.ArgumentParser(description="Insert % GROUNDING comments from a grounding workflow's quotes.")
+    p = argparse.ArgumentParser(description="Insert % GROUNDING comments from the quotes of a grounding workflow.")
     p.add_argument('extract', help="JSON from extract_cites.py")
     p.add_argument('quotes', help="JSON mapping each key to {quote: ...} or {todo: <reason>}")
     p.add_argument('--dry-run', action='store_true',
@@ -255,7 +255,7 @@ def main(argv):
 
     for fpath, fsites in by_file.items():
         try:
-            # newline='' disables universal-newline translation so the file's own
+            # newline='' disables universal-newline translation so the original
             # line terminator survives the round-trip (a CRLF .tex is not rewritten
             # to LF, keeping the diff to the inserted comments only).
             with open(fpath, encoding='utf-8', errors='replace', newline='') as fh:

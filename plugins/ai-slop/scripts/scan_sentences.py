@@ -19,8 +19,8 @@ Kinds:
 
   - long-sentence:   a sentence of more than 25 words (`T.short-sentences`).
                      The context gives the count, so the caller can apply
-                     the rule's tolerance band. A sentence of 26 to 35 words
-                     gets the rule's clause test, and a longer sentence is
+                     the tolerance band in the rule. A sentence of 26 to 35 words
+                     gets the clause test in the rule, and a longer sentence is
                      split.
   - uniform-run:     three or more consecutive sentences in one paragraph with
                      word counts within 5 of each other (`T.vary-length`). The
@@ -41,7 +41,7 @@ counts as nothing, and any other command keeps only the text of its brace
 arguments.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like
-scan_reference.py. The caller applies each rule's test before reporting. A
+scan_reference.py. The caller applies the test in each rule before reporting. A
 passive with an unknown actor stays, and a light verb before a noun that names
 a thing rather than an action is not a nominalization.
 

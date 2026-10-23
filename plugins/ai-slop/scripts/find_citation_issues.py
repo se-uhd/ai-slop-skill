@@ -77,7 +77,7 @@ Known limitations:
   - Multi-cite biblatex forms \\textcites / \\autocites / \\fullcites use
     multiple {key} groups. This script reads only the first group and
     undercounts keys.
-  - "Nearby grounding" is the citation's attached comment block: the same
+  - "Nearby grounding" is the comment block attached to the citation: the same
     line plus the contiguous run of blank and `%`-comment lines below it. The
     first code line ends the block, so a grounding comment placed after
     intervening code or prose is not credited. Blank lines and unrelated
@@ -104,7 +104,7 @@ def truncate(text, limit=120):
 
 
 def scan_text(path, text, stats):
-    """Scan one file's text for cluster and missing-grounding findings,
+    """Scan the text of one file for cluster and missing-grounding findings,
     print one TSV row per finding to stdout, and update `stats` in place."""
     stats['files'] += 1
     lines = text.splitlines()

@@ -8,8 +8,8 @@ documentation only. The `ai-slop:review`, `ai-slop:review-diff`,
 catalog, which `fetch_tropes.py` fetches from tropes.fyi.
 `ai-slop:revise` and `ai-slop:ground` reference only
 the layers (revise applies a finished report, so it needs no trope source, and
-ground reads the LaTeX layer's grounding convention). `ai-slop:glossary` reads
-the general terminology rules and the project's glossary without the trope
+ground reads the grounding convention of the LaTeX layer). `ai-slop:glossary` reads
+the general terminology rules and the project glossary without the trope
 catalog. None of them read this file. Keeping the
 justification here lets the layers carry only the operative directive, example,
 and exception for each rule, while the explanatory background that does not
@@ -37,8 +37,8 @@ For example, "Our goal is to move loop engineering from a practitioner term to
 an empirically grounded object of study, through three research questions"
 states a research purpose. Replacing it with "We ask how loop engineering is
 defined, where it is adopted, and how loop autonomy affects development"
-removes that purpose and repeats the questions below it. The original's
-abstraction contributes meaning; it is not empty filler under `G.be-concrete`.
+removes that purpose and repeats the questions below it. The abstraction
+in the original contributes meaning; it is not empty filler under `G.be-concrete`.
 Likewise, "an ecosystem formed" can summarize publications and tools that
 the next sentences identify, and "despite believing the opposite" can clearly
 refer to a slowdown stated in the same sentence. Neither requires expansion
@@ -169,6 +169,22 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   in every register, academic prose included, so the rule is a test per instance and a
   density signal rather than a ban. A human editor plans the sentence whole and
   makes the property the subject or uses a verb.
+- **Possessive 's on things** (`G.possessive-on-things`). The 's genitive is two
+  words shorter than the of-phrase and keeps the possessor, usually the noun
+  already under discussion, in front of the new information, so a model tuned
+  for concision and topic continuity selects it for every relation that a
+  genitive can carry. Corpus studies of genitive variation (Rosenbach 2002;
+  Hinrichs and Szmrecsanyi 2007) find that short, topical possessors favor 's
+  and that press English extended it to inanimate possessors over the
+  twentieth century, and press and web text dominate the training data. The
+  habit shows as a displaced of-form rather than as a high density. Before the
+  sweep for 2026-10_rev5, the prose of this bundle used "report's" 14 times
+  and "of the report" once. Usage guides accept 's on things, so the rule tests
+  each instance for the relation that it compresses (a part, an attribute, or
+  content) and keeps the form for a person, a named tool, a fixed phrase, and a
+  topical possessor. A human editor writes the of-phrase or a preposition when
+  the relation is not ownership, which also removes the mild personification
+  that gives a sentence a purpose or a section a claim of its own.
 
 - **Empty head nouns** (`G.be-concrete`). The generic noun is the referential form of the pressure that
   **Consequence connectives** (`G.consequence-connectives`) describes. At the position where the noun is emitted,
@@ -279,7 +295,7 @@ cannot tell a well-placed dash from a misplaced one.
   "then" would leave the purpose detached from the action.
 
   Across paragraphs, the same principle connects the question to the method and
-  the evidence to the conclusion. A research article's storyline comes from that
+  the evidence to the conclusion. The storyline of a research article comes from that
   development, with uncertainty and limitations intact. The genre determines the
   order. Procedures can still use chronological steps, and independent items can
   still form a list. The check concerns a missing connection that readers need,
@@ -334,7 +350,7 @@ cannot tell a well-placed dash from a misplaced one.
   followed directly by a subheading, so the reader would reach the first
   subsection without learning what the section claims or how its parts relate.
   The rule therefore names the section-opening paragraph as legitimate when it
-  states the section's claim ("The two analyses for RQ2 disagree. This section
+  states the claim of the section ("The two analyses for RQ2 disagree. This section
   explains why.") or carries what the headings do not. Generic-truth sentences,
   aphorisms, and evaluative sentences are handled like restricted words,
   hedges, and one-sentence paragraphs. In each case, density is a signal, and a
@@ -414,7 +430,7 @@ layer.
 - **Active voice** (`T.active-voice`). A passive sentence can leave out its
   actor, and in technical text the actor is often what the reader needs to
   know. The layer keeps one exception, the unknown actor, because the writer of
-  an active sentence would then have to invent an actor. The general layer's other exceptions,
+  an active sentence would then have to invent an actor. The other exceptions in the general layer,
   an irrelevant actor and a passive that reads better, are the judgments under
   which a writer leaves out an actor that the reader needs.
 - **Nominalizations** (`T.verbs-not-nouns`). "Make a decision" spends three

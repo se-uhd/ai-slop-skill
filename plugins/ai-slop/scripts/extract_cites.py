@@ -122,8 +122,8 @@ class RootError(Exception):
 
 
 def resolve_root(target):
-    """Resolve PATH to a single root .tex, mirroring find_latex_root.py's
-    preference order. Raises RootError on no root or ambiguous multiple roots."""
+    """Resolve PATH to a single root .tex, mirroring the preference order of
+    find_latex_root.py. Raises RootError on no root or ambiguous multiple roots."""
     p = Path(target)
     if p.is_file():
         return p
@@ -207,7 +207,7 @@ def enclosing_sentence(text, pos, bounds):
 
 
 def scan_text(path, text):
-    """Yield a site dict per citation in one file's text. Citations are matched
+    """Yield a site dict per citation in the text of one file. Citations are matched
     on the comment-stripped, line-joined body (so multi-line calls are caught) by
     the scanner shared with find_citation_issues.py, and each site carries the
     line the call starts on and the line it ends on."""

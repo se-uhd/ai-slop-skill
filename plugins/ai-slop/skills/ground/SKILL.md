@@ -1,9 +1,9 @@
 ---
 name: ground
-description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify` stub with a reason when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the review's grounding to-do. LaTeX source only.
+description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify` stub with a reason when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the grounding to-do from a review. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev4"
+  version: "2026-10_rev5"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -13,7 +13,7 @@ This skill fills the grounding comments that review mode flags as missing. `/ai-
 
 **Audience and tone.** The default user is an author who has citations to ground before submission. The result is an audit trail in the source: a quote that co-authors and reviewers can check against each citation. Frame the summary as work completed and work still needing the author's attention, not as a verdict.
 
-**The anti-fabrication rule.** A quote is written into the paper *only* when the source text was actually retrieved (fetched from the web or read from a local file). If it was not retrieved, the comment is `TODO verify -- <reason>`, never an approximation, paraphrase, or remembered quote. This rule matches the skill's principle of verifying rather than asserting. The grounding comment certifies that the cited source says what the paper claims, so a fabricated quote is worse than an honest TODO. Hold every grounding agent to this rule, and do not rely on the agents alone. Step 6 re-reads each named source and checks that the quote occurs in it before anything is written.
+**The anti-fabrication rule.** A quote is written into the paper *only* when the source text was actually retrieved (fetched from the web or read from a local file). If it was not retrieved, the comment is `TODO verify -- <reason>`, never an approximation, paraphrase, or remembered quote. This rule applies the principle of the skill, to verify rather than assert. The grounding comment certifies that the cited source says what the paper claims, so a fabricated quote is worse than an honest TODO. Hold every grounding agent to this rule, and do not rely on the agents alone. Step 6 re-reads each named source and checks that the quote occurs in it before anything is written.
 
 ## Client and paths
 
@@ -28,7 +28,7 @@ Invoke this skill when the user:
 1. Asks to ground citations, fill `% GROUNDING:` comments, or "close the grounding to-do" from an `/ai-slop:review`.
 2. Runs `/ai-slop:ground`.
 
-Do not invoke for a fresh review (use `/ai-slop:review`), to apply a review report's prose suggestions (use `/ai-slop:revise`), or on a non-LaTeX document. Grounding writes an inline LaTeX comment, so it is LaTeX-only. Markdown and PDF have no equivalent inline-comment mechanism for the audit trail.
+Do not invoke for a fresh review (use `/ai-slop:review`), to apply the prose suggestions of a review report (use `/ai-slop:revise`), or on a non-LaTeX document. Grounding writes an inline LaTeX comment, so it is LaTeX-only. Markdown and PDF have no equivalent inline-comment mechanism for the audit trail.
 
 ## Inputs
 
@@ -48,11 +48,11 @@ The skill operates on the LaTeX paper in the current working directory. No argum
    - `by_key`: per unique key, the de-duplicated `claims` and the `sites` that cite it.
    - `meta`: per key, the `.bib` metadata (`type`, `title`, `author`, `year`, `doi`, `url`, `eprint`, `howpublished`) needed to identify and locate the source.
 
-   The script prints to stderr a one-line summary (sites, unique keys, groundable sites still missing a comment, metadata coverage). Add `grounding-cites.json` and `grounding-quotes.json` to the repository root's `.gitignore` (resolve the root with `git rev-parse --show-toplevel`, and create the file if absent). Both files are generated artifacts and must not be committed.
+   The script prints to stderr a one-line summary (sites, unique keys, groundable sites still missing a comment, metadata coverage). Add `grounding-cites.json` and `grounding-quotes.json` to the top-level `.gitignore` (resolve the root with `git rev-parse --show-toplevel`, and create the file if absent). Both files are generated artifacts and must not be committed.
 
 3. **Pick the keys to ground.** From `by_key`, take the keys with at least one site where `groundable` is true and `grounded` is false. `grounded` is true only for a quote-backed comment, so sites carrying a quote-less `TODO verify` stub are selected and filled. Keys already grounded everywhere need no work. Keys that appear only in style-only helpers (`\citeauthor` / `\citeyear`, `groundable: false`) are context, not insertion targets. If a key has no entry in `meta`, note it. The `.bib` lacks that key, so the agent has only the claim text to work from, and the result is likely a `not-found` TODO.
 
-4. **Ground each unique source, one agent per key, chunked.** Author an inline grounding Workflow (see the reusable pattern below). Each agent receives one key's bundle (its `meta` and its list of `claims`) and is told to:
+4. **Ground each unique source, one agent per key, chunked.** Author an inline grounding Workflow (see the reusable pattern below). Each agent receives the bundle for one key (its `meta` and its list of `claims`) and is told to:
    - Identify the source from the metadata (DOI first, then title + author + year, using the `url` / `eprint` if present, or a user-supplied local file).
    - Retrieve the source text (fetch the page or PDF, or read the local file for a paywalled or book source).
    - Find a short verbatim quote from the source that supports the claim(s). Return it only if the source was actually retrieved and the quote is copied from it, together with the URL or local path that it read as `source`, so step 6 can check the quote against it.
@@ -64,7 +64,7 @@ The skill operates on the LaTeX paper in the current working directory. No argum
 
 6. **Check the quotes against their sources.** Run `python3 "<skill-dir>/../../scripts/check_quotes.py" grounding-quotes.json --apply [--sources-dir <dir>]`. For each quote it re-reads the named source (a local text file, or an HTML or plain-text URL) and confirms that the quote occurs in it after whitespace and punctuation normalization. A quote that does not occur is downgraded in place to `{"todo": "unverified", "source": "<the same source>"}`, and each verdict is printed as `<key>\t<verdict>\t<detail>`. A PDF, a binary, or an unreachable source comes back `unverifiable` or `unreachable`. Open that source yourself with the client's PDF reader or web tools, confirm the quote, and downgrade it by hand the same way when you cannot. Nothing goes into the paper that neither the script nor you have seen in the source.
 
-7. **Insert the comments.** Run `python3 "<skill-dir>/../../scripts/insert_grounding.py" grounding-cites.json grounding-quotes.json`. It writes `% GROUNDING: <key> -- "<quote>"` (or the `TODO verify -- <reason>` form) after each groundable, ungrounded citation line, matching the line's indentation. An existing quote-less `TODO verify` stub for the key is replaced in place. A site with a quote-backed comment for the key is left alone (idempotent), and each line is re-checked against the file before editing, so any site that moved is skipped. Use `--dry-run` first if the user wants to preview the edits.
+7. **Insert the comments.** Run `python3 "<skill-dir>/../../scripts/insert_grounding.py" grounding-cites.json grounding-quotes.json`. It writes `% GROUNDING: <key> -- "<quote>"` (or the `TODO verify -- <reason>` form) after each groundable, ungrounded citation line, matching the indentation of that line. An existing quote-less `TODO verify` stub for the key is replaced in place. A site with a quote-backed comment for the key is left alone (idempotent), and each line is re-checked against the file before editing, so any site that moved is skipped. Use `--dry-run` first if the user wants to preview the edits.
 
 8. **Summarize.** Tell the user, in plain terms:
    - How many citations were grounded with a retrieved quote, and how many of those quotes step 6 confirmed mechanically.
@@ -135,6 +135,6 @@ Map each result to `grounding-quotes.json`: `status: 'quote'` becomes `{quote, s
 - **Never fabricate a quote.** A quote is written only when the source was retrieved and the text was copied from it, and step 6 checks each quote against its source before insertion. Otherwise the comment is `TODO verify -- <reason>`. This rule has no exceptions.
 - **Report `source-does-not-support` as a finding.** It marks a likely miscitation, not a missing quote. Report these prominently with the key and claim.
 - **LaTeX only.** Stop on a non-LaTeX target. Only LaTeX has the inline source comment that this audit trail relies on.
-- **Edit only the grounding comments.** Do not change prose, citations, figures, or BibTeX. The only edits to the paper are the inserted `% GROUNDING:` lines. The skill also adds its two generated JSON files to the repository's `.gitignore`.
+- **Edit only the grounding comments.** Do not change prose, citations, figures, or BibTeX. The only edits to the paper are the inserted `% GROUNDING:` lines. The skill also adds its two generated JSON files to the top-level `.gitignore`.
 - **Stay within rate limits.** Chunk the agent fan-out (~8 per slice). The run is resumable over still-ungrounded sites.
 - **Do not commit.** Leave the edits and the generated JSON (gitignored) in the working tree. The user owns the commit.

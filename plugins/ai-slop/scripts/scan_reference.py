@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """scan_reference.py <file> [<file> ...]
 
-Recall aid for the general layer's **Reference** rules. The per-section review
+Recall aid for the **Reference** rules in the general layer. The per-section review
 pass is an LLM reading prose, and it misses unanchored references the same way
 it undercounts Unicode glyphs. A sentence-initial "This shows that ..." reads
 fluently, so the reviewer does not stop on it. This scan lists every candidate
-so the reviewer applies the rule's test ("the [noun] just mentioned") to each
+so the reviewer applies the test in the rule ("the [noun] just mentioned") to each
 one. It
 prints one tab-separated line per candidate to stdout:
 
@@ -39,7 +39,7 @@ Kinds:
                         real stand-ins.
 
 This scan is a CANDIDATE finder, not a verdict, exactly like scan_glyphs.py. The
-caller applies the rule's test and exceptions before reporting. Skipped up
+caller applies the test and exceptions in the rule before reporting. Skipped up
 front, because they are never findings: LaTeX comment lines and trailing `%`
 comments in `.tex` files, fenced code blocks (nesting honored), LaTeX verbatim / lstlisting /
 minted / comment environments, and the common dummy-it frames ("It is possible

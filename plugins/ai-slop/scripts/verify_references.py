@@ -16,8 +16,8 @@ for the work (CrossRef's online-first and print dates, DBLP's year), since a
 journal paper legitimately carries either. The venue matches on shared words of
 four or more letters. A common SE venue abbreviation (TOSEM, EMSE, ICSE, ...)
 is expanded first (VENUE_ABBREVIATIONS). A database abbreviation such as
-"Empir. Softw. Eng." matches by word prefix, and an initialism of the long
-form's words (TOSEM for "ACM Transactions on Software Engineering and
+"Empir. Softw. Eng." matches by word prefix, and an initialism of the words
+of the long form (TOSEM for "ACM Transactions on Software Engineering and
 Methodology") also counts.
 
 Prints one tab-separated line per entry that is NOT cleanly verified:

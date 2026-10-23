@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev4"
+  version: "2026-10_rev5"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -11,7 +11,7 @@ metadata:
 
 This skill applies a previous `/ai-slop:review` report to the document that the review read, whether LaTeX, Markdown, or plain text. For each finding, it locates the quoted text in the document and replaces it with the suggested revision. A repo-mode report is applied one file at a time.
 
-**Audience and tone.** The user has already reviewed the report and wants it applied. Trust the report's `Suggested revision` fields. Do not re-derive a review or substitute your own style preference. Check that applying a suggestion in its current context preserves the argument as well as the facts. Removing a purpose statement, a meaningful contrast, an essential qualification, or an inference counts as a meaning change even when all reported numbers remain. Skip and explain such a change unless the user explicitly approved that specific change in meaning.
+**Audience and tone.** The user has already reviewed the report and wants it applied. Trust the `Suggested revision` fields in the report. Do not re-derive a review or substitute your own style preference. Check that applying a suggestion in its current context preserves the argument as well as the facts. Removing a purpose statement, a meaningful contrast, an essential qualification, or an inference counts as a meaning change even when all reported numbers remain. Skip and explain such a change unless the user explicitly approved that specific change in meaning.
 
 ## Client and paths
 
@@ -33,9 +33,9 @@ Do not invoke when the user wants a fresh review (use `/ai-slop:review` instead)
 Both inputs default to the current working directory. No arguments are required.
 
 - **Report.** Defaults to `ai-slop-report.md` in the working directory. If that file does not exist, ask the user to point to the report (or to run `/ai-slop:review` first). The report must match the schema produced by `/ai-slop:review` (i.e., Findings by section or, for a repo-mode report, Findings by file, then Cross-cutting metrics and Items requiring author judgment).
-- **Document.** The report's `**Paper:**` header names the file that the review read. Use that path when it exists. Otherwise auto-detect a LaTeX root by running `python3 "<skill-dir>/../../scripts/find_latex_root.py"`. Exit 0 means that the printed path is the paper. Exit 2 means that multiple candidates were printed, so ask the user. Exit 1 with no path in the report means there is nothing to edit, so stop. A Markdown or plain-text document is edited the same way as LaTeX, minus the LaTeX-only steps (following `\input`, the syntax check in step 3, and the grounding stubs in step 4). PDF input is not supported, since revise mode edits source text.
+- **Document.** The `**Paper:**` header of the report names the file that the review read. Use that path when it exists. Otherwise auto-detect a LaTeX root by running `python3 "<skill-dir>/../../scripts/find_latex_root.py"`. Exit 0 means that the printed path is the paper. Exit 2 means that multiple candidates were printed, so ask the user. Exit 1 with no path in the report means there is nothing to edit, so stop. A Markdown or plain-text document is edited the same way as LaTeX, minus the LaTeX-only steps (following `\input`, the syntax check in step 3, and the grounding stubs in step 4). PDF input is not supported, since revise mode edits source text.
 
-**Optional path overrides.** Paths can still be passed as arguments. The first argument is the report path, and the second is the document path. For a repo-mode report, the second argument selects which file's `### <relpath>` findings to apply.
+**Optional path overrides.** Paths can still be passed as arguments. The first argument is the report path, and the second is the document path. For a repo-mode report, the second argument selects one file, and only the findings under its `### <relpath>` heading are applied.
 
 ## Workflow
 
@@ -51,7 +51,7 @@ Both inputs default to the current working directory. No arguments are required.
    - If the quote appears in multiple locations and the `Location` hint does not uniquely identify one, prefer the location closest to the hint and log the ambiguity in the summary.
    - For a LaTeX document, if the suggestion would break LaTeX (e.g., mismatched braces, undefined macros, broken `\cite{}` keys), log it as skipped with the reason rather than apply it.
 
-4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the report's **Grounding to-do** section, insert a `% GROUNDING: TODO verify <key>` comment on its own line directly below the line on which that `\cite{}` call ends (one edit or patch hunk per citation, matching the indentation of the `\cite{}` line). A stub placed inside the line would comment out the rest of it, and `/ai-slop:ground` never edits a stub on the citation's own line. These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any citation if its location cannot be matched.
+4. **Insert grounding stubs (LaTeX only).** For every `\cite{}` listed in the **Grounding to-do** section of the report, insert a `% GROUNDING: TODO verify <key>` comment on its own line directly below the line on which that `\cite{}` call ends (one edit or patch hunk per citation, matching the indentation of the `\cite{}` line). A stub placed inside the line would comment out the rest of it, and `/ai-slop:ground` never edits a stub on the same line as the citation. These stubs are TODO markers for a supporting quote. Never invent the quote. The author can fill them by hand, or run `/ai-slop:ground`, which fetches each cited source and replaces the stub with a retrieved verbatim quote. Skip and log any citation if its location cannot be matched.
 
 5. **Cross-cutting metrics.** These metrics are aggregate counts, not individual edits. The specific instances behind them should already appear under "Findings by section" (or "Findings by file" in a repo-mode report). Do not invent new edits to balance a metric.
 
@@ -64,16 +64,16 @@ Both inputs default to the current working directory. No arguments are required.
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, `../../shared/rules-ste.md`: the rule layers, referenced only as a fallback when the user asks *why* a finding was flagged. Revise mode applies the report's suggested revisions as written and does not re-derive them from the rules.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, `../../shared/rules-ste.md`: the rule layers, referenced only as a fallback when the user asks *why* a finding was flagged. Revise mode applies the suggested revisions in the report as written and does not re-derive them from the rules.
 - `../../scripts/find_latex_root.py`: used by the Inputs section to locate the LaTeX root.
 
 Revise mode does not load the trope catalog at runtime. The report already contains every suggested revision, so no trope source is needed.
 
 ## Constraints
 
-- **Trust the report's suggested revisions.** Do not re-derive them from the rule layers or tropes.fyi. If a suggestion looks wrong, flag it in the "Skipped" list with the reason rather than silently substituting your own.
+- **Trust the suggested revisions in the report.** Do not re-derive them from the rule layers or tropes.fyi. If a suggestion looks wrong, flag it in the "Skipped" list with the reason rather than silently substituting your own.
 - **Edit only what the report asks for.** Do not "improve" prose that was not flagged. Do not add or remove citations, change figures, or restructure sections.
-- **Reformulate, do not delete.** Apply each suggested revision as written. If a finding's suggested revision would delete a substantive statement (a claim, example, or qualification, not mere filler) and nothing indicates that the author asked for a cut, treat it as a suggestion that looks wrong. Log it in the "Skipped" list with the reason rather than delete. Genuine filler flagged by the concision rules may be removed.
+- **Reformulate, do not delete.** Apply each suggested revision as written. If the suggested revision of a finding would delete a substantive statement (a claim, example, or qualification, not mere filler) and nothing indicates that the author asked for a cut, treat it as a suggestion that looks wrong. Log it in the "Skipped" list with the reason rather than delete. Genuine filler flagged by the concision rules may be removed.
 - **One edit or patch hunk per finding.** Bundling makes diffs harder to review.
 - **Preserve formatting.** Match the surrounding context (line breaks, indentation, comment placement) when replacing.
 - **Do not commit.** Leave the changes in the working tree. The user owns the commit.

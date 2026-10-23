@@ -137,8 +137,8 @@ def parse_entry(body):
 
 
 def clean_value(raw):
-    """Strip a BibTeX field value's outer brace/quote delimiters and inner
-    braces, resolve TeX accents, collapse whitespace, and drop a trailing
+    """Strip the outer brace/quote delimiters and inner braces of a BibTeX
+    field value, resolve TeX accents, collapse whitespace, and drop a trailing
     comma."""
     raw = raw.strip().rstrip(',').strip()
     if len(raw) >= 2 and ((raw[0] == '{' and raw[-1] == '}') or (raw[0] == '"' and raw[-1] == '"')):

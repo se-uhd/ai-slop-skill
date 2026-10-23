@@ -1,9 +1,9 @@
 ---
 name: writing
-description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the repository's AGENTS.md (creating AGENTS.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", or `/ai-slop:writing`. Writes WRITING.md, updates AGENTS.md, and preserves Claude Code loading through a CLAUDE.md import. Does not modify your content. For rules that the assistant applies to its own output in every project, use `/ai-slop:init`.
+description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the AGENTS.md of the repository (creating AGENTS.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", or `/ai-slop:writing`. Writes WRITING.md, updates AGENTS.md, and preserves Claude Code loading through a CLAUDE.md import. Does not modify your content. For rules that the assistant applies to its own output in every project, use `/ai-slop:init`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev4"
+  version: "2026-10_rev5"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -41,13 +41,13 @@ The skill operates on the current working directory. No arguments are required.
 
 2. **Determine which rule layers to include.** The layers under `../../shared/` are `rules-general.md` (always), `rules-scientific.md` (research article conventions), `rules-latex.md` (LaTeX-source mechanics), and `rules-ste.md` (the optional Simplified Technical English layer). Run `python3 "<skill-dir>/../../scripts/detect_scope.py" <target-directory>`. `latex` (the directory has a LaTeX root) includes the general, scientific, and LaTeX layers. `general` includes `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research article project). `--general` overrides the detection and includes `rules-general.md` alone, for a code repository that happens to contain a paper under a subdirectory. `--ste` adds `rules-ste.md` to whatever the detection or `--general` chose, for a project that writes in Simplified Technical English. From each selected layer file, take everything from its first `##` heading onward (skip the H1 title and the intro paragraph). These bodies, concatenated in the order general, scientific, latex, ste, form the rules section of WRITING.md.
 
-3. **Load the AI trope catalog.** Run `python3 "<skill-dir>/../../scripts/fetch_tropes.py"`. tropes.fyi is the only source and there is no bundled fallback, so the script exits 1 with an empty stdout when it cannot fetch the catalog. Stop there and tell the user, rather than writing a `WRITING.md` with no trope catalog in it. The script accepts only a body with the catalog's structure and prints the size, heading count, and content hash of what it accepted to stderr.
+3. **Load the AI trope catalog.** Run `python3 "<skill-dir>/../../scripts/fetch_tropes.py"`. tropes.fyi is the only source and there is no bundled fallback, so the script exits 1 with an empty stdout when it cannot fetch the catalog. Stop there and tell the user, rather than writing a `WRITING.md` with no trope catalog in it. The script accepts only a body structured like the catalog and prints the size, heading count, and content hash of what it accepted to stderr.
 
 4. **Normalize the trope catalog for inlining.** The fetched catalog is a standalone document with its own H1 and a leading preamble that points readers at system-prompt usage. Neither belongs inside WRITING.md. To inline it cleanly:
    - Drop everything before the first H2 (a line starting with `##`) in the trope content (the original H1 `# AI Writing Tropes to Avoid`, the "Add this file to your AI assistant's system prompt..." paragraph, and the leading `---` separator).
    - Demote every remaining heading by one level: `## Negative parallelism` becomes `### Negative parallelism`, `## "Quietly" and other magic adverbs` becomes `### "Quietly" and other magic adverbs`, and so on. Adjust headings only at the start of a line. Do not touch `#` characters that appear mid-sentence.
    - Insert a blank line between each `**Avoid patterns like:**` line and the bullet list that follows it. The catalog runs the two together, which the Markdown linter flags as a list without surrounding blank lines.
-   - Leave the status line under each heading (e.g., `` `consistent` · Sentence Structure ``) as it stands. It carries the catalog's own frequency rating and category.
+   - Leave the status line under each heading (e.g., `` `consistent` · Sentence Structure ``) as it stands. It carries the frequency rating and category from the catalog itself.
    - Keep the trailing closing paragraph ("Remember: any of these patterns used once might be fine...") at the end of the demoted content.
 
 5. **Build the WRITING.md content.** Compose the file as `<header>` + `<rules body>` + `<separator and trope intro>` + `<normalized trope body>`:
@@ -56,7 +56,7 @@ The skill operates on the current working directory. No arguments are required.
     # Writing rules for this project
 
     <!-- maintainer: bump the version string below on every release (see README "Maintainer notes") -->
-    These rules apply to all prose in this repository. They were generated by `/ai-slop:writing` from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) (skill version 2026-10_rev4) and combine the writing rules maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd) with a general AI trope catalog from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is).
+    These rules apply to all prose in this repository. They were generated by `/ai-slop:writing` from the [ai-slop-skill](https://github.com/se-uhd/ai-slop-skill) (skill version 2026-10_rev5) and combine the writing rules maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd) with a general AI trope catalog from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is).
 
     Edit this file freely to add project-specific conventions. The sections below are a starting point. Once you edit them, this file is yours.
 
@@ -71,7 +71,7 @@ The skill operates on the current working directory. No arguments are required.
 
     ## AI Writing Tropes to Avoid
 
-    The catalog below is sourced from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is) and inlined here so co-authors and offline tooling can read it without re-fetching. The skill's runtime fetches the live catalog on every run. This inlined copy is for reading by humans and other Agent Skills clients.
+    The catalog below is sourced from [tropes.fyi](https://tropes.fyi) by [ossama.is](https://ossama.is) and inlined here so co-authors and offline tooling can read it without re-fetching. The skill fetches the live catalog on every run. This inlined copy is for reading by humans and other Agent Skills clients.
     ````
 
     Then concatenate the normalized trope body from step 4.
@@ -105,7 +105,7 @@ The skill operates on the current working directory. No arguments are required.
 
     **Respect Codex overrides.** If a nonempty `<target>/AGENTS.override.md` exists, Codex reads it instead of `AGENTS.md`. Preserve it and append the same writing-conventions section there if it does not already reference `WRITING.md`.
 
-8. **Lint and finalize.** For each file written or modified in steps 6 and 7 (WRITING.md and any instruction files created or appended), run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix <path>`. If the linter exits non-zero on any file, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise that file in place to address each, and re-run. Repeat at most three iterations per file. After the third pass, proceed regardless of the linter's state. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
+8. **Lint and finalize.** For each file written or modified in steps 6 and 7 (WRITING.md and any instruction files created or appended), run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix <path>`. If the linter exits non-zero on any file, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise that file in place to address each, and re-run. Repeat at most three iterations per file. After the third pass, proceed regardless of what the linter reports. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
 9. **Print a summary.** Tell the user what happened to WRITING.md and each instruction file (created / appended / overwritten / left alone / declined).
 

@@ -10,19 +10,20 @@ review without the network, pass an explicit catalog file to the skill with
 `--tropes=<path>`.
 
 The site serves the catalog inside a rendered HTML page rather than as raw
-markdown. `extract_markdown` therefore unwraps it: first from the download link's
-`data:text/markdown` URI (percent-encoded or base64), then from the `<pre>`
-block that renders the same text. Both come from the site's own generator and
-carry the same bytes. Whatever is extracted, and a body that arrives as plain
-text, is accepted only when it has the catalog's structure (see
-`looks_like_catalog`): a Markdown H1 as its first non-blank line and at least
+markdown. `extract_markdown` therefore unwraps it: first from the
+`data:text/markdown` URI of the download link (percent-encoded or base64),
+then from the `<pre>` block that renders the same text. Both come from the
+generator of the site itself and carry the same bytes. Whatever is extracted,
+and a body that arrives as plain text, is accepted only when it is structured
+like the catalog (see `looks_like_catalog`): a Markdown H1 as its first
+non-blank line and at least
 MIN_HEADINGS `## ` trope headings. A plain-text error message, a JSON error
 body, or an error page that happens to carry a `<pre>` block is rejected, so a
 redesign or an outage stops the run with an error instead of returning other
 text as the catalog. A body over MAX_BYTES is rejected too.
 
 What was accepted is described on stderr (byte count, heading count, and a
-content hash), which makes a changed catalog visible in the run's log and lets
+content hash), which makes a changed catalog visible in the run log and lets
 a reader compare two runs. Because the content is third-party text that the
 skills hand to the model as rules to apply, a paper repository that needs a
 reproducible review keeps its own copy and passes it with `--tropes=<path>`.
@@ -72,7 +73,7 @@ def try_fetch(url):
 
 
 def looks_like_catalog(text):
-    """True when `text` has the catalog's structure: a Markdown H1 as its first
+    """True when `text` is structured like the catalog: a Markdown H1 as its first
     non-blank line and at least MIN_HEADINGS `## ` trope headings."""
     if not text or not text.lstrip().startswith('# '):
         return False
@@ -98,9 +99,9 @@ def extract_markdown(body):
     """Return the markdown catalog in body, or None if it holds none.
 
     A body that is already markdown is a candidate as it is. An HTML page is
-    unwrapped into candidates: the download link's data URI first, then the
-    rendered <pre> block. The first candidate with the catalog's structure is
-    returned. Returns None when no candidate looks like the catalog.
+    unwrapped into candidates: the data URI of the download link first, then
+    the rendered <pre> block. The first candidate structured like the catalog
+    is returned. Returns None when no candidate looks like the catalog.
     """
     if not body or not body.strip():
         return None
