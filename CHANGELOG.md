@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev6] - 2026-10-26
+
+- **Changed:** the general layer is about 6k characters shorter, with every rule, key, test, threshold, and exception kept. Each rule now states its test once, keeps fewer examples, and no longer restates a neighboring rule, so the file that `/ai-slop:init` writes, which loads in every session next to the `CLAUDE.md` of the project, takes less of the 150k characters above which Claude Code warns about the instruction files of a session. The self-check and the rationale are unchanged, because no test changed.
+
 ## [2026-10_rev5] - 2026-10-23
 
 - **Added:** `G.possessive-on-things` flags the possessive 's on a thing or an abstraction ("the sentence's purpose") and prefers the of-phrase, a preposition, or a noun adjunct that names the relation. The form stays for a person, group, organization, or named tool, for a document standing for its authors, in fixed phrases, and where the possessor is the topic under discussion. The self-check and rationale carry the same test.
