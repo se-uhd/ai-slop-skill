@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev7] - 2026-10-26
+
+- **Fixed:** every cross-reference in the rationale and the STE layer names a rule as the general layer names it. Both cited `G.no-figurative-language` as "No figurative language", and eleven rationale entries carried a label of their own, such as "Short paragraphs" for **Paragraph length** (`G.paragraph-length`). Self-check item 23 cites `G.one-example-signal`, the rule that states the one-signal choice, instead of `G.parenthetical-lists`.
+
 ## [2026-10_rev6] - 2026-10-26
 
 - **Changed:** the general layer is about 6k characters shorter, with every rule, key, test, threshold, and exception kept. Each rule now states its test once, keeps fewer examples, and no longer restates a neighboring rule, so the file that `/ai-slop:init` writes, which loads in every session next to the `CLAUDE.md` of the project, takes less of the 150k characters above which Claude Code warns about the instruction files of a session. The self-check and the rationale are unchanged, because no test changed.

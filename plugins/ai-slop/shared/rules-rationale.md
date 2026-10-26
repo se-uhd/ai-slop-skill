@@ -82,10 +82,10 @@ two overlap (see **Precedence over the trope catalog** (`G.catalog-precedence`))
 
 ## Language
 
-- **American English** (`G.american-english`). SE venues expect it. Co-authors and spell-checkers set to
+- **Use American English consistently** (`G.american-english`). SE venues expect it. Co-authors and spell-checkers set to
   the wrong locale are the usual source of British spellings. The check
   targets spellings that others introduce rather than the author's own prose.
-- **"Data" as singular** (`G.data-singular`). Both the singular and plural agreement are accepted in
+- **Treat "data" as singular** (`G.data-singular`). Both the singular and plural agreement are accepted in
   style guides. The project fixes one form so the manuscript reads consistently.
   The choice is conventional, not grammatical.
 
@@ -142,7 +142,7 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   plan. Habits from the training data add to this tendency: "the" before any noun
   followed by a purpose phrase ("the tools needed to ...") and the high rate of
   "the" in academic prose generally.
-- **Stand-in words** (`G.stand-ins`). By the time the model reaches "among the ___" in "detect
+- **Keep stand-in references clear** (`G.stand-ins`). By the time the model reaches "among the ___" in "detect
   flaky tests among the generated ones", it has already committed to "detect
   flaky tests" and cannot go back to restructure the clause, so the only way
   left to avoid repeating *tests* is a stand-in at the current position. The
@@ -186,7 +186,7 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   the relation is not ownership, which also removes the mild personification
   that gives a sentence a purpose or a section a claim of its own.
 
-- **Empty head nouns** (`G.be-concrete`). The generic noun is the referential form of the pressure that
+- **Be concrete** (`G.be-concrete`). The generic noun is the referential form of the pressure that
   **Consequence connectives** (`G.consequence-connectives`) describes. At the position where the noun is emitted,
   "thing" fits every continuation and the specific noun commits to one, and an option that cannot be
   wrong accumulates probability across many positions. Preference tuning sharpens it, because a rater
@@ -257,7 +257,7 @@ cannot tell a well-placed dash from a misplaced one.
   catches a frequent tic.
 - **Semicolons** (`G.semicolons`). Like colons and em-dashes, semicolons become filler punctuation
   in AI text. Two sentences usually read more clearly.
-- **Example/restatement connectives** (`G.connectives`). The pause-mark rules above tell the reviewer
+- **Name the relation with a connective** (`G.connectives`). The pause-mark rules above tell the reviewer
   which marks to remove. This rule supplies the connective that those marks
   replace. AI text tends to name a logical relation with a generic mid-sentence
   pause (a dash or colon) rather than the explicit connective, so `e.g.`/`such as` and
@@ -279,7 +279,7 @@ cannot tell a well-placed dash from a misplaced one.
 
 ## Structure
 
-- **Connected prose** (`G.connected-prose`). Local edits can preserve every fact
+- **Build connected prose** (`G.connected-prose`). Local edits can preserve every fact
   while removing the explanation of how the facts relate. Replacing pause marks
   with periods and deleting transitions can produce a chain of short statements
   that forces readers to reconstruct the argument. Keeping a useful conjunction
@@ -303,9 +303,9 @@ cannot tell a well-placed dash from a misplaced one.
 - **Formulaic openings and closings** (`G.no-formulaic-openings`, `G.no-formulaic-closings`). "In today's...", "In summary," and similar
   stock phrases appear often in AI text and add no content. They are allowed
   only where they consolidate content.
-- **Rule-of-three defaults** (`G.no-rule-of-three`). AI text groups items in threes by habit. The rule
+- **No rule-of-three defaults** (`G.no-rule-of-three`). AI text groups items in threes by habit. The rule
   forces the count to match the actual number of items.
-- **Announced counts** (`G.no-announced-counts`). Models open with the number of
+- **Announce a count only when the reader tracks it** (`G.no-announced-counts`). Models open with the number of
   items that they are about to produce ("Two constraints shape the design.", "for
   three reasons"), a signpost that reads as planning made visible rather than as
   content. The count is useful only where the reader checks items against
@@ -313,7 +313,7 @@ cannot tell a well-placed dash from a misplaced one.
   designs, and contribution lists, and removes it from running prose. The
   back-reference test ("the third of these") is the mechanical form of that
   distinction, and the reviewer does not have to judge the writer's intent.
-- **Prose listicles** (`G.no-prose-listicle`). A model that is told to stop
+- **No enumerated list disguised as paragraphs** (`G.no-prose-listicle`). A model that is told to stop
   emitting bullet lists produces a chain of paragraphs opened by ordinals ("The
   first wall is... The second wall is..."), so banning lists alone displaces
   the list into the paragraphs instead of removing it. Dropping the ordinals
@@ -331,7 +331,7 @@ cannot tell a well-placed dash from a misplaced one.
   colon introducing a series of independent clauses falls
   between the two halves of that rule (capitalize a sentence, lowercase a list).
   Once the clauses are separate sentences, the question does not arise.
-- **Short paragraphs** (`G.paragraph-length`). A sequence of one- or two-sentence
+- **Paragraph length** (`G.paragraph-length`). A sequence of one- or two-sentence
   paragraphs can separate a claim from the explanation, evidence, or qualification
   that develops it. Extending the rule to two-sentence paragraphs prevents a
   two-sentence pattern from becoming the default. Short paragraphs remain useful
@@ -344,7 +344,7 @@ cannot tell a well-placed dash from a misplaced one.
   combining related material or developing a point with information already
   present, and leaves list items, captions, and complete short replies to their
   own formats.
-- **Section openers, generic truths, and evaluative sentences** (`G.paragraph-padding`). The windup rule
+- **Cut padding at the paragraph level** (`G.paragraph-padding`). The windup rule
   targets a sentence that announces what its own paragraph then does. Read at
   section level, it would remove every orienting paragraph and leave a heading
   followed directly by a subheading, so the reader would reach the first
@@ -448,7 +448,7 @@ layer.
   one literal meaning and leaves little room for a stylistic device. A cap
   instead of a ban keeps one analogy or aside where it helps a reader, and it
   still rules out the stacked metaphors, asides, and vivid sentences common in
-  AI prose. The cap narrows **No figurative language**
+  AI prose. The cap narrows **Use figurative language with a clear purpose**
   (`G.no-figurative-language`) instead of overriding it, so STE mode never
   allows an idiom that the general layer removes. The units (a reply, a headed
   section, a text without headings) are the spans that a reader takes in as
