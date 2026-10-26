@@ -3,7 +3,7 @@ name: glossary
 description: Extract or maintain GLOSSARY.md for a document and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text, and finds the main document when no filename is supplied. Writes a glossary and a terminology report, or validates an existing glossary with --check. Does not rewrite the document.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev6"
+  version: "2026-10_rev7"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 

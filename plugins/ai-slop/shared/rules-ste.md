@@ -32,7 +32,7 @@ load.
 
 ## Style
 
-- **Use one stylistic device per unit, at most** (`T.one-device`). A stylistic device is a metaphor, an aside, or a vivid sentence written for effect. A unit is one reply, one headed section, or one text without headings. Use at most one device in each unit, and keep the sentences around it plain. The limit narrows what the other layers permit and permits nothing new. A metaphor must still meet **No figurative language** (`G.no-figurative-language`), so the only metaphor allowed is one marked analogy that helps a reader understand an unfamiliar concept, never an idiom, a cliché, or personification. An aside must still meet **No author-voice metacommentary in published prose** (`G.no-metacommentary`). A parenthetical that expands an abbreviation, defines a term, or lists examples is not an aside.
+- **Use one stylistic device per unit, at most** (`T.one-device`). A stylistic device is a metaphor, an aside, or a vivid sentence written for effect. A unit is one reply, one headed section, or one text without headings. Use at most one device in each unit, and keep the sentences around it plain. The limit narrows what the other layers permit and permits nothing new. A metaphor must still meet **Use figurative language with a clear purpose** (`G.no-figurative-language`), so the only metaphor allowed is one marked analogy that helps a reader understand an unfamiliar concept, never an idiom, a cliché, or personification. An aside must still meet **No author-voice metacommentary in published prose** (`G.no-metacommentary`). A parenthetical that expands an abbreviation, defines a term, or lists examples is not an aside.
 
 ## Text that stays as written
 
