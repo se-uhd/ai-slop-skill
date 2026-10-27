@@ -2,6 +2,14 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev8] - 2026-10-27
+
+- **Added:** the repository root is a pi package. Its `package.json` lists `plugins/ai-slop/skills` under `pi.skills`, so `pi install git:github.com/se-uhd/ai-slop-skill@<tag>` installs the eight skills, which pi invokes as `/skill:<name>`. The manifest declares no extensions or prompts, so the Claude Code command wrappers stay out of pi. Claude Code and Codex read only `.claude-plugin/` and are unaffected.
+- **Added:** `/ai-slop:init` sets up pi. It writes `ai-slop.md` into the pi agent directory (`PI_CODING_AGENT_DIR` or `~/.pi/agent`) and appends a read instruction once to the first global context file there (a nonempty `AGENTS.override.md`, then `AGENTS.md`, then `CLAUDE.md`, and otherwise a new `AGENTS.md`). An explicit output path still writes only the file.
+- **Changed:** every `SKILL.md` names the pi invocation next to the Claude Code and Codex ones, and the `WRITING.md` that `/ai-slop:writing` generates names `/skill:review`. The README has an "Install in pi" section covering pinned and unpinned installs, updates, and name collisions, and the maintainer guide documents the manifest.
+- **Added:** the smoke suite checks the pi manifest (`test_pi_package_manifest`) and the frontmatter and pi invocation of every skill (`test_skills_portable_for_pi`).
+- **Unchanged:** the versioning stays CalVer. The pi manifest has no version field, because pi pins a git install to a tag, so the version callsites stay at twelve. A date-based version also tells an author which month of rules reviewed a draft, and the interface of the bundle has no compatibility boundary that SemVer could track.
+
 ## [2026-10_rev7] - 2026-10-26
 
 - **Fixed:** every cross-reference in the rationale and the STE layer names a rule as the general layer names it. Both cited `G.no-figurative-language` as "No figurative language", and eleven rationale entries carried a label of their own, such as "Short paragraphs" for **Paragraph length** (`G.paragraph-length`). Self-check item 23 cites `G.one-example-signal`, the rule that states the one-signal choice, instead of `G.parenthetical-lists`.

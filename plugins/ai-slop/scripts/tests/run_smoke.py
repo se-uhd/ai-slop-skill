@@ -788,6 +788,74 @@ def test_version_strings_in_sync():
     )
 
 
+def test_pi_package_manifest():
+    """The root package.json is the pi package manifest. It names the skills
+    directory under `pi.skills`, declares no extensions or prompts (the
+    Claude-only commands/*.md wrappers stay out of pi), and carries no version,
+    because pi pins a git install to a release tag and the version callsites
+    stay at twelve (see AGENTS.md)."""
+    import json
+
+    plugin_root = SCRIPTS.parent           # plugins/ai-slop
+    repo_root = plugin_root.parent.parent  # repo root
+    manifest = json.loads((repo_root / 'package.json').read_text(encoding='utf-8'))
+    plugin = json.loads(
+        (plugin_root / '.claude-plugin' / 'plugin.json').read_text(encoding='utf-8')
+    )
+
+    assert manifest.get('name') == 'ai-slop', manifest.get('name')
+    assert manifest.get('private') is True, "package.json must set private: true"
+    assert 'pi-package' in manifest.get('keywords', []), manifest.get('keywords')
+    assert 'version' not in manifest, (
+        "package.json must not carry a version: pi pins installs by git tag"
+    )
+    assert manifest.get('license') == plugin.get('license'), (
+        f"license {manifest.get('license')!r} != plugin.json {plugin.get('license')!r}"
+    )
+
+    pi = manifest.get('pi')
+    assert isinstance(pi, dict), "package.json has no pi manifest"
+    assert pi.get('skills') == ['./plugins/ai-slop/skills'], pi.get('skills')
+    for key in ('extensions', 'prompts'):
+        assert key not in pi, f"package.json pi manifest must not declare {key!r}"
+
+    skills_dir = (repo_root / pi['skills'][0]).resolve()
+    assert skills_dir == (plugin_root / 'skills').resolve(), skills_dir
+    names = sorted(p.parent.name for p in skills_dir.glob('*/SKILL.md'))
+    assert names == sorted(['review', 'review-diff', 'review-repo', 'revise',
+                            'ground', 'glossary', 'writing', 'init']), names
+
+
+def test_skills_portable_for_pi():
+    """Every skill keeps the frontmatter that pi and the Agent Skills
+    specification accept: a name equal to its directory, lowercase with single
+    hyphens and at most 64 characters, and a description of at most 1024
+    characters. Its body names the pi invocation `/skill:<name>`."""
+    name_re = re.compile(r'^[a-z0-9]+(-[a-z0-9]+)*$')
+    problems = []
+    for skill_md in sorted((SCRIPTS.parent / 'skills').glob('*/SKILL.md')):
+        text = skill_md.read_text(encoding='utf-8')
+        directory = skill_md.parent.name
+        fm = re.match(r'^---\n(.*?)\n---\n', text, re.DOTALL)
+        if not fm:
+            problems.append(f"{directory}: no frontmatter")
+            continue
+        name = re.search(r'^name:\s*(.+?)\s*$', fm.group(1), re.MULTILINE)
+        name = name.group(1) if name else None
+        if name != directory:
+            problems.append(f"{directory}: name {name!r} differs from its directory")
+        elif not name_re.match(name) or len(name) > 64:
+            problems.append(f"{directory}: name {name!r} is not a valid skill name")
+        desc = re.search(r'^description:\s*(.+?)\s*$', fm.group(1), re.MULTILINE)
+        if not desc:
+            problems.append(f"{directory}: no description")
+        elif len(desc.group(1)) > 1024:
+            problems.append(f"{directory}: description has {len(desc.group(1))} characters")
+        if f'`/skill:{directory}`' not in text[fm.end():]:
+            problems.append(f"{directory}: body does not name `/skill:{directory}`")
+    assert not problems, "\n  ".join(problems)
+
+
 # ---------- detect_scope.py ----------
 
 def test_detect_scope_file_tex():
@@ -2744,6 +2812,8 @@ TESTS = [
     test_lint_markdown_fix_mode_preserves_structural_findings,
     test_lint_markdown_unreadable_exits_2,
     test_version_strings_in_sync,
+    test_pi_package_manifest,
+    test_skills_portable_for_pi,
     test_check_baseline_passes_on_bundled_yaml,
     test_detect_scope_file_tex,
     test_detect_scope_file_pdf,

@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, LaTeX source loads all three, and `--ste` adds a Simplified Technical English (STE) layer to any input. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev7"
+  version: "2026-10_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -15,9 +15,9 @@ This skill checks a document (LaTeX, PDF, or plain prose) for AI slop and rule v
 
 ## Client and paths
 
-This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+This workflow works in Claude Code, Codex, and pi. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
 
-In Claude Code, invoke `/ai-slop:review`. In Codex, select the `ai-slop:review` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
+In Claude Code, invoke `/ai-slop:review`. In Codex, select the `ai-slop:review` skill through `/skills` or a `$` mention. In pi, invoke `/skill:review`. References to other `/ai-slop:` commands below mean the corresponding sibling skill in any client.
 
 ## When to use
 
@@ -125,7 +125,7 @@ The report schema is stable so revise mode can parse it. Each finding has `Rule`
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-10_rev7 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
+**Skill version:** 2026-10_rev8 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at

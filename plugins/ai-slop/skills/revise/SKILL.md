@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev7"
+  version: "2026-10_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -15,9 +15,9 @@ This skill applies a previous `/ai-slop:review` report to the document that the 
 
 ## Client and paths
 
-This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+This workflow works in Claude Code, Codex, and pi. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
 
-In Claude Code, invoke `/ai-slop:revise`. In Codex, select the `ai-slop:revise` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
+In Claude Code, invoke `/ai-slop:revise`. In Codex, select the `ai-slop:revise` skill through `/skills` or a `$` mention. In pi, invoke `/skill:revise`. References to other `/ai-slop:` commands below mean the corresponding sibling skill in any client.
 
 ## When to use
 

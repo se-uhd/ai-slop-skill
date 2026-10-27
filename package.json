@@ -1,0 +1,12 @@
+{
+  "name": "ai-slop",
+  "private": true,
+  "description": "Catch AI slop in any prose, with scientific, LaTeX, and Simplified Technical English rule layers.",
+  "license": "CC-BY-4.0",
+  "homepage": "https://github.com/se-uhd/ai-slop-skill",
+  "repository": "https://github.com/se-uhd/ai-slop-skill",
+  "keywords": ["pi-package", "agent-skills"],
+  "pi": {
+    "skills": ["./plugins/ai-slop/skills"]
+  }
+}

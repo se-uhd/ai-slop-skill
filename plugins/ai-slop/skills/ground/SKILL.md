@@ -3,7 +3,7 @@ name: ground
 description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify` stub with a reason when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the grounding to-do from a review. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev7"
+  version: "2026-10_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -17,9 +17,9 @@ This skill fills the grounding comments that review mode flags as missing. `/ai-
 
 ## Client and paths
 
-This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+This workflow works in Claude Code, Codex, and pi. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
 
-In Claude Code, invoke `/ai-slop:ground`. In Codex, select the `ai-slop:ground` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
+In Claude Code, invoke `/ai-slop:ground`. In Codex, select the `ai-slop:ground` skill through `/skills` or a `$` mention. In pi, invoke `/skill:ground`. References to other `/ai-slop:` commands below mean the corresponding sibling skill in any client.
 
 ## When to use
 
