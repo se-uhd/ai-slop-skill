@@ -3,7 +3,7 @@ name: review-repo
 description: Review the natural-language text of a whole code repository for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research article layer, and `--ste` adds the Simplified Technical English layer. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev7"
+  version: "2026-10_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -15,9 +15,9 @@ This skill reviews the natural-language text spread across a whole repository, r
 
 ## Client and paths
 
-This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+This workflow works in Claude Code, Codex, and pi. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
 
-In Claude Code, invoke `/ai-slop:review-repo`. In Codex, select the `ai-slop:review-repo` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
+In Claude Code, invoke `/ai-slop:review-repo`. In Codex, select the `ai-slop:review-repo` skill through `/skills` or a `$` mention. In pi, invoke `/skill:review-repo`. References to other `/ai-slop:` commands below mean the corresponding sibling skill in any client.
 
 ## When to use
 

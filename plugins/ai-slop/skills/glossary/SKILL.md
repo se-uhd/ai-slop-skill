@@ -3,7 +3,7 @@ name: glossary
 description: Extract or maintain GLOSSARY.md for a document and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text, and finds the main document when no filename is supplied. Writes a glossary and a terminology report, or validates an existing glossary with --check. Does not rewrite the document.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev7"
+  version: "2026-10_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -22,8 +22,8 @@ the path supplied by the client. Resolve bundled files relative to that director
 while keeping the working directory at the user's project. Quote script paths
 and do not require a client-specific environment variable.
 
-In Claude Code, invoke `/ai-slop:glossary`. In other Agent Skills clients, select
-the `ai-slop:glossary` skill. Sibling command names below refer to their skill
+In Claude Code, invoke `/ai-slop:glossary`. In pi, invoke `/skill:glossary`. In
+other Agent Skills clients, select the `ai-slop:glossary` skill. Sibling command names below refer to their skill
 entries as well.
 
 ## Inputs and outputs

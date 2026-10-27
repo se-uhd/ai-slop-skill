@@ -1,15 +1,15 @@
 ---
 name: init
-description: Set up the general writing rules and AI trope catalog for Claude Code or Codex across projects, or export them as one Markdown file for a system prompt. Use when the user wants the assistant's replies, edits, comments, and commit messages to follow these rules, or runs `/ai-slop:init`. Claude Code uses ~/.claude/rules/ai-slop.md. Codex uses ai-slop.md in its home directory with a reference in its global instructions. For an editable WRITING.md in one project, use `/ai-slop:writing`.
+description: Set up the general writing rules and AI trope catalog for Claude Code, Codex, or pi across projects, or export them as one Markdown file for a system prompt. Use when the user wants the assistant's replies, edits, comments, and commit messages to follow these rules, or runs `/ai-slop:init`. Claude Code uses ~/.claude/rules/ai-slop.md. Codex and pi use ai-slop.md in their home or agent directory with a reference in their global instructions. For an editable WRITING.md in one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev7"
+  version: "2026-10_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
 # AI Slop Review: Init Mode
 
-This skill writes the general rule layer and the AI trope catalog (fetched live from tropes.fyi) into one Markdown file, under an instruction to apply them to all prose that the assistant writes: replies in chat, files that it creates or edits, code comments and docstrings, and commit messages. Claude Code loads the file from its rules directory. Codex reads it through a reference in its global instructions. The selected client determines the default destination and loading step.
+This skill writes the general rule layer and the AI trope catalog (fetched live from tropes.fyi) into one Markdown file, under an instruction to apply them to all prose that the assistant writes: replies in chat, files that it creates or edits, code comments and docstrings, and commit messages. Claude Code loads the file from its rules directory. Codex and pi read it through a reference in their global instructions. The selected client determines the default destination and loading step.
 
 **Audience and tone.** The user wants the assistant's own output to follow the rules everywhere, instead of auditing it afterward. The file applies to any prose, so it carries no rules for a single genre or file format.
 
@@ -17,9 +17,9 @@ This skill writes the general rule layer and the AI trope catalog (fetched live 
 
 ## Client and paths
 
-This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+This workflow works in Claude Code, Codex, and pi. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
 
-In Claude Code, invoke `/ai-slop:init`. In Codex, select the `ai-slop:init` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
+In Claude Code, invoke `/ai-slop:init`. In Codex, select the `ai-slop:init` skill through `/skills` or a `$` mention. In pi, invoke `/skill:init`. References to other `/ai-slop:` commands below mean the corresponding sibling skill in any client.
 
 ## When to use
 
@@ -35,7 +35,7 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 **Client.** Use the current client unless the user names a different target. If the client cannot be identified, ask which client to set up. An explicit export path needs no client selection.
 
-**Output path.** A positional path sets the file to write and skips the automatic Codex registration step. With no path, Claude Code uses `~/.claude/rules/ai-slop.md`. Codex uses `<codex-home>/ai-slop.md`, where `<codex-home>` is the configured `CODEX_HOME` or `~/.codex` when unset. Expand these paths before passing them to the helper. Never export the full rules into an existing `AGENTS.md` or `AGENTS.override.md` as part of automatic setup.
+**Output path.** A positional path sets the file to write and skips the automatic Codex or pi registration step. With no path, Claude Code uses `~/.claude/rules/ai-slop.md`. Codex uses `<codex-home>/ai-slop.md`, where `<codex-home>` is the configured `CODEX_HOME` or `~/.codex` when unset. Pi uses `<pi-agent-dir>/ai-slop.md`, where `<pi-agent-dir>` is the configured `PI_CODING_AGENT_DIR` or `~/.pi/agent` when unset. Expand these paths before passing them to the helper. Never export the full rules into an existing `AGENTS.md`, `AGENTS.override.md`, or `CLAUDE.md` as part of automatic setup.
 
 **Flags.** `--ste` adds the Simplified Technical English layer (`../../shared/rules-ste.md`), which applies to any prose. `--tropes=<path>` (repeatable) reads the catalog from local files instead of tropes.fyi, concatenated in the order given, as in `/ai-slop:review`. The scientific and LaTeX layers are not available here, since they apply to research articles and LaTeX source. `/ai-slop:writing` writes them into the `WRITING.md` of a paper project.
 
@@ -49,20 +49,20 @@ Do not invoke when the user wants the rules of one project as an editable file (
    - `2`: a usage error, or a file that could not be read. Pass the message on and stop.
    - `3`: a file that this mode did not write already exists at the output path. The script replaces a file from an earlier run without asking, because running this mode again is how the rules and the catalog are refreshed. Any other file may hold the user's own rules, so ask before replacing it (e.g., "`<output>` exists and was not written by `/ai-slop:init`. Replace it (y/n)?"). On yes, run the script again with `--force`. On no, stop and leave the file as it is.
 
-3. **Register the Codex default.** Only after a successful export, when setting up Codex without an explicit output path, add a reference in its global instructions. Use a nonempty `<codex-home>/AGENTS.override.md` if present, otherwise `<codex-home>/AGENTS.md`. Preserve all existing text. If the selected file already instructs Codex to read the exported rules, leave it alone. Otherwise append a `## Writing conventions` section with this instruction, substituting the absolute path:
+3. **Register the Codex or pi default.** Only after a successful export, when setting up Codex or pi without an explicit output path, add a reference in the global instructions of the client. For Codex, use a nonempty `<codex-home>/AGENTS.override.md` if present, otherwise `<codex-home>/AGENTS.md`. For pi, use the first match in `<pi-agent-dir>`: a nonempty `AGENTS.override.md`, then an existing `AGENTS.md` or `AGENTS.MD`, then an existing `CLAUDE.md` or `CLAUDE.MD`, and otherwise a new `AGENTS.md`. Preserve all existing text. If the selected file already instructs the client to read the exported rules, leave it alone. Otherwise append a `## Writing conventions` section with this instruction, substituting the absolute path:
 
     ```markdown
     Read `/absolute/path/to/ai-slop.md` before writing prose, and apply its rules to replies, edited files, comments, and commit messages. Project-specific writing conventions take precedence.
     ```
 
-    Create the selected file if missing. Keep the rules themselves in the export file, because Codex limits the automatically loaded instruction files to 32 KiB by default. A Markdown link or Claude's `@path` syntax alone does not substitute for this explicit read instruction. If permissions prevent updating the global file, report that the export succeeded but registration did not, and show the reference to add. Claude Code needs no registration because it reads its rules directory automatically.
+    Create the selected file if missing. Keep the rules themselves in the export file. Codex limits the automatically loaded instruction files to 32 KiB by default. For pi, the separate file keeps the global context file small, and a later run replaces the rules without touching the user's own instructions. A Markdown link or Claude's `@path` syntax alone does not substitute for this explicit read instruction. If permissions prevent updating the global file, report that the export succeeded but registration did not, and show the reference to add. Claude Code needs no registration because it reads its rules directory automatically.
 
 4. **Print a summary** in two or three lines:
    - The file: created or replaced at `<output>`, with the layers and its size in tokens, rounded to the nearest thousand. The whole file stays in the context of every session that loads it.
-   - How it loads. For the Codex default, name the global instruction file updated or already referencing the export. For Claude Code, its user rules directory loads in every project and `.claude/rules/` in a repository loads in that project. An explicit path outside those Claude directories is an export only. Explain how to load it in the target client: an explicit read instruction in Codex's `AGENTS.md`, an `@<path>` import in Claude's `CLAUDE.md`, or a system prompt attachment.
+   - How it loads. For the Codex or pi default, name the global instruction file updated or already referencing the export. For Claude Code, its user rules directory loads in every project and `.claude/rules/` in a repository loads in that project. An explicit path outside those Claude directories is an export only. Explain how to load it in the target client: an explicit read instruction in the `AGENTS.md` of Codex or pi, an `@<path>` import in Claude's `CLAUDE.md`, or a system prompt attachment.
    - Start a new session to use the setup automatically. The exported rules occupy context when read.
 
-5. **Stop.** Do not review the project or edit files beyond the export and the Codex registration described above. Do not commit.
+5. **Stop.** Do not review the project or edit files beyond the export and the Codex or pi registration described above. Do not commit.
 
 ## Bundled files
 
@@ -74,5 +74,5 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 - **Do not edit the file by hand.** The next run replaces it. Its header tells the user to keep their own additions in a separate file, such as another Markdown file under `~/.claude/rules/`.
 - **Ask before replacing a file that this mode did not write.** It may hold the user's own rules.
-- **Preserve existing instructions.** Claude setup and explicit exports write only the output file. Automatic Codex setup also appends its reference to the effective global instruction file without replacing existing content. Do not change Codex configuration or instruction-size limits.
+- **Preserve existing instructions.** Claude setup and explicit exports write only the output file. Automatic Codex or pi setup also appends its reference to the effective global instruction file without replacing existing content. Do not change Codex or pi configuration or instruction-size limits.
 - **No commits.** A file written into a repository stays in the working tree for the user to inspect and commit.

@@ -113,6 +113,12 @@ have been broken before:
   since a count cannot tell them from list separators. Released `CHANGELOG.md`
   entries are edited only to correct or complete the record, never to restate
   it. Upstream-owned files are left to their own repo.
+- **The root `package.json` is the pi package manifest and has no `version`
+  field on purpose.** Do not add one. Pi pins a git install to a release tag,
+  so the tag carries the version and the version callsites stay at twelve.
+  The manifest lists `./plugins/ai-slop/skills` under `pi.skills`, so pi picks
+  up a new skill directory without a manifest change.
+  `test_pi_package_manifest` in the smoke suite enforces this.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
   `grounding-quotes.json`) are never committed. The skills add them to the
   `.gitignore` of the target repo.

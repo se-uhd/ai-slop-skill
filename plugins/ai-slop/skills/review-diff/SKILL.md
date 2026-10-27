@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev7"
+  version: "2026-10_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -15,9 +15,9 @@ This skill reviews only the lines that changed in a git-versioned document. It r
 
 ## Client and paths
 
-This workflow works in Claude Code and Codex. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
+This workflow works in Claude Code, Codex, and pi. Resolve `<skill-dir>` to the absolute directory containing this `SKILL.md`, using the skill path supplied by the client. Substitute that directory in every command below and keep the script path quoted. Resolve `../../shared/` and other bundled paths relative to that directory, while keeping the working directory at the user's project. No client-specific environment variable is required.
 
-In Claude Code, invoke `/ai-slop:review-diff`. In Codex, select the `ai-slop:review-diff` skill through `/skills` or a `$` mention. References to other `/ai-slop:` commands below mean the corresponding sibling skill in either client.
+In Claude Code, invoke `/ai-slop:review-diff`. In Codex, select the `ai-slop:review-diff` skill through `/skills` or a `$` mention. In pi, invoke `/skill:review-diff`. References to other `/ai-slop:` commands below mean the corresponding sibling skill in any client.
 
 ## When to use
 
