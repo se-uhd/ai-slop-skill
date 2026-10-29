@@ -3,7 +3,7 @@ name: writing
 description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the AGENTS.md of the repository (creating AGENTS.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", or `/ai-slop:writing`. Writes WRITING.md, updates AGENTS.md, and preserves Claude Code loading through a CLAUDE.md import. Does not modify your content. For rules that the assistant applies to its own output in every project, use `/ai-slop:init`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev10"
+  version: "2026-10_rev11"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 

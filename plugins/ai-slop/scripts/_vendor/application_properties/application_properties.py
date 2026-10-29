@@ -255,6 +255,28 @@ class ApplicationProperties:
             composed_property_value = property_value[1:]
         return composed_property_value
 
+    def __get_property_prolog(
+        self,
+        property_name: str,
+        default_value: Optional[List[str]],
+        is_required: bool,
+        strict_mode: Optional[Any],
+    ) -> Tuple[str, bool]:
+
+        if not isinstance(property_name, str):
+            raise ValueError("The propertyName argument must be a string.")
+
+        if is_required and default_value is not None:
+            raise ValueError(
+                "The 'is_required' parameter cannot be set to 'True' with the 'default_value' parameter set to a value that is not None."
+            )
+
+        ApplicationProperties.verify_full_key_form(property_name)
+        effective_strict_mode = (
+            self.__strict_mode if strict_mode is None else bool(strict_mode)
+        )
+        return property_name.lower(), effective_strict_mode
+
     # pylint: disable=too-many-arguments
     def get_property(
         self,
@@ -269,12 +291,10 @@ class ApplicationProperties:
         Get an property of a generic type from the configuration.
         """
 
-        if strict_mode is None:
-            strict_mode = self.__strict_mode
+        property_name, new_strict_mode = self.__get_property_prolog(
+            property_name, default_value, is_required, strict_mode
+        )
 
-        if not isinstance(property_name, str):
-            raise ValueError("The propertyName argument must be a string.")
-        ApplicationProperties.verify_full_key_form(property_name)
         if not isinstance(property_type, type):
             raise ValueError(
                 f"The property_type argument for '{property_name}' must be a type."
@@ -292,14 +312,13 @@ class ApplicationProperties:
                 )
 
         property_value = default_value
-        property_name = property_name.lower()
         LOGGER.debug("property_name=%s", property_name)
         if property_name in self.__flat_property_map:
             property_value = self.__get_present_property(
                 property_name,
                 property_value,
                 property_type,
-                strict_mode,
+                new_strict_mode,
                 valid_value_fn,
             )
         elif is_required:
@@ -438,6 +457,159 @@ class ApplicationProperties:
                 is_required=is_required,
                 strict_mode=strict_mode,
             ),
+        )
+
+    # pylint: enable=too-many-arguments
+
+    def __validate_string_list_default_value_elements(
+        self, property_name: str, default_value: Optional[List[str]] = None
+    ) -> None:
+
+        if default_value is not None:
+            is_eligible = isinstance(default_value, list) and all(
+                isinstance(next_default_element, str)
+                for next_default_element in default_value
+            )
+            if not is_eligible:
+                raise ValueError(
+                    f"The default value for property '{property_name}' must either be None or a list of 'str' values."
+                )
+
+    # pylint: disable=too-many-arguments, broad-exception-caught
+    def __validate_parsed_list(
+        self,
+        property_name: str,
+        default_value: Optional[List[str]],
+        parsed_list: List[str],
+        valid_value_fn: Optional[Callable[[List[str]], Any]],
+        strict_mode: bool,
+    ) -> Optional[List[str]]:
+        if valid_value_fn is not None:
+            try:
+                valid_value_fn(parsed_list)
+            except Exception as this_exception:
+                if strict_mode:
+                    raise ValueError(
+                        f"The value for property '{property_name}' is not valid: {str(this_exception)}"
+                    ) from this_exception
+                return default_value
+        return parsed_list
+
+    # pylint: enable=too-many-arguments, broad-exception-caught
+
+    # pylint: disable=too-many-arguments
+    def __get_string_list_property_string(
+        self,
+        property_name: str,
+        delimiter: Optional[str],
+        default_value: Optional[List[str]],
+        valid_value_fn: Optional[Callable[[List[str]], Any]],
+        strict_mode: bool,
+    ) -> Optional[List[str]]:
+        if not isinstance(delimiter, str) or not delimiter:
+            raise ValueError("The delimiter argument must be a non-empty string.")
+        self.__validate_string_list_default_value_elements(property_name, default_value)
+
+        try:
+            raw_string_value = self.get_string_property(
+                property_name, None, None, False, strict_mode
+            )
+        except ValueError as this_exception:
+            assert "must be of type" in str(this_exception)
+            raise ValueError(
+                f"The value for property '{property_name}' must be of type 'str' or type 'List[str]'."
+            ) from this_exception
+        if raw_string_value is None:
+            return default_value
+
+        parsed_list: List[str] = []
+        for next_tag_part in raw_string_value.split(delimiter):
+            if next_tag_part := next_tag_part.strip(" "):
+                parsed_list.append(next_tag_part)
+            elif strict_mode:
+                raise ValueError(
+                    f"Configuration item '{property_name}' contains at least one empty element."
+                )
+            else:
+                return default_value
+        return self.__validate_parsed_list(
+            property_name, default_value, parsed_list, valid_value_fn, strict_mode
+        )
+
+    # pylint: enable=too-many-arguments
+
+    # pylint: disable=too-many-arguments
+    def __get_string_list_property_list(
+        self,
+        property_name: str,
+        default_value: Optional[List[str]],
+        found_value: List[str],
+        valid_value_fn: Optional[Callable[[List[str]], Any]],
+        strict_mode: bool,
+    ) -> Optional[List[str]]:
+
+        parsed_list: List[str] = []
+        for next_element in found_value:
+            if not isinstance(next_element, str):
+                if strict_mode:
+                    raise ValueError(
+                        f"Configuration item '{property_name}' contains at least one non-string element: {next_element}."
+                    )
+                return default_value
+            if next_element := next_element.strip(" "):
+                parsed_list.append(next_element)
+            elif strict_mode:
+                raise ValueError(
+                    f"Configuration item '{property_name}' contains at least one empty element."
+                )
+            else:
+                return default_value
+
+        return self.__validate_parsed_list(
+            property_name, default_value, parsed_list, valid_value_fn, strict_mode
+        )
+
+    # pylint: enable=too-many-arguments
+
+    # pylint: disable=too-many-arguments
+    def get_string_list_property(
+        self,
+        property_name: str,
+        delimiter: Optional[str] = None,
+        default_value: Optional[List[str]] = None,
+        valid_value_fn: Optional[Callable[[List[str]], Any]] = None,
+        is_required: bool = False,
+        strict_mode: Optional[bool] = None,
+    ) -> Optional[List[str]]:
+        """
+        Get a list of strings property from the configuration.
+        """
+        property_name, new_strict_mode = self.__get_property_prolog(
+            property_name, default_value, is_required, strict_mode
+        )
+
+        # Just do enough checking that we can determine if we need to handle this as a list of strings.
+        found_value = self.__flat_property_map.get(property_name, None)
+        if found_value is None and is_required:
+            raise ValueError(
+                f"A value for property '{property_name}' must be provided."
+            )
+
+        # Either call the "list" processor or the "string" processor.
+        if isinstance(found_value, list):
+            return self.__get_string_list_property_list(
+                property_name,
+                default_value,
+                found_value,
+                valid_value_fn,
+                new_strict_mode,
+            )
+        return self.__get_string_list_property_string(
+            property_name,
+            delimiter,
+            default_value,
+            valid_value_fn,
+            new_strict_mode,
         )
 
     # pylint: enable=too-many-arguments

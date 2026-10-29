@@ -24,6 +24,7 @@ class ApplicationResult(Enum):
     FIXED_AT_LEAST_ONE_FILE = 3
     SCAN_TRIGGERED_AT_LEAST_ONCE = 4
     SYSTEM_ERROR = 5
+    FIXED_NO_PLUGINS = 6
 
 
 class SchemeDefinition(ABC):
@@ -52,6 +53,9 @@ class ExplicitScheme(SchemeDefinition):
 
     @override
     def get_scheme_mapping(self) -> Dict[ApplicationResult, int]:
+        """
+        Get the mapping to use for this scheme.
+        """
         return {
             ApplicationResult.SUCCESS: 0,
             ApplicationResult.NO_FILES_TO_SCAN: 1,
@@ -59,6 +63,7 @@ class ExplicitScheme(SchemeDefinition):
             ApplicationResult.FIXED_AT_LEAST_ONE_FILE: 3,
             ApplicationResult.SCAN_TRIGGERED_AT_LEAST_ONCE: 4,
             ApplicationResult.SYSTEM_ERROR: 5,
+            ApplicationResult.FIXED_NO_PLUGINS: 6,
         }
 
 
@@ -69,6 +74,9 @@ class DefaultScheme(SchemeDefinition):
 
     @override
     def get_scheme_mapping(self) -> Dict[ApplicationResult, int]:
+        """
+        Get the mapping to use for this scheme.
+        """
         return {
             ApplicationResult.SUCCESS: 0,
             ApplicationResult.NO_FILES_TO_SCAN: 1,
@@ -76,6 +84,7 @@ class DefaultScheme(SchemeDefinition):
             ApplicationResult.FIXED_AT_LEAST_ONE_FILE: 3,
             ApplicationResult.SCAN_TRIGGERED_AT_LEAST_ONCE: 1,
             ApplicationResult.SYSTEM_ERROR: 1,
+            ApplicationResult.FIXED_NO_PLUGINS: 6,
         }
 
 
@@ -86,6 +95,9 @@ class MinimalScheme(SchemeDefinition):
 
     @override
     def get_scheme_mapping(self) -> Dict[ApplicationResult, int]:
+        """
+        Get the mapping to use for this scheme.
+        """
         return {
             ApplicationResult.SUCCESS: 0,
             ApplicationResult.NO_FILES_TO_SCAN: 0,
@@ -93,6 +105,7 @@ class MinimalScheme(SchemeDefinition):
             ApplicationResult.FIXED_AT_LEAST_ONE_FILE: 0,
             ApplicationResult.SCAN_TRIGGERED_AT_LEAST_ONCE: 0,
             ApplicationResult.SYSTEM_ERROR: 1,
+            ApplicationResult.FIXED_NO_PLUGINS: 1,
         }
 
 

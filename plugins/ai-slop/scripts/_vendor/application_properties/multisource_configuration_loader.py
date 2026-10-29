@@ -611,8 +611,6 @@ class MultisourceConfigurationLoader:
                               is made to load the file.
             config_file_type: Type of configuration file to load.  For auto-detecting
                               the file type, see the notes above.
-            section_header_if_toml: Optional section header to use when loading
-                              TOML configuration files.
 
         Returns:
             Instance of `self` for chaining `add_*` functions and the `process` function

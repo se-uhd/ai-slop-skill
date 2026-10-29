@@ -62,6 +62,9 @@ class FileScanHelper:
         handle_error: Callable[[str, Optional[Exception], bool, str], None],
         properties: ApplicationProperties,
     ):
+        """
+        Initialize a new instance of the FileScanHelper class.
+        """
         self.__tokenizer = tokenizer
         self.__plugins = plugins
         self.__presentation = presentation
@@ -79,7 +82,7 @@ class FileScanHelper:
         use_standard_in: bool,
         files_to_scan: List[str],
         string_to_scan: Optional[str],
-    ) -> Tuple[bool, bool]:
+    ) -> Tuple[bool, bool, bool]:
         """
         Process the specified files to scan, or the string to scan.
         """
@@ -99,6 +102,7 @@ class FileScanHelper:
             self.__process_per_file_ignores()
 
             POGGER.debug("Scanning from: $", files_to_scan)
+            is_first_file = True
             for next_file in files_to_scan:
                 per_file_disabled_identifiers = (
                     self.__check_file_name_against_per_file_disabled_identifiers(
@@ -106,24 +110,56 @@ class FileScanHelper:
                     )
                 )
                 if in_fix_mode:
-                    did_fix_file, did_succeed = self.__fix_specific_file(
-                        next_file,
-                        next_file,
-                        args.x_fix_debug,
-                        args.x_fix_file_debug,
-                        args.x_fix_no_rescan_log,
-                        per_file_disabled_identifiers,
+                    did_succeed, did_fix_any_file, did_attempt_at_least_one_fix = (
+                        self.__fix_specific_file(
+                            is_first_file,
+                            next_file,
+                            args,
+                            per_file_disabled_identifiers,
+                            did_fix_any_file,
+                        )
                     )
-                    if did_fix_file:
-                        self.__presentation.print_fix_message(next_file)
-                        did_fix_any_file = True
+                    if did_attempt_at_least_one_fix:
+                        return False, False, True
                 else:
                     did_succeed = self.__scan_specific_file(
                         next_file, next_file, per_file_disabled_identifiers
                     )
+                is_first_file = False
                 if not did_succeed:
                     did_fail_any_file = True
-        return did_fix_any_file, did_fail_any_file
+        return did_fix_any_file, did_fail_any_file, False
+
+    # pylint: disable=too-many-arguments
+    def __fix_specific_file(
+        self,
+        is_first_file: bool,
+        next_file: str,
+        args: argparse.Namespace,
+        per_file_disabled_identifiers: Set[str],
+        did_fix_any_file: bool,
+    ) -> Tuple[bool, bool, bool]:
+        did_fix_file, did_succeed, did_attempt_at_least_one_fix = (
+            self.__fix_specific_file_with_error_handling(
+                next_file,
+                next_file,
+                args.x_fix_debug,
+                args.x_fix_file_debug,
+                args.x_fix_no_rescan_log,
+                per_file_disabled_identifiers,
+            )
+        )
+        if is_first_file and not did_attempt_at_least_one_fix:
+            self.__presentation.print_system_error(
+                "Cannot fix files: No rule plugins are enabled have fix mode support."
+            )
+            return False, False, True
+        if did_fix_file:
+            self.__presentation.print_fix_message(next_file)
+            did_fix_any_file = True
+        return did_succeed, did_fix_any_file, False
+
+    # pylint: enable=too-many-arguments
 
     def __check_file_name_against_per_file_disabled_identifiers(
         self, next_file_name: str
@@ -151,7 +187,9 @@ class FileScanHelper:
             if args.x_test_stdin_fault:
                 raise IOError("made up")
 
-            with tempfile.NamedTemporaryFile("wt", delete=False) as outfile:
+            with tempfile.NamedTemporaryFile(
+                "wt", delete=False, encoding="utf-8"
+            ) as outfile:
                 temporary_file = outfile.name
 
                 if string_to_scan:
@@ -272,7 +310,7 @@ class FileScanHelper:
     # pylint: enable=too-many-arguments
 
     # pylint: disable=too-many-arguments
-    def __fix_specific_file(
+    def __fix_specific_file_with_error_handling(
         self,
         next_file: str,
         next_file_name: str,
@@ -280,14 +318,15 @@ class FileScanHelper:
         fix_file_debug: bool,
         fix_nolog_rescan: bool,
         per_file_disabled_identifiers: Optional[Set[str]],
-    ) -> Tuple[bool, bool]:
+    ) -> Tuple[bool, bool, bool]:
         did_fix_file = False
+        did_attempt_at_least_one_fix = False
         did_succeed = False
         try:
             try:
                 POGGER.info("Starting file to fix '$'.", next_file_name)
 
-                did_fix_file = self.__process_file_fix(
+                did_fix_file, did_attempt_at_least_one_fix = self.__process_file_fix(
                     next_file,
                     next_file_name,
                     fix_debug,
@@ -307,7 +346,7 @@ class FileScanHelper:
             if not self.__continue_on_error:
                 raise
             self.__handle_scan_error(next_file, this_exception, allow_shortcut=True)
-        return did_fix_file, did_succeed
+        return did_fix_file, did_succeed, did_attempt_at_least_one_fix
 
     # pylint: enable=too-many-arguments
 
@@ -525,7 +564,7 @@ class FileScanHelper:
         fix_file_debug: bool,
         fix_nolog_rescan: bool,
         per_file_disabled_identifiers: Optional[Set[str]],
-    ) -> bool:
+    ) -> Tuple[bool, bool]:
         enabled_plugins_with_fixes = filter(
             lambda x: x.plugin_supports_fix, self.__plugins.enabled_plugins
         )
@@ -550,9 +589,10 @@ class FileScanHelper:
                 level_list = []
                 plugins_by_fix_level[pair_fix_level] = level_list
             level_list.append(pair_plugin_id)
-        minimum_fix_level = min(plugins_by_fix_level.keys())
         did_anything_get_fixed = False
-        keep_processing = True
+        did_attempt_at_least_one_fix = len(plugins_by_fix_level) != 0
+        keep_processing = did_attempt_at_least_one_fix
+        minimum_fix_level = min(plugins_by_fix_level.keys()) if keep_processing else -1
 
         while keep_processing:
             (
@@ -574,7 +614,7 @@ class FileScanHelper:
                 did_anything_get_fixed or did_anything_get_fixed_this_time
             )
 
-        return did_anything_get_fixed
+        return did_anything_get_fixed, did_attempt_at_least_one_fix
 
     # pylint: enable=too-many-arguments, too-many-locals
 
@@ -1126,19 +1166,14 @@ class FileScanHelper:
                 next_entry, full_property_name, per_file_ignores_prefix
             )
 
-            property_value = self.__properties.get_string_property(
-                full_property_name, strict_mode=True
-            )
-            property_value = (
-                property_value.strip() if property_value else property_value
-            )
-            if not property_value:
-                raise ValueError(
-                    f"Property value for `{full_property_name}` must be a non-empty, comma-separated list of rule identifiers."
+            property_values = (
+                self.__properties.get_string_list_property(
+                    full_property_name, delimiter=",", strict_mode=True
                 )
-
+                or []
+            )
             rules_to_disable_by_id: Set[str] = set()
-            for next_rule_identifier in property_value.lower().split(","):
+            for next_rule_identifier in property_values:
                 normalize_identifier = self.__plugins.get_plugin_id_from_identifier(
                     next_rule_identifier
                 )

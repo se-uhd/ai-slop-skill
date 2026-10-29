@@ -1,3 +1,7 @@
+"""
+Module to provide for a manager that tracks the currently open container blocks.
+"""
+
 from typing import Dict, List, Optional, cast
 
 from pymarkdown.general.parser_helper import ParserHelper
@@ -11,13 +15,10 @@ from pymarkdown.tokens.text_markdown_token import TextMarkdownToken
 
 class ContainerTokenManager:
     """
-    TBD
+    Class to provide for a manager that tracks the currently open container blocks.
     """
 
     def __init__(self) -> None:
-        """
-        TBD
-        """
         self.container_token_stack: List[MarkdownToken] = []
         self.bq_line_index: Dict[int, int] = {}
         self.last_leaf_token: Optional[MarkdownToken] = None
@@ -26,11 +27,13 @@ class ContainerTokenManager:
 
     def clear(self) -> None:
         """
-        TBD
+        Clear the token manager for new document.
         """
         self.container_token_stack = []
         self.bq_line_index = {}
         self.last_leaf_token = None
+        self.list_adjust_map = {}
+        self.bq_close_map = {}
 
     @classmethod
     def __is_simple_delta(cls, token: MarkdownToken) -> bool:
@@ -113,6 +116,9 @@ class ContainerTokenManager:
         )
 
     def premanage_container_tokens(self, token: MarkdownToken) -> None:
+        """
+        Premanage the container tokens.
+        """
         if (
             self.container_token_stack
             and self.last_leaf_token
@@ -121,7 +127,9 @@ class ContainerTokenManager:
         ):
             self.bq_line_index[len(self.container_token_stack)] += 1
 
-    def manage_container_tokens(self, token: MarkdownToken) -> None:
+    def manage_container_tokens(
+        self, token: MarkdownToken, use_new: bool = False
+    ) -> None:
         """
         Manage the container tokens, especially the block quote indices.
         """
@@ -152,8 +160,27 @@ class ContainerTokenManager:
         elif token.is_new_list_item:
             self.list_adjust_map[len(self.container_token_stack)] += 1
         elif token.is_list_end:
-            del self.bq_line_index[len(self.container_token_stack)]
-            del self.list_adjust_map[len(self.container_token_stack)]
-            del self.container_token_stack[-1]
+            self.manage_container_tokens_list_end(use_new)
         elif self.container_token_stack:
             self.__manage_leaf_tokens(token)
+
+    def manage_container_tokens_list_end(self, use_new: bool) -> None:
+        """
+        Manage the container tokens at the end of a list.
+        """
+        stack_count = len(self.container_token_stack)
+        if use_new:
+            if (
+                stack_count in self.bq_line_index
+                and stack_count - 1 in self.list_adjust_map
+            ):
+                current_count = self.bq_line_index[stack_count]
+                previous_count = self.list_adjust_map[stack_count - 1]
+                self.list_adjust_map[stack_count - 1] = current_count + previous_count
+        elif stack_count - 1 in self.list_adjust_map:
+            current_count = self.list_adjust_map[stack_count]
+            previous_count = self.list_adjust_map[stack_count - 1]
+            self.list_adjust_map[stack_count - 1] = current_count + previous_count
+        del self.bq_line_index[stack_count]
+        del self.list_adjust_map[stack_count]
+        del self.container_token_stack[-1]

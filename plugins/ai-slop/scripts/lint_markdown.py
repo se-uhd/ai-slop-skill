@@ -15,8 +15,14 @@ GitHub-Flavored Markdown via PyMarkdown's CommonMark base plus the
 `markdown-tables`, `markdown-task-list-items`, `markdown-strikethrough`,
 `markdown-extended-autolinks`, and `front-matter` extensions. Disabled
 plugins (`md013` line-length, `md033` no-inline-html, `md041`
-first-line-heading) are noisy or incompatible with the report template and
-add no value to the prose this linter targets.
+first-line-heading) are noisy or incompatible with the templates of the
+consuming skills and add no value to the prose this linter targets.
+
+The wrapper itself also turns off the rules in WRAPPER_DISABLED_RULES
+(`md060` table-column-style), so a consuming skill needs no config
+change to drop them. They report only how the Markdown source is spaced,
+which renders identically. A config that sets `enabled: true` for such
+a rule turns it back on.
 
 Pre-pass checks
 ---------------
@@ -41,10 +47,11 @@ on the raw bytes before pymarkdown is invoked:
                         does not parse as YAML is treated as body text,
                         so fences inside it are tracked.
 
-Note: pymarkdown 0.9.37 crashes (internal assertion) on files that open
-with `---` but lack a final newline, and, when allow_blank_lines is enabled,
-on any unclosed frontmatter block. The wrapper exits 2 on such files and
-still prints the pre-pass and schema findings it detected.
+Note: pymarkdown 0.9.37 through 0.9.41 crash (internal assertion) on
+files that open with `---` but lack a final newline, and, when
+allow_blank_lines is enabled, on any unclosed frontmatter block. The
+wrapper exits 2 on such files and still prints the pre-pass and schema
+findings it detected.
 
 Schema checks
 -------------
@@ -104,6 +111,16 @@ PYMARKDOWN_LINE_RE = re.compile(
     r'(?P<message>.+?)(?:\s+\((?P<aliases>[^)]+)\))?\s*$'
 )
 
+# Rules passed to pymarkdown's --disable-rules unless the config enables
+# them, mapped to the identifiers pymarkdown accepts as their config
+# section, in the order it tries them.
+#   - md060 (PyMarkdown 0.9.40): no style accepts spaced cells over an
+#     unspaced `|---|` delimiter row, the most common table layout, and
+#     the rule has no --fix.
+WRAPPER_DISABLED_RULES = {
+    'md060': ('md060', 'table-column-style'),
+}
+
 
 def load_schema_checks():
     """Load the sibling `schema_checks.py`. Return (skill_name, finder) or
@@ -120,7 +137,45 @@ def load_schema_checks():
     return skill_name, finder
 
 
-def frontmatter_settings(config_path):
+def read_config(config_path):
+    """Parse the pymarkdown config and return its top-level mapping.
+
+    An unreadable or unparseable config, or one that is not a mapping,
+    yields {}. pymarkdown reports such a config itself when it runs.
+    """
+    try:
+        # Binary read: PyYAML auto-detects UTF-8/16/32 via BOM, matching
+        # how pymarkdown's own loader reads the same file. Undecodable
+        # bytes appear as a YAMLError, not a UnicodeDecodeError.
+        doc = yaml.safe_load(config_path.read_bytes())
+    except (OSError, yaml.YAMLError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def wrapper_disabled_rules(doc):
+    """Return the WRAPPER_DISABLED_RULES that the config does not enable.
+
+    Mirrors pymarkdown's lookup: the first identifier with a non-empty
+    section decides, and only a boolean `enabled: true` enables the rule.
+    """
+    plugins = doc.get('plugins')
+    if not isinstance(plugins, dict):
+        plugins = {}
+    disabled = []
+    for rule_id, identifiers in WRAPPER_DISABLED_RULES.items():
+        enabled = False
+        for name in identifiers:
+            section = plugins.get(name)
+            if isinstance(section, dict) and section:
+                enabled = section.get('enabled') is True
+                break
+        if not enabled:
+            disabled.append(rule_id)
+    return disabled
+
+
+def frontmatter_settings(doc):
     """Read the front-matter extension settings from the pymarkdown config.
 
     Returns (enabled, allow_blank_lines). Mirrors pymarkdown's strict booleans,
@@ -129,15 +184,6 @@ def frontmatter_settings(config_path):
     explicitly). An unparseable config yields (False, False), which only
     suppresses the frontmatter pre-pass and never adds findings.
     """
-    try:
-        # Binary read: PyYAML auto-detects UTF-8/16/32 via BOM, matching
-        # how pymarkdown's own loader reads the same file. Undecodable
-        # bytes appear as a YAMLError, not a UnicodeDecodeError.
-        doc = yaml.safe_load(config_path.read_bytes())
-    except (OSError, yaml.YAMLError):
-        return False, False
-    if not isinstance(doc, dict):
-        return False, False
     extensions = doc.get('extensions')
     if not isinstance(extensions, dict):
         return False, False
@@ -216,7 +262,7 @@ def pre_findings(raw_text, fm_enabled=False, fm_allow_blanks=False):
             if fm_allow_blanks:
                 # With allow_blank_lines pymarkdown never reaches its
                 # abandonment path. An unclosed block hits an internal
-                # assertion at EOF instead (0.9.37).
+                # assertion at EOF instead (0.9.37 through 0.9.41).
                 detail = ('leading `---` has no matching close before '
                           'EOF; pymarkdown errors out on such files')
             else:
@@ -258,21 +304,24 @@ def pre_findings(raw_text, fm_enabled=False, fm_allow_blanks=False):
     return findings
 
 
-def run_pymarkdown(subcommand, path, config):
+def run_pymarkdown(subcommand, path, config, disabled_rules=()):
     """Invoke the vendored PyMarkdown CLI and return (rc, stdout, stderr).
 
     Uses the `explicit` return-code scheme, the only one in which every
     outcome is distinguishable: 0 success, 1 no files to scan, 2 command
     line error, 3 fixed at least one file, 4 scan triggered at least
     once, 5 system error (see _vendor/pymarkdown/return_code_helper.py).
+    `disabled_rules` go to --disable-rules, which overrides the config.
     """
     argv = [
         "pymarkdown",
         "--no-json5",
         "--config", str(config),
         "--return-code-scheme", "explicit",
-        subcommand, str(path),
     ]
+    if disabled_rules:
+        argv += ["--disable-rules", ",".join(disabled_rules)]
+    argv += [subcommand, str(path)]
     saved_argv = sys.argv
     sys.argv = argv
     out_buf = io.StringIO()
@@ -352,11 +401,14 @@ def main():
         sys.stderr.write(f"lint_markdown.py: cannot read {args.path}: {e}\n")
         sys.exit(2)
 
+    doc = read_config(config)
+    disabled_rules = wrapper_disabled_rules(doc)
+
     if args.fix:
         # Under the explicit scheme 0 means nothing to fix and 3 means at
         # least one file was fixed. Anything else is worth a warning (the
         # scan below reports terminal conditions with a hard error).
-        rc_fix, _, _ = run_pymarkdown('fix', p, config)
+        rc_fix, _, _ = run_pymarkdown('fix', p, config, disabled_rules)
         if rc_fix not in (0, 3):
             sys.stderr.write(
                 f"lint_markdown.py: pymarkdown fix exited {rc_fix}\n"
@@ -369,7 +421,7 @@ def main():
             )
             sys.exit(2)
 
-    fm_enabled, fm_allow_blanks = frontmatter_settings(config)
+    fm_enabled, fm_allow_blanks = frontmatter_settings(doc)
     findings = pre_findings(raw, fm_enabled, fm_allow_blanks)
     if schema_findings is not None:
         findings.extend(schema_findings(raw, p))
@@ -378,7 +430,8 @@ def main():
         for line_no, rule, message in sorted(found):
             print(f"{args.path}:{line_no}\t{rule}\t{message}")
 
-    rc_scan, stdout, stderr = run_pymarkdown('scan', p, config)
+    rc_scan, stdout, stderr = run_pymarkdown('scan', p, config,
+                                             disabled_rules)
     if rc_scan == 1:
         # NO_FILES_TO_SCAN: pymarkdown declined the path (typically a
         # non-Markdown extension) and emits no diagnostic of its own, so
