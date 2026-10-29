@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev8"
+  version: "2026-10_rev9"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -64,7 +64,7 @@ Both inputs default to the current working directory. No arguments are required.
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, `../../shared/rules-ste.md`: the rule layers, referenced only as a fallback when the user asks *why* a finding was flagged. Revise mode applies the suggested revisions in the report as written and does not re-derive them from the rules.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, `../../shared/rules-economist.md`, `../../shared/rules-ste.md`: the rule layers, referenced only as a fallback when the user asks *why* a finding was flagged. Revise mode applies the suggested revisions in the report as written and does not re-derive them from the rules.
 - `../../scripts/find_latex_root.py`: used by the Inputs section to locate the LaTeX root.
 
 Revise mode does not load the trope catalog at runtime. The report already contains every suggested revision, so no trope source is needed.

@@ -3,7 +3,7 @@ name: init
 description: Set up the general writing rules and AI trope catalog for Claude Code, Codex, or pi across projects, or export them as one Markdown file for a system prompt. Use when the user wants the assistant's replies, edits, comments, and commit messages to follow these rules, or runs `/ai-slop:init`. Claude Code uses ~/.claude/rules/ai-slop.md. Codex and pi use ai-slop.md in their home or agent directory with a reference in their global instructions. For an editable WRITING.md in one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev8"
+  version: "2026-10_rev9"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -13,7 +13,7 @@ This skill writes the general rule layer and the AI trope catalog (fetched live 
 
 **Audience and tone.** The user wants the assistant's own output to follow the rules everywhere, instead of auditing it afterward. The file applies to any prose, so it carries no rules for a single genre or file format.
 
-**Init and writing.** `/ai-slop:writing` writes a `WRITING.md` into one project, with the layers that the project calls for (the scientific and LaTeX layers for a paper), for co-authors to read and edit and to commit with the project. Init writes one file for every session, with the general layer only (plus the STE layer on request), and replaces it on each run.
+**Init and writing.** `/ai-slop:writing` writes a `WRITING.md` into one project, with the layers that the project calls for (the scientific and LaTeX layers for a paper), for co-authors to read and edit and to commit with the project. Init writes one file for every session, with the general layer and the Economist or STE layers on request, and replaces it on each run.
 
 ## Client and paths
 
@@ -37,13 +37,13 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 **Output path.** A positional path sets the file to write and skips the automatic Codex or pi registration step. With no path, Claude Code uses `~/.claude/rules/ai-slop.md`. Codex uses `<codex-home>/ai-slop.md`, where `<codex-home>` is the configured `CODEX_HOME` or `~/.codex` when unset. Pi uses `<pi-agent-dir>/ai-slop.md`, where `<pi-agent-dir>` is the configured `PI_CODING_AGENT_DIR` or `~/.pi/agent` when unset. Expand these paths before passing them to the helper. Never export the full rules into an existing `AGENTS.md`, `AGENTS.override.md`, or `CLAUDE.md` as part of automatic setup.
 
-**Flags.** `--ste` adds the Simplified Technical English layer (`../../shared/rules-ste.md`), which applies to any prose. `--tropes=<path>` (repeatable) reads the catalog from local files instead of tropes.fyi, concatenated in the order given, as in `/ai-slop:review`. The scientific and LaTeX layers are not available here, since they apply to research articles and LaTeX source. `/ai-slop:writing` writes them into the `WRITING.md` of a paper project.
+**Flags.** `--economist` adds core advice from *Writing with Style: The Economist Guide* (`../../shared/rules-economist.md`). `--ste` adds the Simplified Technical English layer (`../../shared/rules-ste.md`). Both apply to any prose and can be combined, with the stricter STE limits retained (`E.precedence`). `--tropes=<path>` (repeatable) reads the catalog from local files instead of tropes.fyi, concatenated in the order given, as in `/ai-slop:review`. The scientific and LaTeX layers are not available here, since they apply to research articles and LaTeX source. `/ai-slop:writing` writes them into the `WRITING.md` of a paper project.
 
 ## Workflow
 
 1. **Resolve the output path.** Take the positional path, or select the default for the target client as described in Inputs. Record whether the path was explicit.
 
-2. **Write the file.** Run `python3 "<skill-dir>/../../scripts/export_rules.py" <output> [--ste] [--tropes=<path> ...]`. The script builds the file from `../../shared/rules-general.md` (and `rules-ste.md` with `--ste`) and the catalog, each under its own heading. It leaves out the self-check of each layer, which restates the rules, and the status line, label, and `---` line of each catalog entry. The script writes the file in one step, so do not compose or edit the file by hand. The next step depends on its exit code:
+2. **Write the file.** Run `python3 "<skill-dir>/../../scripts/export_rules.py" <output> [--economist] [--ste] [--tropes=<path> ...]`. The script builds the file from `../../shared/rules-general.md`, the requested optional layers, and the catalog, each under its own heading. It leaves out the self-check of each layer, which restates the rules, and the status line, label, and `---` line of each catalog entry. The script writes the file in one step, so do not compose or edit the file by hand. The next step depends on its exit code:
    - `0`: the file is written. The stderr line says whether it was created or replaced, and gives its size in bytes and approximate tokens.
    - `1`: there is no catalog. tropes.fyi is the only source and there is no bundled fallback, so stop and tell the user that fetching the catalog failed and that `--tropes=<path>` writes the file from a local copy.
    - `2`: a usage error, or a file that could not be read. Pass the message on and stop.
@@ -68,7 +68,7 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 - `../../scripts/export_rules.py` assembles and writes the file. Unless `--force` is passed, it replaces only a file from an earlier run, including one from `/ai-slop:export`, the former name of this mode.
 - `../../scripts/fetch_tropes.py` fetches the catalog from tropes.fyi. `export_rules.py` calls it unless `--tropes=<path>` is passed.
-- `../../shared/rules-general.md` and `../../shared/rules-ste.md` are the rule layers in the file.
+- `../../shared/rules-general.md`, `../../shared/rules-economist.md`, and `../../shared/rules-ste.md` are the rule layers available for the file.
 
 ## Constraints
 

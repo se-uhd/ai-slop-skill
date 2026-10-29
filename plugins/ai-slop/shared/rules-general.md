@@ -3,10 +3,11 @@
 This file is the base layer of the writing rules. It applies to any prose, scientific
 or not, in any format. Other layers build on it. `rules-scientific.md` adds
 conventions for empirical research articles, and `rules-latex.md` adds mechanics
-for LaTeX source. The optional `rules-ste.md` adds rules based on Simplified
-Technical English. A skill loads the layers that its scope calls for
+for LaTeX source. The optional `rules-economist.md` adds core advice from
+*Writing with Style: The Economist Guide*, and `rules-ste.md` adds rules based on
+Simplified Technical English. A skill loads the layers that its scope calls for
 (general only; general + scientific; or general + scientific + LaTeX), plus the
-STE layer when it is passed `--ste`.
+Economist layer with `--economist` and the STE layer with `--ste`.
 
 These rules target AI slop and the habits that make machine-written prose
 recognizable, plus universal points of clean writing. The general AI trope

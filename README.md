@@ -1,6 +1,6 @@
 # AI Slop Review Skill
 
-An [Agent Skill](https://agentskills.io/home) bundle that catches AI slop in prose and enforces conventions for clear writing. It works on any text, such as a Markdown draft, documentation, or a blog post, and adds a scientific layer for empirical software engineering papers (voice and tense, statistical reporting per APA/IEEE/ACM, citations) and a LaTeX layer for LaTeX source (BibTeX, `\citeauthor`, `% GROUNDING`). Both load automatically for `.tex` source, and `--scientific` opts a non-LaTeX manuscript into the scientific layer. An optional STE layer (`--ste`) applies rules based on ASD-STE100 Simplified Technical English to any input. Agent Skills is an open standard originally developed by Anthropic and now read by Claude Code, Cursor, GitHub Copilot, OpenAI Codex, and pi, among others. The [client list](https://agentskills.io/clients) names the rest.
+An [Agent Skill](https://agentskills.io/home) bundle that catches AI slop in prose and enforces conventions for clear writing. It works on any text, such as a Markdown draft, documentation, or a blog post, and adds a scientific layer for empirical software engineering papers (voice and tense, statistical reporting per APA/IEEE/ACM, citations) and a LaTeX layer for LaTeX source (BibTeX, `\citeauthor`, `% GROUNDING`). Both load automatically for `.tex` source, and `--scientific` opts a non-LaTeX manuscript into the scientific layer. Optional layers apply rules based on ASD-STE100 Simplified Technical English (`--ste`) and core advice from *Writing with Style: The Economist Guide* (`--economist`) to any input. Agent Skills is an open standard originally developed by Anthropic and now read by Claude Code, Cursor, GitHub Copilot, OpenAI Codex, and pi, among others. The [client list](https://agentskills.io/clients) names the rest.
 
 The skill keeps its writing rules in layers (listed under Rule layers below) and fetches a general AI trope catalog (named patterns such as negative parallelism, em-dash addiction, and rule-of-three groupings, each tagged with a status) at runtime from [tropes.fyi](https://tropes.fyi) and from no other source. The table under Rule layers shows which layers each input loads, and `review-repo` never loads the LaTeX layer. The same bundle therefore reviews a Markdown blog draft, a non-LaTeX manuscript (with `--scientific`), or a full LaTeX paper.
 
@@ -8,7 +8,7 @@ Stylistic checks require a problem in context and a replacement that preserves t
 
 ## Rule layers
 
-The writing rules ship as four layers. Which of the first three load depends on whether the input is LaTeX source (detected automatically by `scripts/detect_scope.py`) and whether you pass `--scientific`:
+The writing rules ship as five layers. Which of the first three load depends on whether the input is LaTeX source (detected automatically by `scripts/detect_scope.py`) and whether you pass `--scientific`:
 
 | Input | general | scientific | latex |
 |---|:---:|:---:|:---:|
@@ -21,6 +21,31 @@ The writing rules ship as four layers. Which of the first three load depends on 
 `rules-ste.md` is the optional STE layer, and `--ste` adds it to any row of the table. It applies part of ASD-STE100 Simplified Technical English: short sentences with the subject and verb near the start, active voice, one topic per paragraph, one meaning per word, verbs instead of nominalizations, and no dropped articles. It changes the ASD-STE100 rules on sentence length and style. Sentence length varies around a target of 25 words, with a tolerance up to 35. Each unit (a reply, a headed section, or a text without headings) carries one stylistic device at most. Quotations and literal strings stay as written. Where the STE layer and the general layer set different limits for the same construction, the STE limit applies. The STE rules carry `T.` keys.
 
 When an STE rewrite of an existing sentence would lose meaning, precision, or force, the sentence stays as written, and a review lists it for author judgment. `scripts/scan_sentences.py` lists the candidates that a count or a word pattern can find: sentences over 25 words, runs of sentences of similar length, passive verbs, and a light verb followed by an action noun ("make a decision").
+
+`rules-economist.md` is the optional Economist layer, selected by `--economist`.
+It distills the core advice in Lane Greene's *Writing with Style: The Economist
+Guide* (2023): explain unfamiliar knowledge to intelligent readers, choose plain
+and precise words, make actors and actions clear, connect the argument, remove
+padding, use a civil tone, and put numbers in context. It also checks numerical
+precision and comparability. The rules carry `E.` keys and include a self-check.
+The book is not bundled and is not needed at runtime.
+
+Economist mode keeps project and academic conventions, including the default
+American spelling and required statistical detail. It sets no sentence-length
+limit, numerical quota, or automatic rounding rule. `--economist --ste` combines
+both optional layers, retaining the stricter STE limits. An unresolved fact or
+interpretation goes under author judgment instead of a speculative rewrite.
+
+Examples:
+
+```text
+/ai-slop:review draft.md --economist
+/ai-slop:review paper.pdf --scientific --economist
+/ai-slop:review-diff main --economist
+/ai-slop:review-repo --economist
+/ai-slop:writing --economist
+/ai-slop:init --economist
+```
 
 ## Versioning
 
@@ -54,7 +79,7 @@ Eight slash commands become available:
 /ai-slop:init
 ```
 
-`review`, `review-diff`, and `writing` detect LaTeX source automatically and load all three rule layers for it. Any other input loads the general layer. Add `--scientific` to also apply the research article rules to a non-LaTeX manuscript (a Markdown or PDF paper). `review-repo` is the whole-codebase mode and always loads the general layer (`--scientific` optional). It never loads the LaTeX layer, since it reviews the prose and code comments of a repository rather than a single paper. `--ste` adds the STE layer in `review`, `review-diff`, `review-repo`, `writing`, and `init`.
+`review`, `review-diff`, and `writing` detect LaTeX source automatically and load all three rule layers for it. Any other input loads the general layer. Add `--scientific` to also apply the research article rules to a non-LaTeX manuscript (a Markdown or PDF paper). `review-repo` is the whole-codebase mode and always loads the general layer (`--scientific` optional). It never loads the LaTeX layer, since it reviews the prose and code comments of a repository rather than a single paper. `--ste` and `--economist` add their optional layers in `review`, `review-diff`, `review-repo`, `writing`, and `init`.
 
 Run them from your project directory. `/ai-slop:review` finds the document to review in the current directory (a LaTeX root or a PDF, while a Markdown or plain-text draft needs an explicit path), walks the full draft against the rules, and writes a structured Markdown report to `ai-slop-report.md` in the working directory. `/ai-slop:review-diff` does the same but only on the lines that you changed in the git working tree (default base `HEAD`, or any git ref passed as an argument to compare against a different baseline, e.g., `/ai-slop:review-diff main`). `/ai-slop:review-repo` sweeps a whole repository instead of one document: its Markdown, plain-text, and LaTeX files, the comments in its source and config files, and its commit messages, with findings grouped by file and by commit (see `/ai-slop:review-repo` below). `/ai-slop:revise` reads the report and applies its suggested revisions to the source. The review modes write the same report schema. `/ai-slop:glossary` creates or maintains `GLOSSARY.md` from a document, proposes definitions, and checks the document for competing terms and new names for existing concepts, using that report schema for source suggestions. For LaTeX papers, `/ai-slop:ground` fills the grounding comments that the review flags as missing. Review *finds* the `\cite{}` calls missing a grounding comment, and ground *fills* them by fetching each cited source and inserting a retrieved verbatim quote (or a `TODO verify -- <reason>` stub when the source cannot be retrieved). `/ai-slop:writing` is a one-shot setup command. It copies the bundled writing rules into a project-local `WRITING.md` and adds a reference to it in the `AGENTS.md` of the repository, with a `CLAUDE.md` import for Claude Code so collaborators and any Agent Skills client see the conventions even without this plugin installed. `/ai-slop:init` sets up the general rules and the trope catalog for the current client across projects, using the rules directory of Claude Code or a file referenced by the global instructions of Codex or pi (see `/ai-slop:init` below). Explicit paths can be passed as arguments to override the auto-detection. The skills also auto-trigger on matching prompts (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "ground the citations", "set up writing rules in this repo").
 
@@ -104,7 +129,7 @@ For Claude Code, Codex, and pi, use the installation instructions above. For ano
 
 ## Use as a system prompt
 
-For chat UIs or LLM APIs without Agent Skills support, paste the contents of the rule layers (`rules-general.md`, plus `rules-scientific.md`, `rules-latex.md`, and `rules-ste.md` as your text calls for) and the catalog from [tropes.fyi](https://tropes.fyi/tropes-md) into the system prompt. The catalog page has a download button, and the file behind it is plain markdown formatted for system-prompt use. `/ai-slop:init <path>` writes the general layer and the catalog into one file at `<path>`, ready to paste or to add to a claude.ai Project as knowledge.
+For chat UIs or LLM APIs without Agent Skills support, paste the contents of the rule layers (`rules-general.md`, plus `rules-scientific.md`, `rules-latex.md`, `rules-economist.md`, and `rules-ste.md` as your text calls for) and the catalog from [tropes.fyi](https://tropes.fyi/tropes-md) into the system prompt. The catalog page has a download button, and the file behind it is plain markdown formatted for system-prompt use. `/ai-slop:init <path>` writes the general layer and the catalog into one file at `<path>`, ready to paste or to add to a claude.ai Project as knowledge.
 
 ## Skill workflows
 
@@ -200,13 +225,13 @@ The anti-fabrication rule is mandatory. A quote is written only when the source 
 
 ### `/ai-slop:writing`
 
-The writing skill is a one-shot setup command for new (or existing) project repositories. It builds a project-local `WRITING.md` by concatenating the bundled writing rules (the layers selected automatically: all three for a LaTeX project, the general layer otherwise, general + scientific with `--scientific`, or the general layer alone with `--general` for a code repository that happens to contain a paper, with the STE layer added by `--ste`) with the AI trope catalog (fetched live from tropes.fyi), then creates or updates `AGENTS.md` with an instruction to read `WRITING.md`. It also creates a `CLAUDE.md` import of `AGENTS.md`, or preserves an existing Claude reference to the rules. A nonempty `AGENTS.override.md` receives the reference too, because Codex and pi read it instead of `AGENTS.md`. All three clients can use the generated rules without this plugin installed and when offline.
+The writing skill is a one-shot setup command for new (or existing) project repositories. It builds a project-local `WRITING.md` by concatenating the bundled writing rules (the layers selected automatically: all three for a LaTeX project, the general layer otherwise, general + scientific with `--scientific`, or the general layer alone with `--general` for a code repository that happens to contain a paper, with the Economist layer added by `--economist` and the STE layer by `--ste`) with the AI trope catalog (fetched live from tropes.fyi), then creates or updates `AGENTS.md` with an instruction to read `WRITING.md`. It also creates a `CLAUDE.md` import of `AGENTS.md`, or preserves an existing Claude reference to the rules. A nonempty `AGENTS.override.md` receives the reference too, because Codex and pi read it instead of `AGENTS.md`. All three clients can use the generated rules without this plugin installed and when offline.
 
 `WRITING.md` is meant to be edited freely after generation. It is a starting point, not a synced replica. The skill confirms before overwriting an existing `WRITING.md`, and the instruction-file updates are idempotent. Existing instructions are preserved, and references already present are not appended again. The writing skill does not modify your content and does not commit.
 
 ### `/ai-slop:init`
 
-Init mode sets up the rules for the current client across projects, so that the assistant's replies in chat, the files it edits, its code comments, and its commit messages follow the rules without a review afterward. `scripts/export_rules.py` combines the general layer with the AI trope catalog (fetched live from tropes.fyi), each under its own heading, below an instruction to apply the rules to the text that the assistant writes or changes, and to let the writing conventions of the project itself take precedence. `--ste` adds the STE layer. The file leaves out the self-check of each layer, which restates the rules item by item, and asks for the check in its opening paragraph instead. It also drops the status line of each catalog entry, its `**Avoid patterns like:**` label, and the `---` line after it. The file carries no rules for a single genre or file format. The scientific and LaTeX layers belong to a paper project and stay with `/ai-slop:writing`.
+Init mode sets up the rules for the current client across projects, so that the assistant's replies in chat, the files it edits, its code comments, and its commit messages follow the rules without a review afterward. `scripts/export_rules.py` combines the general layer with the AI trope catalog (fetched live from tropes.fyi), each under its own heading, below an instruction to apply the rules to the text that the assistant writes or changes, and to let the writing conventions of the project itself take precedence. `--economist` adds the core Economist advice, and `--ste` adds the STE layer. Both flags can be combined. The file leaves out the self-check of each layer, which restates the rules item by item, and asks for the check in its opening paragraph instead. It also drops the status line of each catalog entry, its `**Avoid patterns like:**` label, and the `---` line after it. The file carries no rules for a single genre or file format. The scientific and LaTeX layers belong to a paper project and stay with `/ai-slop:writing`.
 
 In Claude Code, the default output remains `~/.claude/rules/ai-slop.md`. Claude Code reads every Markdown file under `~/.claude/rules/` at launch, in every project, so the rules load without an import in any `CLAUDE.md`. A path under `.claude/rules/` in a repository loads the file in that project only, and any other path writes the file for another use, such as knowledge for a claude.ai Project or an `@<path>` import. Running the mode again replaces the file with the current rules and catalog. The mode also replaces a file from `/ai-slop:export`, its former name. The skill asks before replacing any other file, so keep your own additions in a separate file. The general layer and the catalog come to about 20,000 tokens, which every session carries in its context. The file takes effect in the next session.
 
@@ -220,7 +245,7 @@ An explicit output path exports the file without changing the global instruction
 
 ## Repository layout
 
-The plugin is under `plugins/ai-slop/`: `commands/` holds the eight slash commands, `skills/` the eight `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, glossary, writing, init), and `shared/` the four rule layers plus the rationale doc. `scripts/` holds the vendored Markdown linter under `_vendor/` and the stdlib Python helpers for scope and LaTeX root detection, repository prose extraction (`scan_repo.py`), the glyph, reference, repeat, and sentence scans (`scan_glyphs.py`, `scan_reference.py`, `scan_repeats.py`, `scan_sentences.py`), the trope catalog download, the export of the rules as one file (`export_rules.py`), the citation, BibTeX, and reference checks, citation extraction, the grounding quote check, and grounding-comment insertion. The marketplace manifest is at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`. The root `package.json` is the pi package manifest, which lists `plugins/ai-slop/skills` under its `pi.skills` key.
+The plugin is under `plugins/ai-slop/`: `commands/` holds the eight slash commands, `skills/` the eight `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, glossary, writing, init), and `shared/` the five rule layers plus the rationale doc. `scripts/` holds the vendored Markdown linter under `_vendor/` and the stdlib Python helpers for scope and LaTeX root detection, repository prose extraction (`scan_repo.py`), the glyph, reference, repeat, and sentence scans (`scan_glyphs.py`, `scan_reference.py`, `scan_repeats.py`, `scan_sentences.py`), the trope catalog download, the export of the rules as one file (`export_rules.py`), the citation, BibTeX, and reference checks, citation extraction, the grounding quote check, and grounding-comment insertion. The marketplace manifest is at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`. The root `package.json` is the pi package manifest, which lists `plugins/ai-slop/skills` under its `pi.skills` key.
 
 ## Maintainer notes
 
@@ -251,7 +276,7 @@ If a user reports `Failed to install: This plugin uses a source type your Claude
 
 ## Acknowledgements
 
-The general AI trope catalog is the work of [Ossama Chaib](https://ossama.is) at [tropes.fyi](https://tropes.fyi). This skill fetches the catalog at runtime and bundles no copy of it. All credit for the trope catalog goes to him. The layered writing rules (`rules-general.md`, `rules-scientific.md`, `rules-latex.md`, `rules-ste.md`) are maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd). The STE layer adapts writing rules from the ASD-STE100 Simplified Technical English specification, which ASD maintains, and reproduces neither the specification nor its dictionary.
+The general AI trope catalog is the work of [Ossama Chaib](https://ossama.is) at [tropes.fyi](https://tropes.fyi). This skill fetches the catalog at runtime and bundles no copy of it. All credit for the trope catalog goes to him. The layered writing rules (`rules-general.md`, `rules-scientific.md`, `rules-latex.md`, `rules-economist.md`, `rules-ste.md`) are maintained by the [Software Engineering Group at Heidelberg University](https://github.com/se-uhd). The STE layer adapts writing rules from the ASD-STE100 Simplified Technical English specification, which ASD maintains, and reproduces neither the specification nor its dictionary. The Economist layer distills core advice from Lane Greene's *Writing with Style: The Economist Guide* (2023), chiefly the introduction and chapters 1 through 5, into rules and examples written for this bundle. The book is not distributed or needed at runtime.
 
 ## License
 

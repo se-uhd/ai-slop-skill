@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""export_rules.py OUTPUT [--ste] [--tropes=PATH ...] [--force]
+"""export_rules.py OUTPUT [--economist] [--ste] [--tropes=PATH ...] [--force]
 
 Write the writing rules and the AI trope catalog to OUTPUT as one Markdown
 file for a coding agent to read. The init skill selects the client-specific
@@ -9,8 +9,9 @@ apply the rules to the text that the model writes, including its replies in
 chat, so its wording addresses the model, where WRITING.md from
 `/ai-slop:writing` addresses the contributors of one project.
 
-The file holds the layers that apply to any prose: the general layer, and the
-STE layer with `--ste`. The scientific and LaTeX layers stay out, since they
+The file holds the layers that apply to any prose: the general layer, the
+Economist layer with `--economist`, and the STE layer with `--ste`.
+The scientific and LaTeX layers stay out, since they
 apply to research articles and LaTeX source, and `/ai-slop:writing` writes
 them into the WRITING.md of a paper project. Each layer goes under its own H2
 heading with a sentence that states where it applies, and its headings move one
@@ -64,6 +65,8 @@ PLUGIN_JSON = PLUGIN_ROOT / '.claude-plugin' / 'plugin.json'
 LAYERS = (
     (None, 'rules-general.md', 'General rules',
      'These rules apply to all prose.'),
+    ('economist', 'rules-economist.md', 'Economist style rules',
+     'These rules apply to all prose, on top of the general rules.'),
     ('ste', 'rules-ste.md', 'Simplified Technical English rules',
      'These rules apply to all prose, on top of the general rules.'),
 )
@@ -90,8 +93,8 @@ def parse_args(argv):
     """Return (output, flags, tropes, force), or None on a usage error."""
     output, flags, tropes, force = None, set(), [], False
     for arg in argv[1:]:
-        if arg == '--ste':
-            flags.add('ste')
+        if arg in ('--ste', '--economist'):
+            flags.add(arg[2:])
         elif arg == '--force':
             force = True
         elif arg.startswith('--tropes='):
