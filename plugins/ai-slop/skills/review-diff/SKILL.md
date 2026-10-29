@@ -1,9 +1,9 @@
 ---
 name: review-diff
-description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
+description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer; `--economist` for core Economist style advice), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev8"
+  version: "2026-10_rev9"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -45,6 +45,8 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 **STE mode.** `--ste` adds the Simplified Technical English layer to every changed file, as in `/ai-slop:review`.
 
+**Economist mode.** `--economist` adds `rules-economist.md` to every changed file, as in `/ai-slop:review`. Keep project and research conventions and the stricter STE limits when both flags are selected (`E.precedence`).
+
 ## Workflow
 
 1. **Verify git context.** Run `git rev-parse --is-inside-work-tree`. If not in a git repo, stop with the message above. Otherwise capture the repo root for later path resolution.
@@ -59,7 +61,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 5. **Identify sections.** For each changed paragraph, walk backward in the new file to the nearest preceding `\section{}` or `\subsection{}` (for Markdown, the nearest preceding `#` / `##` heading) to map the paragraph to its section. The section mapping selects the section-aware rules (e.g., verb tense, threats-to-validity specificity), which apply only when the scientific layer is in scope.
 
-6. **Determine which rule layers to load.** Same layers as `/ai-slop:review` under `../../shared/`. Decide per changed file. Run `python3 "<skill-dir>/../../scripts/detect_scope.py" <file>` on each. A `latex` file (any `.tex`) gets the general, scientific, and LaTeX layers. A `general` file gets `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research manuscript). With `--ste`, every changed file also gets `rules-ste.md`, which sets the limit wherever it and the general layer disagree (`T.precedence`). Read each selected layer file. Each adds its own rules and self-check section. Read the applicable project `GLOSSARY.md`, or a glossary named by project instructions, before checking terminology, preserving its concept boundaries, accepted variants, and scope exceptions. Treat synonyms mentioned as retired vocabulary in the glossary as reference material, not as violations in that file. The `Rule` field of a finding carries the rule name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name and its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
+6. **Determine which rule layers to load.** Same layers as `/ai-slop:review` under `../../shared/`. Decide per changed file. Run `python3 "<skill-dir>/../../scripts/detect_scope.py" <file>` on each. A `latex` file (any `.tex`) gets the general, scientific, and LaTeX layers. A `general` file gets `rules-general.md`, plus `rules-scientific.md` when `--scientific` was passed (a non-LaTeX research manuscript). With `--ste`, every changed file also gets `rules-ste.md`, which sets the limit wherever it and the general layer disagree (`T.precedence`). With `--economist`, also load `rules-economist.md` for every changed file, retaining the conventions and STE limits of the other selected layers (`E.precedence`). Read each selected layer file. Each adds its own rules and self-check section. Read the applicable project `GLOSSARY.md`, or a glossary named by project instructions, before checking terminology, preserving its concept boundaries, accepted variants, and scope exceptions. Treat synonyms mentioned as retired vocabulary in the glossary as reference material, not as violations in that file. The `Rule` field of a finding carries the rule name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name and its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
 
 7. **Load the AI trope catalog.** If `--tropes=<path>` was passed (one or more times), read each named file and concatenate them in the order given. Otherwise run `python3 "<skill-dir>/../../scripts/fetch_tropes.py"` and read its stdout. tropes.fyi is the only source and there is no bundled fallback, so the script exits 1 with an empty stdout when it cannot fetch the catalog. Stop there and tell the user that the catalog could not be fetched, naming `--tropes=<path>` as the way to review against a local copy.
 
@@ -71,6 +73,8 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
    - A **Reason** explaining the problem in context and the benefit of the replacement, or naming the explicit convention being corrected.
 
    In STE mode, list a changed sentence that an STE rewrite would weaken under **Items requiring author judgment** instead of reporting it, as `/ai-slop:review` step 4 does.
+
+   With `--economist`, apply the Economist pass in `/ai-slop:review` step 4. Use surrounding paragraphs as context, but report an `E.` finding only when its quote overlaps a changed line. Put unresolved factual questions under author judgment. Name the selected optional layers in the report Summary and apply them to report prose too. Economist mode alone adds no STE metrics.
 
 9. **Cross-cutting metrics, scoped to the diff.** Compute on changed lines only:
    - Dash count and locations in changed lines. Run `python3 "<skill-dir>/../../scripts/scan_glyphs.py"` over the changed files and keep the rows inside the changed-line set, as `/ai-slop:review` step 5 does.
@@ -108,7 +112,7 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers, and `../../shared/rules-ste.md` is the optional STE layer. Load the subset that each changed file calls for (step 6).
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three base layers. `../../shared/rules-economist.md` and `../../shared/rules-ste.md` are the optional layers selected by `--economist` and `--ste`. Load the subset that each changed file calls for (step 6).
 - `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_repeats.py`, `../../scripts/scan_sentences.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection; the catalog download; the glyph, reference, repeat, and sentence scans; citation issues; BibTeX field and reference verification; and report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints

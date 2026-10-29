@@ -1,9 +1,9 @@
 ---
 name: review
-description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, LaTeX source loads all three, and `--ste` adds a Simplified Technical English (STE) layer to any input. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
+description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, LaTeX source loads all three, and `--ste` adds a Simplified Technical English (STE) layer to any input. `--economist` adds core Economist style advice. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev8"
+  version: "2026-10_rev9"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -50,6 +50,8 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 **STE mode.** `--ste` adds the Simplified Technical English layer (`rules-ste.md`) on top of the layers that the scope selects (see step 2). It works with every input type.
 
+**Economist mode.** `--economist` adds `rules-economist.md` to any input. It applies core advice from Lane Greene's *Writing with Style: The Economist Guide*: reader knowledge, plain and precise words, sentence flow, argument, tone, and numerical context. Keep project and research conventions, and apply the stricter STE limits if both flags are passed (`E.precedence`).
+
 ## Workflow
 
 1. **Resolve inputs.** Auto-detect the paper as described in Inputs (or use the path that the user supplied). Parse any `--tropes=<path>` arguments from the user's message. Collect them as a list. Open the paper file (or extract text from PDF) and identify its sections (e.g., Abstract, Method, and Threats to Validity). For LaTeX, follow `\section{}` and `\subsection{}` markers.
@@ -59,11 +61,13 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - `rules-scientific.md`: research article conventions (research-coded phrases, the "significant" caveat, verb tense by section, citations, numbers and statistics, figures and tables, threats to validity).
    - `rules-latex.md`: LaTeX-source mechanics (LaTeX quotes, run-in caption punctuation, cross-reference and `\citeauthor` macros, `% GROUNDING` comments, BibTeX).
    - `rules-ste.md`: the optional Simplified Technical English layer (sentence length and variation, active voice, one topic per paragraph, one meaning per word, verbs instead of nominalizations, articles, and one stylistic device per unit).
+   - `rules-economist.md`: the optional Economist layer (reader knowledge, precise wording, actors and actions, sentence flow, structure and pace, concision, tone, imagery, and numbers).
 
    Decide as follows:
    - **Is it LaTeX?** Run `python3 "<skill-dir>/../../scripts/detect_scope.py" <resolved-paper-path>`. Output `latex` means LaTeX source. Load the general, scientific, and LaTeX layers (a LaTeX paper is a research article, so the scientific layer loads automatically). Output `general` means anything else, that is, Markdown, plain text, or PDF.
    - **Research article?** For `general` input, also load `rules-scientific.md` when the user passed `--scientific`, to treat a non-LaTeX manuscript (a Markdown or PDF paper) as a research article. Without the flag, load `rules-general.md` only.
    - **STE mode?** When the user passed `--ste`, also load `rules-ste.md`, whatever the two decisions above chose. Where it and the general layer set different limits for the same construction, such as the exceptions for passive voice, apply the STE limit (`T.precedence`).
+   - **Economist mode?** When the user passed `--economist`, also load `rules-economist.md`, whatever the preceding decisions chose. Keep explicit conventions from the other layers and apply the stricter STE limits when both optional layers are selected (`E.precedence`).
 
    Read each selected layer file. Each contributes its own rules and its own self-check section. Apply them together. The `Rule` field of a finding carries the rule name as written in the layer, followed by its key in parentheses, as in `Semicolons (G.semicolons)`. A catalog trope carries its name and its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
 
@@ -79,6 +83,8 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite) and for an empty head noun (`G.be-concrete`), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so revise mode does not insert a guessed noun.
 
    In STE mode, when the STE rewrite of a sentence would lose meaning, precision, or force (`T.keep-original`), record no STE finding for it. List it under **Items requiring author judgment** instead, with the STE rule and a short reason, so revise mode leaves it alone. No suggested revision changes a quotation or a literal string (`T.quotations`, `T.literals`).
+
+   In Economist mode, assess structure and reader needs before local wording. Record an Economist finding only for a demonstrated problem, citing its `E.` key. Combine overlapping findings at one location rather than reporting the same edit under multiple layers. When a proposed edit requires an essential fact or interpretation absent from the source, put a focused question under **Items requiring author judgment** (`E.keep-original`). An unknown actor is not itself a finding when the passive suits the passage. Preserve exact figures and required statistical reporting. Economist mode alone adds no sentence-length limits, number quotas, or STE metrics.
 
 5. **Cross-cutting metrics.** Compute and record the metrics for the layers in scope (when only the general layer is loaded, skip the scientific metrics: verb-tense compliance and the "significant" audit). Run the deterministic scans below first, because the per-section reading pass undercounts glyphs, reference candidates, and sentence lengths:
    - **Glyph and dash tells (run `scan_glyphs.py` instead of counting by eye).** Run `python3 "<skill-dir>/../../scripts/scan_glyphs.py" <paper-file> [<input.tex> ...]` over the paper file(s). Each stdout line is `<file>:<line>:<col>\t<glyph-name>\t<context>` for one tell, with `em-dash`, `ascii-dash`, `en-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` as the categories, and the stderr summary gives the per-category totals (e.g. `15 tell(s) [em-dash=15 ascii-dash=0 ...]`). Take the dash-density count below from this output, not from a visual estimate, adding the `em-dash` and `ascii-dash` rows. Report every `em-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` row as a per-section finding with its ASCII replacement. For `en-dash`, keep the dashes in numeric or page ranges (`pp. 12–18`). For any glyph, skip the occurrences inside quoted source material or a code string. A glyph inside a code *comment* is still a finding (the comment is prose). An `ascii-dash` row is a candidate for the per-mark judgment in **Em-dashes** (`G.em-dashes`), not an automatic finding: `---` is the correct em-dash in LaTeX and `--` is a normal ASCII dash in Markdown, so report one only when the dash itself is the wrong mark. The ASCII dash pass already skips flags, numeric ranges, table separators, fenced blocks, inline code, `%` comments in `.tex` (so the ` -- ` separator in the `% GROUNDING:` comments that the bundle writes never counts), and runs of four or more dashes. The Unicode glyph rows skip none of these, so clear a glyph inside fenced code or a `% GROUNDING` quote by hand. The script exits 0 once it read a file (with or without findings) and 2 on a usage error.
@@ -113,7 +119,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations. After the third pass, proceed regardless of what the linter reports. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
-   Then Read the file back and quote its contents verbatim in your reply. Do not regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template below. In STE mode, write the prose of the report itself (the Summary, the items for author judgment, and every suggested revision) under the STE layer too (`T.scope`).
+   Then Read the file back and quote its contents verbatim in your reply. Do not regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template below. Name the selected optional layers in the Summary. Write the report prose and suggested revisions under those layers too (`T.scope`, `E.scope`), keeping quotations unchanged.
 
 8. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
 
@@ -125,7 +131,7 @@ The report schema is stable so revise mode can parse it. Each finding has `Rule`
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-10_rev8 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
+**Skill version:** 2026-10_rev9 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
@@ -220,7 +226,7 @@ Phrase each as a suggestion, not a command. Revise mode will not act on these.>
 
 ## Bundled files
 
-- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers that the scope selects from (general prose; research article conventions; LaTeX mechanics), and `../../shared/rules-ste.md` is the optional STE layer that `--ste` adds. Load the subset that step 2 calls for.
+- `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers that the scope selects from (general prose; research article conventions; LaTeX mechanics). `--economist` adds `../../shared/rules-economist.md`, and `--ste` adds `../../shared/rules-ste.md`. Load the subset that step 2 calls for.
 - `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_repeats.py`, `../../scripts/scan_sentences.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog download, citation issues, BibTeX field and reference verification, the Unicode-glyph recheck, the reference-candidate scan, the repeat scan, the sentence scan for STE mode, report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints

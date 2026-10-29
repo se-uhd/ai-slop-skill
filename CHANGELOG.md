@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev9] - 2026-10-29
+
+- **Added:** `--economist` selects an optional layer based on the core advice in Lane Greene's *Writing with Style: The Economist Guide* (2023). It covers reader knowledge, precise words, actors and actions, sentence flow, argument, concision, tone, imagery, and numerical context and precision. The book is not bundled or required at runtime.
+- **Changed:** review, diff, repository, writing, and init modes support the layer, including offline exports with `--tropes=<path>`. Its `E.` keys, self-check, rationale, documentation, and smoke checks follow the existing layer structure. It preserves project and research conventions and combines with `--ste` under the stricter STE limits.
+
 ## [2026-10_rev8] - 2026-10-27
 
 - **Added:** the repository root is a pi package. Its `package.json` lists `plugins/ai-slop/skills` under `pi.skills`, so `pi install git:github.com/se-uhd/ai-slop-skill@<tag>` installs the eight skills, which pi invokes as `/skill:<name>`. The manifest declares no extensions or prompts, so the Claude Code command wrappers stay out of pi. Claude Code and Codex read only `.claude-plugin/` and are unaffected.

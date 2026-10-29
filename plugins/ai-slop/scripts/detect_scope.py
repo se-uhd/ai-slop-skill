@@ -13,6 +13,8 @@ The printed value drives which rule layers a skill loads:
                (plus rules-scientific.md only when --scientific is passed, to
                 treat a non-LaTeX document as a research article)
     With --ste, a skill adds rules-ste.md to either set.
+    With --economist, a skill adds rules-economist.md to either set. Both
+    optional layers can be selected, with the stricter STE limits retained.
 
 Detection:
     A file is `latex` iff its extension is `.tex`. Everything else (.pdf, .md,

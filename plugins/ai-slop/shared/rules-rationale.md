@@ -398,6 +398,82 @@ follow IEEE/ACM rather than APA, and BibTeX verification, which exists because
 AI-generated entries frequently carry wrong years, venues, page numbers, or
 hallucinated DOIs.
 
+## Economist layer
+
+The optional `rules-economist.md` distills the introduction and first five
+chapters of Lane Greene's *Writing with Style: The Economist Guide* (2023).
+It focuses on editorial decisions rather than the alphabetical rulings and
+house mechanics in the later chapters. The book is neither bundled nor needed
+at runtime. The rules and examples are written for this bundle.
+
+- **Preserve project and research conventions** (`E.precedence`). The book
+  distinguishes useful writing principles from choices made for consistency
+  within a publication. Selecting this layer does not silently replace
+  American spelling, the Oxford comma, or scientific reporting with Economist
+  conventions. It also retains the general rule on *that* and project glossary
+  terms, despite the book allowing some omissions and transparent synonyms.
+  With STE selected too, the stricter STE limits remain in force.
+- **Assume intelligence, explain unfamiliar knowledge** (`E.reader-knowledge`).
+  The relevant distinction is between an intelligent reader and a specialist
+  in the subject. Defining every everyday word is patronizing, but an
+  unexplained acronym or institutional name can make an otherwise clear
+  argument hard to follow. In a research paper, established terms and defined
+  constructs retain their meaning even when a lay paraphrase is also given.
+- **Choose familiar words without blurring meaning** (`E.precise-words`).
+  Plain language helps only when the substitute means the same thing. A
+  measured association is not automatically an action, and a technical
+  category is not interchangeable with one vivid example. The layer therefore
+  requires accurate equivalents instead of importing a list of preferred
+  substitutions from the book.
+- **Make actors and actions clear** (`E.actors-and-actions`). The book favors
+  active voice but allows passives for focus, information order, and unknown
+  or irrelevant actors. This agrees with `G.active-voice`. Economist mode alone
+  does not apply the narrower STE exception or invent a missing actor. Each
+  rewrite example keeps the actor identified in the source.
+- **Make sentences easy to follow on first reading** (`E.sentence-flow`). The
+  book prefers crisp syntax and varied pacing without a universal word cap.
+  Nested clauses and long gaps between subject and verb matter more than a
+  length count. A clear long sentence can remain, and a short one can need
+  repair. STE sentence limits apply only when STE is also selected.
+- **Edit the argument before polishing sentences** (`E.structure-and-pace`).
+  Editing begins with whether the document makes its intended case. A concise
+  paragraph can still be in the wrong place or skip a step. Academic articles
+  keep their required structure and evidential detail. They do not need an
+  anecdotal opening or a magazine narrative to meet this rule.
+- **Remove words that add no meaning** (`E.concision`). A word is removable
+  only if the reader loses no meaning or needed connection. Negative phrasing
+  sometimes expresses a weaker claim than its apparent positive equivalent.
+  Shortening it must not strengthen the evidence. Clause markers and
+  qualifications can be necessary even when omission is grammatical.
+- **Persuade with evidence and a civil tone** (`E.reasoned-tone`). Directness
+  means stating what the evidence supports. It permits neither inflated
+  certainty nor false balance. Giving an objection fair weight and describing
+  harm plainly can strengthen an argument without insults or euphemisms.
+- **Use imagery to clarify a specific relation** (`E.imagery`). The book
+  encourages original imagery and sometimes extended comparisons. The bundle
+  keeps the narrower `G.no-figurative-language` limits, with STE narrowing them
+  further when selected. The purpose is clear explanation, not compulsory
+  wit, new metaphors, or imitation of a publication's voice.
+- **Give numbers a basis for comparison** (`E.number-context`). Large figures
+  and relative changes can mislead without units, baselines, periods, and
+  comparable measures. These checks help general prose as well as research
+  papers. Essential missing context follows `E.keep-original`, without an
+  invented denominator or a guessed kind of average. Context that is irrelevant
+  to the claim needs no query.
+- **Match numerical detail to its purpose** (`E.number-precision`). The book
+  suggests limiting numerical density and rounding for general readers. A
+  fixed quota or automatic conversion to fractions would discard information
+  needed in empirical papers, so the layer uses purpose and required precision
+  instead. It retains scientific reporting and distinguishes statistical
+  significance, practical importance, and causation.
+- **Keep the best version of the author's argument** (`E.keep-original`).
+  The editing chapter treats editing as improving the document that the author
+  intended, rather than substituting the editor's preferred document. This
+  agrees with `G.context-first`. In a review, unresolved facts and interpretations
+  belong under author judgment, where revise mode cannot apply a speculative
+  change. Other tasks preserve the uncertain passage and raise necessary queries
+  outside the document. The report format does not apply to ordinary replies.
+
 ## STE layer
 
 The STE layer (`rules-ste.md`) loads only on request. Its rules come from

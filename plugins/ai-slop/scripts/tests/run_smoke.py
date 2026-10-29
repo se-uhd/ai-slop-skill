@@ -1305,11 +1305,12 @@ def test_verify_references_partial_read_exits_0():
 
 # ---------- rule-layer structure ----------
 
-RULE_LAYERS = ('rules-general.md', 'rules-scientific.md', 'rules-latex.md', 'rules-ste.md')
+RULE_LAYERS = ('rules-general.md', 'rules-scientific.md', 'rules-latex.md',
+               'rules-economist.md', 'rules-ste.md')
 
 
 def test_rule_layers_exist():
-    """The rules ship as four layered files plus a rationale doc. The old
+    """The rules ship as five layered files plus a rationale doc. The old
     monolithic rules.md must be gone so nothing loads a stale path."""
     shared = SCRIPTS.parent / 'shared'
     for name in RULE_LAYERS + ('rules-rationale.md',):
@@ -2243,16 +2244,17 @@ def test_scan_sentences_usage_and_unreadable_paths():
 
 # ---------- rule keys ----------
 
-LAYERS = ('rules-general.md', 'rules-scientific.md', 'rules-latex.md', 'rules-ste.md')
-LAYER_PREFIX = {'rules-general.md': 'G', 'rules-scientific.md': 'S', 'rules-latex.md': 'L', 'rules-ste.md': 'T'}
-KEY_DEF_RE = re.compile(r'^[ \t]*(?:- |\d+\. )?\*\*(?P<name>(?:[^*\n]|\*(?!\*))+?)\*\* \(`(?P<key>[GSLT]\.[a-z0-9-]+)`\)', re.M)
-KEY_REF_RE = re.compile(r'`([GSLT]\.[a-z0-9-]+)`')
+LAYERS = RULE_LAYERS
+LAYER_PREFIX = {'rules-general.md': 'G', 'rules-scientific.md': 'S',
+                'rules-latex.md': 'L', 'rules-economist.md': 'E', 'rules-ste.md': 'T'}
+KEY_DEF_RE = re.compile(r'^[ \t]*(?:- |\d+\. )?\*\*(?P<name>(?:[^*\n]|\*(?!\*))+?)\*\* \(`(?P<key>[GSLTE]\.[a-z0-9-]+)`\)', re.M)
+KEY_REF_RE = re.compile(r'`([GSLTE]\.[a-z0-9-]+)`')
 RULE_BULLET_RE = re.compile(r'^[ \t]*- \*\*(?P<bold>[^"*](?:[^*\n]|\*(?!\*))*)\*\*', re.M)
 SELF_CHECK_HEADING_RE = re.compile(r'^## Self-check', re.I | re.M)
 
 
 def test_rule_keys_unique_and_resolvable():
-    """Every rule bullet in the four layers defines one key with the prefix
+    """Every rule bullet in the five layers defines one key with the prefix
     of its layer, and keys are unique across the layers. Every self-check item cites
     a key, and every key cited in the layers, the rationale, or a SKILL.md is
     defined. Keys are the stable handle that survives renames and insertions."""
@@ -2687,6 +2689,42 @@ def test_export_rules_writes_general_layer_and_catalog():
         assert rc == 0, f"STE export lint rc={rc} out={lint_out!r} err={lint_err!r}"
 
 
+def test_export_rules_economist_and_combined_layers():
+    """Optional exports retain every rule body and omit self-checks. Layer
+    selection is independent of flag order and keeps source attribution."""
+    import export_rules
+    shared = SCRIPTS.parent / 'shared'
+    with tempfile.TemporaryDirectory() as d:
+        catalog = Path(d) / 'tropes.md'
+        write(catalog, EXPORT_CATALOG)
+        combined = []
+        for index, flags in enumerate((('--economist',),
+                                       ('--economist', '--ste'),
+                                       ('--ste', '--economist'))):
+            out = Path(d) / f'export-{index}.md'
+            rc, _, err = run('export_rules.py', str(out), *flags, f'--tropes={catalog}')
+            assert rc == 0, (flags, rc, err)
+            text = out.read_text(encoding='utf-8')
+            selected = ['rules-general.md', 'rules-economist.md']
+            headings = ['General rules', 'Economist style rules']
+            if '--ste' in flags:
+                selected.append('rules-ste.md')
+                headings.append('Simplified Technical English rules')
+                combined.append(text)
+            headings.append('AI writing tropes to avoid')
+            assert re.findall(r'^## (.+)$', text, re.M) == headings, (flags, headings)
+            for name in selected:
+                source = (shared / name).read_text(encoding='utf-8')
+                body = export_rules.drop_self_checks(export_rules.from_first_h2(source))
+                expected = export_rules.demote_headings(body).strip()
+                assert expected in text, f"{name}: incomplete exported rules"
+            assert 'Lane Greene' in text and '2023' in text, "source attribution lost"
+            assert 'Self-check' not in text, "self-check exported"
+            rc, lint_out, lint_err = run('lint_markdown.py', str(out))
+            assert rc == 0, f"Economist export lint: {lint_out!r} {lint_err!r}"
+        assert combined[0] == combined[1], "flag order changed the export"
+
+
 def test_export_rules_drops_only_the_self_check_section():
     """drop_self_checks removes a `## Self-check` section up to the next H2
     and keeps the sections around it and a fenced block that shows one."""
@@ -2902,6 +2940,7 @@ TESTS = [
     test_scan_repeats_lists_pasted_and_partial_copies,
     test_scan_repeats_usage_and_unreadable_paths,
     test_export_rules_writes_general_layer_and_catalog,
+    test_export_rules_economist_and_combined_layers,
     test_export_rules_drops_only_the_self_check_section,
     test_export_rules_replaces_only_an_earlier_export,
     test_export_rules_usage_and_bad_catalog,

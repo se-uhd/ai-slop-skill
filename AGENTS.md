@@ -71,10 +71,10 @@ have been broken before:
   `python3 plugins/ai-slop/scripts/lint_markdown.py <file>`.
 - **Changing the rules is an edit in three places.** A new or reworded rule in
   `shared/rules-general.md`, `shared/rules-scientific.md`,
-  `shared/rules-latex.md`, or `shared/rules-ste.md` also needs its numbered
-  item in the self-check section of that layer, and an entry in
+  `shared/rules-latex.md`, `shared/rules-economist.md`, or `shared/rules-ste.md`
+  also needs its numbered item in the self-check section of that layer, and an entry in
   `shared/rules-rationale.md` whenever a reader could push back on it. Every
-  rule carries a stable key (`G.`/`S.`/`L.`/`T.` plus a slug) that reports and
+  rule carries a stable key (`G.`/`S.`/`L.`/`E.`/`T.` plus a slug) that reports and
   cross-references cite. `test_rule_keys_unique_and_resolvable` in the smoke
   suite enforces the key invariants: one key per rule bullet, unique across the
   layers, a key in every self-check item, and no dangling key in the layers,

@@ -11,6 +11,7 @@ The base ref is positional. Default is `HEAD` (uncommitted working-tree changes)
 - `/ai-slop:review-diff`: working tree vs `HEAD` (uncommitted changes only).
 - `/ai-slop:review-diff main`: working tree vs `main` (every change on the branch).
 - `/ai-slop:review-diff abc1234`: working tree vs a specific commit.
+- `/ai-slop:review-diff main --economist`: apply the core Economist advice to changed lines, preserving project and research conventions. Combine with `--ste` to retain its stricter limits too.
 
 The `--tropes=<path>` override flag (repeatable) from `/ai-slop:review` works the same way here.
 
