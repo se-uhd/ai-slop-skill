@@ -3,7 +3,7 @@ name: init
 description: Set up the general writing rules and AI trope catalog for Claude Code, Codex, or pi across projects, or export them as one Markdown file for a system prompt. Use when the user wants the assistant's replies, edits, comments, and commit messages to follow these rules, or runs `/ai-slop:init`. Claude Code uses ~/.claude/rules/ai-slop.md. Codex and pi use ai-slop.md in their home or agent directory with a reference in their global instructions. For an editable WRITING.md in one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev11"
+  version: "2026-10_rev12"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -49,13 +49,13 @@ Do not invoke when the user wants the rules of one project as an editable file (
    - `2`: a usage error, or a file that could not be read. Pass the message on and stop.
    - `3`: a file that this mode did not write already exists at the output path. The script replaces a file from an earlier run without asking, because running this mode again is how the rules and the catalog are refreshed. Any other file may hold the user's own rules, so ask before replacing it (e.g., "`<output>` exists and was not written by `/ai-slop:init`. Replace it (y/n)?"). On yes, run the script again with `--force`. On no, stop and leave the file as it is.
 
-3. **Register the Codex or pi default.** Only after a successful export, when setting up Codex or pi without an explicit output path, add a reference in the global instructions of the client. For Codex, use a nonempty `<codex-home>/AGENTS.override.md` if present, otherwise `<codex-home>/AGENTS.md`. For pi, use the first match in `<pi-agent-dir>`: a nonempty `AGENTS.override.md`, then an existing `AGENTS.md` or `AGENTS.MD`, then an existing `CLAUDE.md` or `CLAUDE.MD`, and otherwise a new `AGENTS.md`. Preserve all existing text. If the selected file already instructs the client to read the exported rules, leave it alone. Otherwise append a `## Writing conventions` section with this instruction, substituting the absolute path:
+3. **Register the Codex or pi default.** Only after a successful export, when setting up Codex or pi without an explicit output path, add a reference in the global instructions of the client. For Codex, use a nonempty `<codex-home>/AGENTS.override.md` if present, otherwise `<codex-home>/AGENTS.md`. For pi, use the first of these files that exists in `<pi-agent-dir>`: `AGENTS.override.md`, which pi reads even when it is empty, then `AGENTS.md` or `AGENTS.MD`, then `CLAUDE.md` or `CLAUDE.MD`, and otherwise a new `AGENTS.md`. Preserve all existing text. If the selected file already instructs the client to read the exported rules, leave it alone. Otherwise append a `## Writing conventions` section with this instruction, substituting the absolute path:
 
     ```markdown
     Read `/absolute/path/to/ai-slop.md` before writing prose, and apply its rules to replies, edited files, comments, and commit messages. Project-specific writing conventions take precedence.
     ```
 
-    Create the selected file if missing. Keep the rules themselves in the export file. Codex limits the automatically loaded instruction files to 32 KiB by default. For pi, the separate file keeps the global context file small, and a later run replaces the rules without touching the user's own instructions. A Markdown link or Claude's `@path` syntax alone does not substitute for this explicit read instruction. If permissions prevent updating the global file, report that the export succeeded but registration did not, and show the reference to add. Claude Code needs no registration because it reads its rules directory automatically.
+    Create the selected file if missing. Keep the rules themselves in the export file. The separate file keeps the global instruction file small, and a later run replaces the rules without touching the user's own instructions. A Markdown link or Claude's `@path` syntax alone does not substitute for this explicit read instruction. If permissions prevent updating the global file, report that the export succeeded but registration did not, and show the reference to add. Claude Code needs no registration because it reads its rules directory automatically.
 
 4. **Print a summary** in two or three lines:
    - The file: created or replaced at `<output>`, with the layers and its size in tokens, rounded to the nearest thousand. The whole file stays in the context of every session that loads it.

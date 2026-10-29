@@ -15,15 +15,14 @@ have been broken before:
    published release, so make one only when the work is finished and has been
    checked against the main use of the bundle (academic writing) and against the
    existing rule layers, rather than at the first version that passes the smoke
-   suite. A correction to a release made in the same session is a squash into
-   that rev, not a new rev. Soft-reset to the previous release, fold the work
+   suite. A correction to a release made in the same session, such as a fix to
+   the design of a rule that shipped minutes earlier, is a squash into that rev,
+   not a new rev. Soft-reset to the previous release, fold the work
    into one commit, restore the version strings and merge the CHANGELOG entries
    so the record describes the settled change rather than the route to it,
    delete the extra tag locally and on the remote, and force-push `main` and the
    retargeted tag. Once the session has ended, or anyone may have pulled the tag,
-   rule 3 governs instead and the fix is a new rev. (Shipping a new rule and
-   then correcting its design minutes later is what produced the squashed
-   release now numbered `2026-09_rev24`.)
+   rule 3 governs instead and the fix is a new rev.
 2. **Every rev bump is its own commit AND a matching git tag.** After bumping
    the version, create `git tag YYYY-MM_revN` on that commit and push it. A
    release without its tag is not done. List the current month's tags with
@@ -32,11 +31,9 @@ have been broken before:
 3. **Never amend, rebase, or rewrite a commit that is already tagged, released,
    or pushed as part of ordinary work.** If more work is needed after a release,
    it is a NEW rev with a NEW commit and tag. Amending a released commit orphans
-   its tag and breaks the linear release history. (Amending a released commit is
-   the mistake that produced the dangling-tag situation at the release now
-   numbered `2026-05_rev15`.) A history repair that the maintainer asks for is
-   an exception, and so is the same-session squash in rule 1, which uses its own
-   procedure. A repair comes with obligations. Rewrite with `git filter-branch
+   its tag and breaks the linear release history. A history repair that the
+   maintainer asks for is an exception, and so is the same-session squash in
+   rule 1, which uses its own procedure. A repair comes with obligations. Rewrite with `git filter-branch
    --tag-name-filter cat -- --branches --tags` so every tag points to its corresponding rewritten
    commit. Verify against `refs/original` that the trees are unchanged and that
    no tag is left off `main`. Force-push `main` and `--tags` together, because a
@@ -96,7 +93,7 @@ have been broken before:
   offline or pinned run.
 - **The bundle follows its own rules.** When a rule is added or tightened, sweep
   the prose of the repository itself for the pattern in the same rev: the
-  Markdown files, the skill and command files, and the Python docstrings and
+  Markdown files, the skill files, and the Python docstrings and
   comments. The opt-in STE layer is an exception. The prose of the bundle does
   not follow it, so an STE rule change needs no sweep. Between sweeps,
   `test_first_party_prose_avoids_the_plain_words_seeds` runs `scan_repo.py` over
