@@ -1,7 +1,0 @@
----
-description: Fill the `% GROUNDING:` comments that review only flags as missing, and the `TODO verify` stubs left by revise or an earlier run, fetching each cited source, extracting a verbatim supporting quote, and writing it into the LaTeX (or a `TODO verify -- <reason>` stub when the source cannot be retrieved). LaTeX source only.
----
-
-Use the `ai-slop:ground` skill.
-
-The workflow and inputs are in `skills/ground/SKILL.md`. By default it auto-detects the LaTeX root in the working directory. A `.tex` path can be passed as an argument to override. Review *finds* `\cite{}` calls without a quote-backed `% GROUNDING:` comment, and ground *fills* them. Revise applies prose fixes and may insert `% GROUNDING: TODO verify <key>` stubs, which ground replaces with retrieved quotes. Ground runs `extract_cites.py` to gather each citation with the claim that it supports and the BibTeX metadata of the source, starts one source-fetching agent per cited key (chunked to stay under rate limits), runs `check_quotes.py` to confirm that each returned quote occurs in the source that the agent named, and runs `insert_grounding.py` to write the quotes back. The anti-fabrication rule is mandatory. A quote is written only when the source was actually retrieved. Otherwise the comment is `TODO verify -- <reason>`. Grounding is LaTeX-only. The user inspects the edits with `git diff` and commits when satisfied.

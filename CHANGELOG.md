@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev12] - 2026-10-29
+
+- **Removed:** the command wrappers in `plugins/ai-slop/commands/`. Claude Code now serves each `/ai-slop:` command from its skill and loads the `SKILL.md` directly, with the same commands and arguments.
+- **Fixed:** `/ai-slop:writing` also adds its reference to an empty `AGENTS.override.md`, which Codex and pi read instead of `AGENTS.md`, and `/ai-slop:init` does the same in the pi agent directory.
+- **Fixed:** init and the README no longer cite the 32 KiB Codex limit for the global instruction file, since it applies only to project files.
+
 ## [2026-10_rev11] - 2026-10-29
 
 - **Changed:** `lint_markdown.py`, `refresh_vendor.py`, and `_vendor/` come from pymarkdown-skill 0.3.0. It vendors PyMarkdown 0.9.40 and keeps the new md060 table-column-style rule off unless a config enables it.

@@ -33,21 +33,20 @@ def write(p, content):
 
 # ---------- portable skill commands ----------
 
-def test_slash_commands_resolve_to_packaged_skills():
-    """Each slash command routes to its packaged skill, with no orphaned entries."""
+def test_skills_serve_the_slash_commands():
+    """Each skill declares the name of its directory, and the plugin ships no
+    commands/ wrappers. Claude Code serves `/ai-slop:<name>` from the skill
+    itself and tells the model where its SKILL.md is. A command with the same
+    name would take its place and leave the model to search for the file."""
     plugin = SCRIPTS.parent
     skills = {path.parent.name: path for path in (plugin / 'skills').glob('*/SKILL.md')}
-    commands = {path.stem: path for path in (plugin / 'commands').glob('*.md')}
-    assert skills and skills.keys() == commands.keys(), (
-        f"unpaired skills or commands: {skills.keys() ^ commands.keys()}"
-    )
+    assert skills, "no skills found"
+    assert not (plugin / 'commands').exists(), \
+        "commands/ wrappers take the place of the skills in Claude Code"
     for name, skill in skills.items():
         frontmatter = skill.read_text(encoding='utf-8').split('---', 2)[1]
         declared = re.search(r'^name:\s*(\S+)\s*$', frontmatter, re.M)
         assert declared and declared.group(1) == name, f'{skill}: wrong skill name'
-        command = commands[name].read_text(encoding='utf-8')
-        routed = re.search(r'`ai-slop:([a-z0-9-]+)`', command)
-        assert routed and routed.group(1) == name, f'{commands[name]}: wrong skill route'
 
 
 def test_skill_commands_from_another_project():
@@ -785,8 +784,8 @@ def test_version_strings_in_sync():
 
 def test_pi_package_manifest():
     """The root package.json is the pi package manifest. It names the skills
-    directory under `pi.skills`, declares no extensions or prompts (the
-    Claude-only commands/*.md wrappers stay out of pi), and carries no version,
+    directory under `pi.skills`, declares no extensions or prompts, and carries
+    no version,
     because pi pins a git install to a release tag and the version callsites
     stay at eleven (see AGENTS.md)."""
     import json
@@ -1329,7 +1328,6 @@ def test_no_dangling_rules_md_references():
     plugin_root = SCRIPTS.parent
     repo_root = plugin_root.parent.parent
     docs = [repo_root / 'README.md']
-    docs += sorted(plugin_root.glob('commands/*.md'))
     docs += sorted(plugin_root.glob('skills/*/SKILL.md'))
     docs += [plugin_root / 'shared' / n
              for n in RULE_LAYERS + ('rules-rationale.md',)]
@@ -2868,7 +2866,7 @@ TESTS = [
     test_scan_sentences_skips_non_prose,
     test_scan_sentences_usage_and_unreadable_paths,
     test_rule_keys_unique_and_resolvable,
-    test_slash_commands_resolve_to_packaged_skills,
+    test_skills_serve_the_slash_commands,
     test_skill_commands_from_another_project,
     test_find_latex_root_empty,
     test_find_latex_root_single,

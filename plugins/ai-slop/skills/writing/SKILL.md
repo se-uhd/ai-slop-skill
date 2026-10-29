@@ -3,7 +3,7 @@ name: writing
 description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the AGENTS.md of the repository (creating AGENTS.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", or `/ai-slop:writing`. Writes WRITING.md, updates AGENTS.md, and preserves Claude Code loading through a CLAUDE.md import. Does not modify your content. For rules that the assistant applies to its own output in every project, use `/ai-slop:init`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev11"
+  version: "2026-10_rev12"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -72,7 +72,7 @@ The skill operates on the current working directory. No arguments are required.
 
     **Preserve Claude Code loading.** If `<target>/CLAUDE.md` does not exist, create it with `# CLAUDE.md`, a blank line, and `@AGENTS.md` on its own line. If it exists, preserve its contents and append `@AGENTS.md` on a separate line unless it already imports `AGENTS.md` or references `WRITING.md`. If it is a symlink to `AGENTS.md`, leave it alone and do not append a self-import. This keeps older Claude Code versions working and avoids depending on the client's instruction-file setting.
 
-    **Respect Codex and pi overrides.** If a nonempty `<target>/AGENTS.override.md` exists, Codex and pi read it instead of `AGENTS.md`. Preserve it and append the same writing-conventions section there if it does not already reference `WRITING.md`.
+    **Respect Codex and pi overrides.** If `<target>/AGENTS.override.md` exists, Codex and pi read it instead of `AGENTS.md`, even when it is empty. Preserve it and append the same writing-conventions section there if it does not already reference `WRITING.md`.
 
 5. **Lint and finalize.** For each instruction file created or appended in step 4, run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix <path>`. If the linter exits non-zero on any file, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise that file in place to address each, and re-run. Repeat at most three iterations per file. After the third pass, proceed regardless of what the linter reports. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
