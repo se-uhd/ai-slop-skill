@@ -43,13 +43,13 @@ have been broken before:
    forced branch push alone leaves every tag on a commit that the branch no
    longer reaches. The commit message cleanups recorded in the 2026-09_rev15 and
    2026-09_rev23 changelog entries are the precedent.
-4. **Keep the 12 version callsites in sync.** The version string is in
+4. **Keep the 11 version callsites in sync.** The version string is in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
    `.claude-plugin/marketplace.json`, the `version:` frontmatter of each
-   `SKILL.md`, the `**Skill version:**` line in `review/SKILL.md`'s report
-   template, and the `skill version <X>` line in `writing/SKILL.md`'s
-   WRITING.md header. `test_version_strings_in_sync` in the smoke suite
-   enforces this.
+   `SKILL.md`, and the `**Skill version:**` line in `review/SKILL.md`'s report
+   template. `export_rules.py` and `build_writing.py` read it from
+   `plugin.json`. `test_version_strings_in_sync` in the smoke suite enforces
+   this.
 5. **Run the smoke suite before every commit:**
    `python3 plugins/ai-slop/scripts/tests/run_smoke.py`. It must be green.
 6. **Release tags must be ancestors of `main`.** The release history is linear:
@@ -82,22 +82,18 @@ have been broken before:
 - **Commit messages follow the general layer.** They are prose, and
   `/ai-slop:review-repo` scans them with every other file. Correcting a pushed
   message means rewriting history, which rule 3 above allows only as a
-  deliberate repair, so the check happens before `git commit`. The September
-  2026 cleanup rewrote the whole history and fixed the recurring failures: a
-  semicolon joining two independent clauses (in 50 of the 76 messages, among
-  them the boilerplate "Version bumped to X at all ten callsites; the tropes
-  snapshot was already up to date", which is two sentences), a literal em-dash
-  glyph (U+2014) in 8 messages, one British spelling, and one comma splice. A
-  semicolon in a parenthetical list, in quoted output, or in a code span stays.
+  deliberate repair, so the check happens before `git commit`. The recurring
+  failures are a semicolon joining two independent clauses, a literal em-dash
+  glyph (U+2014), a British spelling, and a comma splice. A semicolon in a
+  parenthetical list, in quoted output, or in a code span stays.
   Write the subject line as an imperative ending in `; release YYYY-MM_revN` on
   a release commit. That suffix is the one semicolon that the convention keeps,
   and the rest of the subject takes commas.
 - **The trope catalog has one source and no bundled copy.** `fetch_tropes.py`
-  reads tropes.fyi and exits non-zero when it cannot. A stale copy that
-  outranks the live catalog is worse than failing to fetch the catalog, which
-  is why the gist mirror and the bundled snapshot were both dropped in
-  2026-09_rev16. `--tropes=<path>` supplies the catalog for an offline or
-  pinned run.
+  reads tropes.fyi and exits non-zero when it cannot. Do not add a mirror or a
+  bundled snapshot. A stale copy that outranks the live catalog is worse than
+  failing to fetch the catalog. `--tropes=<path>` supplies the catalog for an
+  offline or pinned run.
 - **The bundle follows its own rules.** When a rule is added or tightened, sweep
   the prose of the repository itself for the pattern in the same rev: the
   Markdown files, the skill and command files, and the Python docstrings and
@@ -115,7 +111,7 @@ have been broken before:
   it. Upstream-owned files are left to their own repo.
 - **The root `package.json` is the pi package manifest and has no `version`
   field on purpose.** Do not add one. Pi pins a git install to a release tag,
-  so the tag carries the version and the version callsites stay at twelve.
+  so the tag carries the version and the version callsites stay at eleven.
   The manifest lists `./plugins/ai-slop/skills` under `pi.skills`, so pi picks
   up a new skill directory without a manifest change.
   `test_pi_package_manifest` in the smoke suite enforces this.

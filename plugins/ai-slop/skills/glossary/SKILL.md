@@ -3,7 +3,7 @@ name: glossary
 description: Extract or maintain GLOSSARY.md for a document and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text, and finds the main document when no filename is supplied. Writes a glossary and a terminology report, or validates an existing glossary with --check. Does not rewrite the document.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev9"
+  version: "2026-10_rev10"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -47,8 +47,8 @@ stays unchanged in both modes.
 
 ## Find the main document
 
-Use `rg --files` to locate candidate documents, including LaTeX sources, PDFs,
-Markdown, and plain text. Examine project instructions, the README, and build
+List the candidate documents, including LaTeX sources, PDFs, Markdown, and
+plain text. Examine project instructions, the README, and build
 configuration for pointers to the main manuscript or document. Search relevant
 subdirectories, such as `paper/`, `manuscript/`, or `docs/`, when the root directory
 does not contain it. Use filenames, titles, and document structure to distinguish
@@ -161,7 +161,7 @@ over *logs* in a discussion of version control does not rename runtime logs.
 
 Reread the source against the glossary, including passages that introduce terms
 absent from it. Trace each important concept across sections and check its
-definition, first use, and later names. Search known forms with `rg -n -F --`
+definition, first use, and later names. Search for known forms as fixed strings
 when helpful, but read their contexts before reporting a finding.
 
 Report competing names for the same referent, a term used for conflicting

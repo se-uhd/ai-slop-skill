@@ -2,6 +2,15 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev10] - 2026-10-29
+
+- **Changed:** `/ai-slop:writing` writes `WRITING.md` with the new `scripts/build_writing.py` instead of having the model copy the rule layers and the trope catalog into the file by hand, about 115 KB for a LaTeX project. The script keeps the layers verbatim, self-checks included, and adds the layer name to a heading that repeats one from an earlier layer (`## Voice (scientific)`, `## Structure (scientific)`, `## Citations (LaTeX)`), so the file lints clean. The hand-assembled file failed the linter on these three headings and carried a maintainer comment into the project. The script does not replace an existing `WRITING.md` without `--force`, so the skill still asks first. A smoke test covers the script.
+- **Changed:** the version string has eleven callsites. The `WRITING.md` header takes the version from `plugin.json`, as the init export already did.
+- **Fixed:** `/ai-slop:review-diff` reviews untracked files. `git diff` does not list them, so a new chapter that was not yet added to git went unreviewed.
+- **Changed:** `/ai-slop:review` lists a doubt about whether a citation supports a claim under **Items requiring author judgment** instead of recording a finding that revise mode would apply. The review does not read the cited source, and `/ai-slop:ground` checks the claim against the retrieved source.
+- **Changed:** `/ai-slop:review-repo` runs `scan_reference.py`, like the other two review modes.
+- **Fixed:** self-check item 6 of the general layer states the semicolon default of its rule, a period between two independent clauses, and three self-check items no longer join clauses with a semicolon. `/ai-slop:glossary` no longer calls ripgrep, which the bundle does not list as a dependency. The rationale names the Economist layer and init mode, and the maintainer guide states its catalog and commit-message conventions without the history behind them. The report-echo instruction in review and diff modes keeps its read-back step and drops the account of the glitch that motivated it.
+
 ## [2026-10_rev9] - 2026-10-29
 
 - **Added:** `--economist` selects an optional layer based on the core advice in Lane Greene's *Writing with Style: The Economist Guide* (2023). It covers reader knowledge, precise words, actors and actions, sentence flow, argument, concision, tone, imagery, and numerical context and precision. The book is not bundled or required at runtime.

@@ -732,9 +732,9 @@ def test_lint_markdown_unreadable_exits_2():
 def test_version_strings_in_sync():
     """All version references must equal the canonical version in
     plugins/ai-slop/.claude-plugin/plugin.json: both manifests, every SKILL.md
-    frontmatter, the report-template `**Skill version:**` line in
-    review/SKILL.md, and the `skill version <X>` reference in the WRITING.md
-    header in writing/SKILL.md.
+    frontmatter, and the report-template `**Skill version:**` line in
+    review/SKILL.md. export_rules.py and build_writing.py read the version
+    from plugin.json.
 
     Guards against the drift seen at rev7, where SKILL.md files got bumped but the
     two manifests were left behind. See README "Maintainer notes" for the list
@@ -777,11 +777,6 @@ def test_version_strings_in_sync():
     check("review/SKILL.md report-template **Skill version:** line",
           m.group(1) if m else None)
 
-    writing_text = (skills_dir / 'writing' / 'SKILL.md').read_text(encoding='utf-8')
-    m = re.search(r'skill version\s+([^\s)]+)\)', writing_text)
-    check("writing/SKILL.md WRITING.md header `skill version <X>` reference",
-          m.group(1) if m else None)
-
     assert not mismatches, (
         "Version drift detected (see README \"Maintainer notes\"):\n  "
         + "\n  ".join(mismatches)
@@ -793,7 +788,7 @@ def test_pi_package_manifest():
     directory under `pi.skills`, declares no extensions or prompts (the
     Claude-only commands/*.md wrappers stay out of pi), and carries no version,
     because pi pins a git install to a release tag and the version callsites
-    stay at twelve (see AGENTS.md)."""
+    stay at eleven (see AGENTS.md)."""
     import json
 
     plugin_root = SCRIPTS.parent           # plugins/ai-slop
@@ -2784,6 +2779,74 @@ def test_export_rules_usage_and_bad_catalog():
         assert not out.exists(), "a failed export wrote the file"
 
 
+# ---------- build_writing.py ----------
+
+def test_build_writing_assembles_layers_and_catalog():
+    """WRITING.md holds the header, every selected layer verbatim from its first
+    `## ` heading (self-check included), and the catalog under one
+    `## AI Writing Tropes to Avoid` section with demoted headings, status lines,
+    and spaced lists. A heading that repeats one of an earlier layer gets the
+    layer name, so a LaTeX project lints clean. An existing file stays until
+    --force is passed, and --scientific and --latex select their layers."""
+    import json
+    import export_rules
+    shared = SCRIPTS.parent / 'shared'
+    with tempfile.TemporaryDirectory() as d:
+        catalog = Path(d) / 'tropes.md'
+        write(catalog, EXPORT_CATALOG)
+        out = Path(d) / 'WRITING.md'
+        rc, _, err = run('build_writing.py', str(out), '--latex', f'--tropes={catalog}')
+        assert rc == 0 and err.startswith('created '), (rc, err)
+        text = out.read_text(encoding='utf-8')
+        assert text.startswith('# Writing rules for this project\n'), text[:80]
+        assert text.count('\n# ') == 0, "second H1"
+        version = json.loads((SCRIPTS.parent / '.claude-plugin' / 'plugin.json')
+                             .read_text(encoding='utf-8'))['version']
+        assert f'(skill version {version})' in text, text[:900]
+        assert 'maintainer' not in text.lower(), "maintainer note leaked"
+        rules, catalog_part = text.split('\n## AI Writing Tropes to Avoid\n')
+        for name in ('rules-general.md', 'rules-scientific.md', 'rules-latex.md'):
+            body = export_rules.from_first_h2((shared / name).read_text(encoding='utf-8'))
+            for line in body.splitlines():
+                if line.strip() and not line.startswith('#'):
+                    assert line in rules, f"{name}: line missing: {line[:60]!r}"
+        assert '## Voice (scientific)' in rules and '## Citations (LaTeX)' in rules, \
+            "repeated headings not labeled"
+        assert 'Self-check before presenting text (LaTeX)' in rules, "self-check dropped"
+        assert '# AI Writing Tropes to Avoid' not in catalog_part, "catalog title leaked"
+        assert 'system prompt' not in catalog_part, "catalog preamble leaked"
+        assert '### Negative parallelism' in catalog_part, "catalog headings not demoted"
+        assert '`consistent` · Sentence Structure' in catalog_part, "status line dropped"
+        assert '**Avoid patterns like:**\n\n- "It\'s not bold' in catalog_part, \
+            "catalog list not spaced"
+        assert 'Remember: any of these patterns' in catalog_part, "catalog closing dropped"
+        rc, lint_out, lint_err = run('lint_markdown.py', str(out))
+        assert rc == 0, f"WRITING.md lint rc={rc} out={lint_out!r} err={lint_err!r}"
+
+        rc, _, err = run('build_writing.py', str(out), f'--tropes={catalog}')
+        assert rc == 3 and '--force' in err, (rc, err)
+        assert out.read_text(encoding='utf-8') == text, "existing WRITING.md changed"
+        rc, _, err = run('build_writing.py', str(out), f'--tropes={catalog}', '--force')
+        assert rc == 0 and err.startswith('replaced '), (rc, err)
+        general = out.read_text(encoding='utf-8')
+        assert 'Verb tense by section' not in general, "scientific layer without a flag"
+
+        sci = Path(d) / 'sci.md'
+        rc, _, err = run('build_writing.py', str(sci), '--scientific', '--ste',
+                         f'--tropes={catalog}')
+        assert rc == 0, (rc, err)
+        sci_text = sci.read_text(encoding='utf-8')
+        assert 'Verb tense by section' in sci_text and 'LaTeX quotation marks' not in sci_text
+        assert 'Self-check before presenting text (STE)' in sci_text, "STE layer missing"
+
+        rc, _, err = run('build_writing.py')
+        assert rc == 2 and 'usage' in err, (rc, err)
+        bad = Path(d) / 'bad.md'
+        write(bad, '# Not a catalog\n\nNo trope headings here.\n')
+        rc, _, err = run('build_writing.py', str(Path(d) / 'x.md'), f'--tropes={bad}')
+        assert rc == 1 and not (Path(d) / 'x.md').exists(), (rc, err)
+
+
 TESTS = [
     test_scan_glyphs_counts_every_occurrence,
     test_scan_glyphs_two_on_one_line_distinct_columns,
@@ -2944,6 +3007,7 @@ TESTS = [
     test_export_rules_drops_only_the_self_check_section,
     test_export_rules_replaces_only_an_earlier_export,
     test_export_rules_usage_and_bad_catalog,
+    test_build_writing_assembles_layers_and_catalog,
 ]
 
 

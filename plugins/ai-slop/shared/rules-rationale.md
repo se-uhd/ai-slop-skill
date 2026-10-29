@@ -2,10 +2,11 @@
 
 This file records the *why* behind the rules in the rule layers
 (`rules-general.md`, `rules-scientific.md`, `rules-latex.md`, and the optional
-`rules-ste.md`). It is
-documentation only. The `ai-slop:review`, `ai-slop:review-diff`,
-`ai-slop:review-repo`, and `ai-slop:writing` skills load the layers that their scope calls for, plus the trope
-catalog, which `fetch_tropes.py` fetches from tropes.fyi.
+`rules-economist.md` and `rules-ste.md`). It is documentation only. The
+`ai-slop:review`, `ai-slop:review-diff`, `ai-slop:review-repo`,
+`ai-slop:writing`, and `ai-slop:init` skills load the layers that their scope
+calls for, plus the trope catalog, which `fetch_tropes.py` fetches from
+tropes.fyi.
 `ai-slop:revise` and `ai-slop:ground` reference only
 the layers (revise applies a finished report, so it needs no trope source, and
 ground reads the grounding convention of the LaTeX layer). `ai-slop:glossary` reads
@@ -20,8 +21,9 @@ justification in the layer or need none. When a rule with an entry here
 changes, update both: the directive in the relevant layer and the
 justification here. The sections below are grouped by topic. Each topic belongs to
 the general layer (any prose), the scientific layer (research articles), the
-LaTeX layer (markup mechanics), or the STE layer (Simplified Technical English,
-on request), and several cross-cutting topics state a
+LaTeX layer (markup mechanics), the Economist layer (core Economist style
+advice, on request), or the STE layer (Simplified Technical English, on
+request), and several cross-cutting topics state a
 principle in a lower layer and its mechanics in the LaTeX layer.
 
 ## Context before replacement
