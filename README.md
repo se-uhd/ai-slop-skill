@@ -251,13 +251,13 @@ The plugin is under `plugins/ai-slop/`: `commands/` holds the eight slash comman
 
 ### Refreshing the vendored Markdown linter
 
-The bundled `_vendor/` tree under `plugins/ai-slop/scripts/` holds PyMarkdown plus its pure-Python deps. To pull a newer release:
+The bundled `_vendor/` tree under `plugins/ai-slop/scripts/` holds PyMarkdown plus its pure-Python deps. Like the other upstream-owned paths that `AGENTS.md` lists, it is refreshed in [pymarkdown-skill](https://github.com/se-uhd/pymarkdown-skill), which pins the vendored versions and builds the tree with its `refresh_vendor.py`. To pull a newer release, release it there and sync it in from a checkout of that repo:
 
 ```bash
-python3 plugins/ai-slop/scripts/refresh_vendor.py
+/path/to/pymarkdown-skill/sync/sync_to_skill.sh --target plugins/ai-slop/scripts/
 ```
 
-The script creates a clean venv, installs `pymarkdownlnt` with `--no-binary :all:` so every dep is built from source (pure-Python where the package supports it), copies the resolved tree into `_vendor/`, replaces `pyjson5/` with a stdlib shim (PyMarkdown is always invoked with `--no-json5`, so the C-extension is never reached), asserts that no compiled extensions end up in the tree, and regenerates `_vendor/NOTICE` from the dist-info of each package. Pin to a specific version with `--version pymarkdownlnt==0.9.37`.
+The sync replaces `lint_markdown.py`, `check_baseline.py`, `refresh_vendor.py`, `_vendor/`, and `bundled_licenses/`, keeps `schema_checks.py`, `lint_markdown.yaml`, and `tests/`, and records the upstream release in `scripts/.pymarkdown-skill-version`. Do not run the synced `refresh_vendor.py` here, because a tree refreshed in this repo matches no upstream release and the next sync overwrites it.
 
 Bump the version at the eleven callsites listed in the Versioning section. The next rev is the highest existing rev for the month plus one, with the bare `YYYY-MM` tag as rev0. After committing the bump, create the matching tag (`git tag YYYY-MM_revN`) and push it. Every release commit gets one, and tags must stay ancestors of `main`. Never amend or rebase a commit that has already been tagged or pushed. Additional work goes into a new rev with its own commit and tag.
 

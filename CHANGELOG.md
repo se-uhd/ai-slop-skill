@@ -2,6 +2,11 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-10_rev11] - 2026-10-29
+
+- **Changed:** `lint_markdown.py`, `refresh_vendor.py`, and `_vendor/` come from pymarkdown-skill 0.3.0. It vendors PyMarkdown 0.9.40 and keeps the new md060 table-column-style rule off unless a config enables it.
+- **Fixed:** the README told maintainers to run `refresh_vendor.py` here, which `AGENTS.md` rules out. It now describes the refresh in pymarkdown-skill and the sync.
+
 ## [2026-10_rev10] - 2026-10-29
 
 - **Changed:** `/ai-slop:writing` writes `WRITING.md` with the new `scripts/build_writing.py` instead of having the model copy the rule layers and the trope catalog into the file by hand, about 115 KB for a LaTeX project. The script keeps the layers verbatim, self-checks included, and adds the layer name to a heading that repeats one from an earlier layer (`## Voice (scientific)`, `## Structure (scientific)`, `## Citations (LaTeX)`), so the file lints clean. The hand-assembled file failed the linter on these three headings and carried a maintainer comment into the project. The script does not replace an existing `WRITING.md` without `--force`, so the skill still asks first. A smoke test covers the script.

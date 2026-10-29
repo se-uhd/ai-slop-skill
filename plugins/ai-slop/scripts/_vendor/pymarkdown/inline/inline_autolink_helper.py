@@ -12,7 +12,7 @@ from pymarkdown.container_blocks.parse_block_pass_properties import (
 )
 from pymarkdown.general.parser_helper import ParserHelper
 from pymarkdown.general.parser_logger import ParserLogger
-from pymarkdown.html.html_raw_helper import HtmlRawHelper
+from pymarkdown.html_helpers.html_raw_helper import HtmlRawHelper
 from pymarkdown.inline.inline_request import InlineRequest
 from pymarkdown.inline.inline_response import InlineResponse
 from pymarkdown.tokens.email_autolink_markdown_token import EmailAutolinkMarkdownToken
@@ -24,7 +24,12 @@ from pymarkdown.tokens.uri_autolink_markdown_token import UriAutolinkMarkdownTok
 POGGER = ParserLogger(logging.getLogger(__name__))
 
 
+# pylint: disable=too-few-public-methods
 class InlineAutoLinkHelper:
+    """
+    Class to help with the parsing of autolink inline elements.
+    """
+
     __scheme_end_character = ":"
     __valid_scheme_characters = f"{string.ascii_letters}{string.digits}.-+"
     __valid_email_regex = (
@@ -65,8 +70,6 @@ class InlineAutoLinkHelper:
             if new_token.is_inline_raw_html:
                 html_token = cast(RawHtmlMarkdownToken, new_token)
                 between_brackets = html_token.raw_tag
-            else:
-                between_brackets = between_brackets
         return new_token, between_brackets, closing_angle_index
 
     @staticmethod
@@ -200,3 +203,6 @@ class InlineAutoLinkHelper:
         else:
             uri_scheme, path_index = "", -1
         return None
+
+
+# pylint: enable=too-few-public-methods

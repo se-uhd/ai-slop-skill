@@ -8,6 +8,7 @@ proper handling of Unicode grapheme clusters and character display widths.
 from __future__ import annotations
 
 # std imports
+import os
 import secrets
 import textwrap
 
@@ -15,10 +16,20 @@ from typing import TYPE_CHECKING, Optional
 
 # local
 from ._width import width as wcwidth_width
-from .grapheme import iter_graphemes
 from .hyperlink import HyperlinkParams
 from .sgr_state import propagate_sgr as _propagate_sgr
 from .escape_sequences import ZERO_WIDTH_PATTERN, iter_sequences
+
+if os.environ.get('WCWIDTH_PYTHON', ''):
+    # local
+    from .grapheme import iter_graphemes
+else:
+    try:
+        # local
+        from ._wcwidth_c import iter_graphemes
+    except ImportError:
+        # local
+        from .grapheme import iter_graphemes
 
 if TYPE_CHECKING:  # pragma: no cover
     from typing import Any, Literal
@@ -48,6 +59,7 @@ class SequenceTextWrapper(textwrap.TextWrapper):
                  control_codes: Literal['parse', 'strict', 'ignore'] = 'parse',
                  tabsize: int = 8,
                  ambiguous_width: int = 1,
+                 term_program: bool | str = False,
                  **kwargs: Any) -> None:
         """
         Initialize the wrapper.
@@ -56,12 +68,20 @@ class SequenceTextWrapper(textwrap.TextWrapper):
         :param control_codes: How to handle control sequences (see :func:`~.width`).
         :param tabsize: Tab stop width for tab expansion.
         :param ambiguous_width: Width to use for East Asian Ambiguous (A) characters.
+        :param term_program: Terminal software identifier for table correction.
+            ``False`` (default) disables override lookup.  ``True`` reads the
+            ``TERM_PROGRAM`` or ``TERM`` environment variable for auto-detection.
+            Accepts a canonical terminal name matching :func:`list_term_programs`,
+            such as from XTVERSION_, ENQ_, or ``TERM_PROGRAM``.
+
+            .. versionadded:: 0.8.0
         :param kwargs: Additional arguments passed to :class:`textwrap.TextWrapper`.
         """
         super().__init__(width=width, **kwargs)
         self.control_codes = control_codes
         self.tabsize = tabsize
         self.ambiguous_width = ambiguous_width
+        self.term_program = term_program
 
     @staticmethod
     def _next_hyperlink_id() -> str:
@@ -71,7 +91,8 @@ class SequenceTextWrapper(textwrap.TextWrapper):
     def _width(self, text: str) -> int:
         """Measure text width accounting for sequences."""
         return wcwidth_width(text, control_codes=self.control_codes, tabsize=self.tabsize,
-                             ambiguous_width=self.ambiguous_width)
+                             ambiguous_width=self.ambiguous_width,
+                             term_program=self.term_program)
 
     def _strip_sequences(self, text: str) -> str:
         """Strip all terminal sequences from text."""
@@ -109,8 +130,7 @@ class SequenceTextWrapper(textwrap.TextWrapper):
         # Build a mapping from stripped text positions to original text positions.
         #
         # Track where each character ENDS so that sequences between characters
-        # attach to the following text (not preceding text). This ensures sequences
-        # aren't lost when whitespace is dropped.
+        # attach to the following text, keeping them when whitespace is dropped.
         #
         # char_end[i] = position in original text right after the i-th stripped char
         char_end: list[int] = []
@@ -187,15 +207,17 @@ class SequenceTextWrapper(textwrap.TextWrapper):
         """
         Wrap chunks into lines using sequence-aware width.
 
-        Override TextWrapper._wrap_chunks to use _width instead of len. Follows stdlib's algorithm:
+        Override TextWrapper._wrap_chunks to measure with _width. Follows stdlib's algorithm:
         greedily fill lines, handle long words.  Also handle OSC hyperlink processing. When
         hyperlinks span multiple lines, each line gets complete open/close sequences with matching
         id parameters for hover underlining continuity per OSC 8 spec.
         """
         # pylint: disable=too-many-branches,too-many-statements,too-complex,too-many-locals
         # pylint: disable=too-many-nested-blocks
-        # the hyperlink code in particular really pushes the complexity rating of this method.
-        # preferring to keep it "all in one method" because of so much local state and manipulation.
+        # The hyperlink code pushes the complexity rating of this method.  It stays in one method
+        # because of the shared local state.
+        if self.width <= 0:
+            raise ValueError('invalid width %r (must be > 0)' % self.width)
         if not chunks:
             return []
 
@@ -213,8 +235,6 @@ class SequenceTextWrapper(textwrap.TextWrapper):
         is_first_line = True
 
         hyperlink_state: Optional[HyperlinkParams] = None
-        # Track the id we're using for the current hyperlink continuation
-        current_hyperlink_id: Optional[str] = None
 
         # Arrange in reverse order so items can be efficiently popped
         chunks = list(reversed(chunks))
@@ -238,7 +258,7 @@ class SequenceTextWrapper(textwrap.TextWrapper):
 
             # Drop leading whitespace (except at very start)
             # When dropping, transfer any sequences to the next chunk.
-            # Only drop if there's actual whitespace text, not if it's only sequences.
+            # Only drop when actual whitespace text is present.
             stripped = self._strip_sequences(chunks[-1])
             if self.drop_whitespace and lines and stripped and not stripped.strip():
                 sequences = self._extract_sequences(chunks[-1])
@@ -269,7 +289,7 @@ class SequenceTextWrapper(textwrap.TextWrapper):
 
             # Drop trailing whitespace
             # When dropping, transfer any sequences to the previous chunk.
-            # Only drop if there's actual whitespace text, not if it's only sequences.
+            # Only drop when actual whitespace text is present.
             stripped_last = self._strip_sequences(current_line[-1]) if current_line else ''
             if (self.drop_whitespace and current_line and
                     stripped_last and not stripped_last.strip()):
@@ -301,17 +321,16 @@ class SequenceTextWrapper(textwrap.TextWrapper):
 
                     # If we end inside a hyperlink, append close sequence
                     if new_state is not None:
-                        # Ensure we have an id for continuation
-                        if current_hyperlink_id is None:
-                            if 'id=' in new_state.params:
-                                current_hyperlink_id = new_state.params
-                            elif new_state.params:
-                                # Prepend id to existing params. Per OSC 8 spec, params can have
-                                # multiple key=value pairs separated by ':'.
-                                current_hyperlink_id = (
-                                    f'id={self._next_hyperlink_id()}:{new_state.params}')
-                            else:
-                                current_hyperlink_id = f'id={self._next_hyperlink_id()}'
+                        # Use the active link's params; wrapper state can leak a prior link's id.
+                        if 'id=' in new_state.params:
+                            continuation_params = new_state.params
+                        elif new_state.params:
+                            # Prepend id to existing params. Per OSC 8 spec, params can have
+                            # multiple key=value pairs separated by ':'.
+                            continuation_params = (
+                                f'id={self._next_hyperlink_id()}:{new_state.params}')
+                        else:
+                            continuation_params = f'id={self._next_hyperlink_id()}'
                         line_content += HyperlinkParams(
                             terminator=new_state.terminator, url='').make_close()
 
@@ -326,22 +345,23 @@ class SequenceTextWrapper(textwrap.TextWrapper):
                             ).make_open()
                             new_open = HyperlinkParams(
                                 url=new_state.url,
-                                params=current_hyperlink_id,
+                                params=continuation_params,
                                 terminator=new_state.terminator,
                             ).make_open()
                             line_content = line_content.replace(old_open, new_open, 1)
 
-                        # Update state for next line, using computed id
+                        # Update state for next line, using computed params
                         hyperlink_state = HyperlinkParams(
-                            new_state.url, current_hyperlink_id, new_state.terminator)
+                            new_state.url, continuation_params, new_state.terminator)
                     else:
                         hyperlink_state = None
-                        current_hyperlink_id = None  # Reset id when hyperlink closes
 
                     # Strip trailing whitespace when drop_whitespace is enabled
                     # (matches CPython #140627 fix behavior)
                     if self.drop_whitespace:
                         line_content = line_content.rstrip()
+                        if not line_content:
+                            continue
                     lines.append(indent + line_content)
                     is_first_line = False
                 else:
@@ -412,30 +432,29 @@ class SequenceTextWrapper(textwrap.TextWrapper):
         if self.break_long_words:
             break_at_hyphen = False
             hyphen_end = 0
+            # End of the prefix that fits within space_left by display width.
+            prefix_end = self._find_break_position(chunk, space_left)
 
-            # Handle break_on_hyphens: find last hyphen within space_left
+            # Handle break_on_hyphens: find last hyphen in the portion that fits.
             if self.break_on_hyphens:
-                # Strip sequences to find hyphen in logical text
-                stripped = self._strip_sequences(chunk)
-                if len(stripped) > space_left:
-                    # Find last hyphen in the portion that fits
-                    hyphen_pos = stripped.rfind('-', 0, space_left)
-                    if hyphen_pos > 0 and any(c != '-' for c in stripped[:hyphen_pos]):
-                        # Map back to original position including sequences
-                        hyphen_end = self._map_stripped_pos_to_original(chunk, hyphen_pos + 1)
-                        break_at_hyphen = True
+                stripped = self._strip_sequences(chunk[:prefix_end])
+                hyphen_pos = stripped.rfind('-')
+                if hyphen_pos > 0 and any(c != '-' for c in stripped[:hyphen_pos]):
+                    # Map back to original position including sequences
+                    hyphen_end = self._map_stripped_pos_to_original(chunk, hyphen_pos + 1)
+                    break_at_hyphen = True
 
             # Break at grapheme boundaries to avoid splitting multi-codepoint characters
             if break_at_hyphen:
                 actual_end = hyphen_end
             else:
-                actual_end = self._find_break_position(chunk, space_left)
-                # If no progress possible (e.g., wide char exceeds line width),
-                # force at least one grapheme to avoid infinite loop.
-                # Only force when cur_line is empty; if line has content,
-                # appending nothing is safe and the line will be committed.
-                if actual_end == 0 and not cur_line:
-                    actual_end = self._find_first_grapheme_end(chunk)
+                actual_end = prefix_end
+                # Include first visible unit when break would take only leading sequences.
+                if not cur_line and (
+                        actual_end == 0
+                        or (actual_end < len(chunk)
+                            and self._width(chunk[:actual_end]) == 0)):
+                    actual_end = self._find_first_visible_break(chunk)
             cur_line.append(chunk[:actual_end])
             reversed_chunks[-1] = chunk[actual_end:]
 
@@ -490,9 +509,15 @@ class SequenceTextWrapper(textwrap.TextWrapper):
         # exceeds and we return from within the loop. Type checker requires this.
         return idx  # pragma: no cover
 
-    def _find_first_grapheme_end(self, text: str) -> int:
-        """Find the end position of the first grapheme."""
-        return len(next(iter_graphemes(text)))
+    def _find_first_visible_break(self, text: str) -> int:
+        """End of leading escape sequences plus the first grapheme."""
+        idx = 0
+        while idx < len(text) and text[idx] == '\x1b':
+            match = ZERO_WIDTH_PATTERN.match(text, idx)
+            if match is None:
+                break
+            idx = match.end()
+        return idx + len(next(iter_graphemes(text, start=idx)))
 
     def _rstrip_visible(self, text: str) -> str:
         """Strip trailing visible whitespace, preserving trailing sequences."""
@@ -520,6 +545,7 @@ def wrap(text: str, width: int = 70, *,
          expand_tabs: bool = True,
          replace_whitespace: bool = True,
          ambiguous_width: int = 1,
+         term_program: bool | str = False,
          initial_indent: str = '',
          subsequent_indent: str = '',
          fix_sentence_endings: bool = False,
@@ -532,8 +558,8 @@ def wrap(text: str, width: int = 70, *,
     r"""
     Wrap text to fit within given width, returning a list of wrapped lines.
 
-    Like :func:`textwrap.wrap`, but measures width in display cells rather than
-    characters, correctly handling wide characters, combining marks, and terminal
+    Like :func:`textwrap.wrap`, but measures width in display cells, correctly
+    handling wide characters, combining marks, and terminal
     escape sequences.
 
     :param text: Text to wrap, may contain terminal sequences.
@@ -549,6 +575,13 @@ def wrap(text: str, width: int = 70, *,
         may differ from stdlib for non-space whitespace characters.
     :param ambiguous_width: Width to use for East Asian Ambiguous (A)
         characters. Default is ``1`` (narrow). Set to ``2`` for CJK contexts.
+    :param term_program: Terminal software identifier for table correction.
+        ``False`` (default) disables override lookup.  ``True`` reads the
+        ``TERM_PROGRAM`` or ``TERM`` environment variable for auto-detection.
+        Accepts a canonical terminal name matching :func:`list_term_programs`,
+        such as from XTVERSION_, ENQ_, or ``TERM_PROGRAM``.
+
+        .. versionadded:: 0.8.0
     :param initial_indent: String prepended to first line.
     :param subsequent_indent: String prepended to subsequent lines.
     :param fix_sentence_endings: If True, ensure sentences are always
@@ -587,6 +620,13 @@ def wrap(text: str, width: int = 70, *,
         ...  for line in (wrap(para, 40) if para else [''])]
         ['First line.', 'Second line.']
 
+    .. note::
+
+       Segmentation follows UAX #29 grapheme clusters. Tamil, Kannada and Sinhala may break in the
+       middle of a conjunct and fall short of ``width``. Correct rendering of these languages is
+       not specified by unicode.org standards, and no terminal emulator or editor handles them
+       legibly, so this library function makes no attempt at accommodating them.
+
     .. seealso::
 
        :func:`textwrap.wrap`, :class:`textwrap.TextWrapper`
@@ -620,6 +660,7 @@ def wrap(text: str, width: int = 70, *,
         expand_tabs=expand_tabs,
         replace_whitespace=replace_whitespace,
         ambiguous_width=ambiguous_width,
+        term_program=term_program,
         initial_indent=initial_indent,
         subsequent_indent=subsequent_indent,
         fix_sentence_endings=fix_sentence_endings,

@@ -56,6 +56,9 @@ class PluginManager:
         self,
         presentation: MainPresentation,
     ) -> None:
+        """
+        Initialize an instance of the PluginManager class.
+        """
         (
             self.number_of_scan_failures,
             self.number_of_pragma_failures,
@@ -107,8 +110,13 @@ class PluginManager:
         self.__load_plugins(directory_to_search, plugin_files)
 
         all_additional_paths = list(additional_paths or [])
-        if more_paths := properties.get_string_property("plugins.additional_paths"):
-            all_additional_paths.extend(more_paths.split(","))
+        if new_paths := (
+            properties.get_string_list_property(
+                "plugins.additional_paths", delimiter=","
+            )
+            or []
+        ):
+            all_additional_paths.extend(new_paths)
 
         if all_additional_paths:
             for next_additional_plugin in all_additional_paths:
@@ -224,7 +232,9 @@ class PluginManager:
     ) -> ApplicationResult:
         list_re = (
             re.compile(
-                "^" + args.list_filter.replace("*", ".*").replace("?", ".") + "$"
+                "^"
+                + args.list_filter.lower().replace("*", ".*").replace("?", ".")
+                + "$"
             )
             if args.list_filter
             else None
@@ -293,7 +303,7 @@ class PluginManager:
     ) -> ApplicationResult:
         matching_plugins: List[FoundPlugin] = list(
             filter(
-                lambda x: args.info_filter in x.plugin_identifiers,
+                lambda x: args.info_filter.lower() in x.plugin_identifiers,
                 self.__registered_plugins,
             )
         )
@@ -432,7 +442,7 @@ class PluginManager:
         self, scan_file: str, line_number: int, pragma_error: str
     ) -> None:
         """
-        Log the pragma failure in the appropriate format.
+        Log the pragma error in the appropriate format.
         """
         self.__presentation.print_pragma_failure(scan_file, line_number, pragma_error)
         self.number_of_pragma_failures += 1
