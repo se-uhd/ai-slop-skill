@@ -282,6 +282,6 @@ The general AI trope catalog is the work of [Ossama Chaib](https://ossama.is) at
 
 First-party content is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [`LICENSE`](LICENSE).
 
-Third-party software bundled under `plugins/ai-slop/scripts/_vendor/` is distributed verbatim under its own licenses (MIT, BSD-3-Clause, Apache-2.0, PSF-2.0). See [`plugins/ai-slop/scripts/_vendor/NOTICE`](plugins/ai-slop/scripts/_vendor/NOTICE) for per-package attribution and full license texts.
+Third-party software bundled under `plugins/ai-slop/scripts/_vendor/` is distributed verbatim under its own licenses (MIT, BSD-3-Clause, PSF-2.0). See [`plugins/ai-slop/scripts/_vendor/NOTICE`](plugins/ai-slop/scripts/_vendor/NOTICE) for per-package attribution and full license texts.
 
 The AI trope catalog is third-party content by [Ossama Chaib](https://ossama.is) at [tropes.fyi](https://tropes.fyi), and it does not declare an explicit license. No copy of it is redistributed here. `plugins/ai-slop/scripts/fetch_tropes.py` fetches it at review time and passes it to the model, which is the use that upstream states on the page ("Add this file to your AI assistant's system prompt or context"). All rights to the catalog remain with the original author.
