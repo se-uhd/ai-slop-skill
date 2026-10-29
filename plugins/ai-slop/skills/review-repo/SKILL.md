@@ -3,7 +3,7 @@ name: review-repo
 description: Review the natural-language text of a whole code repository for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research article layer, `--ste` adds the Simplified Technical English layer, and `--economist` adds core Economist style advice. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev9"
+  version: "2026-10_rev10"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -52,7 +52,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
 4. **Load the AI trope catalog.** Same as `/ai-slop:review` step 3. If `--tropes=<path>` was passed, read each named file and concatenate them in order. Otherwise run `python3 "<skill-dir>/../../scripts/fetch_tropes.py"` and read its stdout, stopping as review does when fetching the catalog fails.
 
-5. **Review file by file.** Group the scan output by `<relpath>` and review each group's extracted text against the rules and the trope catalog. Apply `G.context-first` before reporting a candidate: read the surrounding context, identify the function of the sentence, and require a concrete benefit from the proposed edit. Word matches and counts are not findings by themselves. Preserve purpose, distinctions, logical relations, scope, emphasis, and voice. Read the source around extracted passages to assess continuity across sentences and paragraphs under `G.connected-prose`. The `commit <short-sha>` groups are reviewed the same way as files. A repository can be large, so be systematic. Take one group's lines at a time and record only real findings. For each violation record:
+5. **Review file by file.** Group the scan output by `<relpath>` and review each group's extracted text against the rules and the trope catalog. Apply `G.context-first` before reporting a candidate: read the surrounding context, identify the function of the sentence, and require a concrete benefit from the proposed edit. Word matches and counts are not findings by themselves. Preserve purpose, distinctions, logical relations, scope, emphasis, and voice. Read the source around extracted passages to assess continuity across sentences and paragraphs under `G.connected-prose`. The `commit <short-sha>` groups are reviewed the same way as files. Take one group at a time and record only confirmed findings. For each violation record:
    - The rule name with its key, as in `Semicolons (G.semicolons)`, or the trope name with its catalog status, as in `Negative parallelism (tropes.fyi, consistent)`.
    - The location (`<relpath>:<line>`, or `commit <short-sha>:<line>` for a commit message).
    - A short verbatim quote of the offending text. The scan strips comment markers, so read the file at that line when an exact quote matters. For a commit message use `git show <short-sha>`.
@@ -67,6 +67,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
 6. **Cross-cutting metrics, repo-wide.** Compute the following metrics over the extracted text and report raw counts with locations, since per-page densities do not apply to a repository:
    - Dashes, from `python3 "<skill-dir>/../../scripts/scan_glyphs.py"` run over the Markdown, plain-text, and LaTeX files that the scan listed. Take the counts from the scan, and treat the rows as `/ai-slop:review` step 5 does.
+   - Reference candidates, from `python3 "<skill-dir>/../../scripts/scan_reference.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested per the **Reference** rules as `/ai-slop:review` step 5 does.
    - American-vs-British spelling, a frequent source of drift in code comments.
    - Restricted-word occurrences.
    - The "significant" audit and verb tense, when the scientific layer is in scope.
@@ -92,7 +93,7 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 ## Bundled files
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-economist.md`, and `../../shared/rules-ste.md` are the rule layers that repo mode can load (the LaTeX layer never applies here).
-- `../../scripts/scan_repo.py` extracts the natural-language text of the repository. `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_repeats.py`, `../../scripts/scan_sentences.py`, and `../../scripts/lint_markdown.py` implement the catalog download, the glyph scan, the repeat scan, the sentence scan for STE mode, and report linting. Their module docstrings document inputs, outputs, exit codes, and known limitations.
+- `../../scripts/scan_repo.py` extracts the natural-language text of the repository. `../../scripts/fetch_tropes.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_repeats.py`, `../../scripts/scan_sentences.py`, and `../../scripts/lint_markdown.py` implement the catalog download, the glyph scan, the reference-candidate scan, the repeat scan, the sentence scan for STE mode, and report linting. Their module docstrings document inputs, outputs, exit codes, and known limitations.
 
 ## Constraints
 

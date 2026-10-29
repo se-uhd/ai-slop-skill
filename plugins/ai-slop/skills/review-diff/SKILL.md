@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer; `--economist` for core Economist style advice), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev9"
+  version: "2026-10_rev10"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -32,7 +32,7 @@ Do not invoke for a full-paper pass (use `/ai-slop:review`) or when the working 
 
 The skill auto-detects the paper and the diff in the current working directory.
 
-**Base ref.** Defaults to `HEAD` (so the review covers staged + unstaged changes in the working tree). The user may pass any git ref as a positional argument:
+**Base ref.** Defaults to `HEAD` (so the review covers staged + unstaged changes in the working tree, and new untracked files). The user may pass any git ref as a positional argument:
 
 - No argument -> `git diff HEAD` (uncommitted changes vs the last commit).
 - A branch or commit-ish (e.g., `main`, `abc1234`) -> `git diff <ref>` (working tree vs that ref).
@@ -53,7 +53,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 2. **Resolve inputs.** Auto-detect the LaTeX root, if any (see Paper detection). Parse the base ref (default `HEAD`) and any `--tropes=<path>` arguments (repeatable) from the user's message.
 
-3. **Compute the diff.** Run `git diff --unified=0 <base> -- '*.tex' '*.md' '*.txt'` to list changed lines. Parse the unified-diff hunk headers (`@@ -<old_start>,<old_count> +<new_start>,<new_count> @@`) to extract per-file line ranges of added or modified lines in the new tree (the working-tree side). Track these as the **changed-line set** per file. If no matching files changed, write an empty report (Summary: "No changes since `<base>`."), print it, and stop.
+3. **Compute the diff.** Run `git diff --unified=0 <base> -- '*.tex' '*.md' '*.txt'` to list changed lines. Parse the unified-diff hunk headers (`@@ -<old_start>,<old_count> +<new_start>,<new_count> @@`) to extract per-file line ranges of added or modified lines in the new tree (the working-tree side). Track these as the **changed-line set** per file. `git diff` does not list untracked files, so also run `git ls-files --others --exclude-standard -- '*.tex' '*.md' '*.txt'` and add every line of each listed file to the changed-line set. If no matching files changed, write an empty report (Summary: "No changes since `<base>`."), print it, and stop.
 
 4. **Expand to paragraph context.** For each changed-line range, expand outward in the new file to the nearest preceding and following blank line so the changed prose is reviewed in its full paragraph. Record both:
    - the **changed lines** (used to scope what counts as a finding), and
@@ -96,7 +96,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
     Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations. After the third pass, proceed regardless of what the linter reports. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
-    Then Read the file back and quote its contents verbatim in your reply. Do not regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
+    Then read the file back and quote its contents verbatim in your reply, rather than writing the report text a second time, so the printed version is identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
 
     ```text
     **Diff scope:** base=<base ref>, files=<list of changed files in the diff pathspec>

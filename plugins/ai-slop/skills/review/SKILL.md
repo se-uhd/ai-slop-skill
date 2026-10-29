@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, LaTeX source loads all three, and `--ste` adds a Simplified Technical English (STE) layer to any input. `--economist` adds core Economist style advice. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-10_rev9"
+  version: "2026-10_rev10"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -84,6 +84,8 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    In STE mode, when the STE rewrite of a sentence would lose meaning, precision, or force (`T.keep-original`), record no STE finding for it. List it under **Items requiring author judgment** instead, with the STE rule and a short reason, so revise mode leaves it alone. No suggested revision changes a quotation or a literal string (`T.quotations`, `T.literals`).
 
+   When the scientific layer is loaded, the review does not fetch cited sources. If a claim attributed to a citation looks unsupported by what you know of the cited work (`S.ground-claims`), list it under **Items requiring author judgment** with the reason, not as a finding that rewrites the claim, because revise mode would apply that edit although nobody has read the source. For LaTeX, step 6 also lists the citation as a grounding to-do, and `/ai-slop:ground` checks the claim against the retrieved source.
+
    In Economist mode, assess structure and reader needs before local wording. Record an Economist finding only for a demonstrated problem, citing its `E.` key. Combine overlapping findings at one location rather than reporting the same edit under multiple layers. When a proposed edit requires an essential fact or interpretation absent from the source, put a focused question under **Items requiring author judgment** (`E.keep-original`). An unknown actor is not itself a finding when the passive suits the passage. Preserve exact figures and required statistical reporting. Economist mode alone adds no sentence-length limits, number quotas, or STE metrics.
 
 5. **Cross-cutting metrics.** Compute and record the metrics for the layers in scope (when only the general layer is loaded, skip the scientific metrics: verb-tense compliance and the "significant" audit). Run the deterministic scans below first, because the per-section reading pass undercounts glyphs, reference candidates, and sentence lengths:
@@ -119,7 +121,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations. After the third pass, proceed regardless of what the linter reports. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
-   Then Read the file back and quote its contents verbatim in your reply. Do not regenerate the report text from memory for the inline echo, which has triggered repetition glitches (duplicate disclaimer blockquotes and `## Summary` headings). Echoing the Read result keeps the printed version identical to the file. Use the report template below. Name the selected optional layers in the Summary. Write the report prose and suggested revisions under those layers too (`T.scope`, `E.scope`), keeping quotations unchanged.
+   Then read the file back and quote its contents verbatim in your reply, rather than writing the report text a second time, so the printed version is identical to the file. Use the report template below. Name the selected optional layers in the Summary. Write the report prose and suggested revisions under those layers too (`T.scope`, `E.scope`), keeping quotations unchanged.
 
 8. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
 
@@ -131,7 +133,7 @@ The report schema is stable so revise mode can parse it. Each finding has `Rule`
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-10_rev9 <!-- maintainer: bump on every release (see README "Maintainer notes") -->
+**Skill version:** 2026-10_rev10
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
