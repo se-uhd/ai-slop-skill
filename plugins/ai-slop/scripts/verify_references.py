@@ -10,7 +10,10 @@ comparison (the rule layers name DBLP as the canonical record for CS/SE
 venues). An entry without a DOI is looked up by title in the local DBLP
 database, and online at CrossRef when DBLP has no match. The CrossRef search
 sends the title with the first three author names, which rank the right work
-first, and asks only for the fields that the comparison reads.
+first, and asks only for the fields that the comparison reads. When no hit
+matches, it asks once more with the hyphens of the title removed, and titles
+match under either reading of a hyphen, since a word that a line break split
+("popu-larity") survives into a title copied from a PDF.
 
 --mailto, which defaults to $CROSSREF_MAILTO, gives CrossRef a contact
 address in the query and in the User-Agent. CrossRef then serves the run
@@ -203,11 +206,22 @@ def _tokens(s):
     return [t for t in re.sub(r'[^a-z0-9 ]', ' ', (s or '').lower()).split() if t]
 
 
+def _readings(title):
+    """The word sets of a title under both readings of a hyphen: a compound
+    ("Model-Driven" as two words) and a word that a line break split
+    ("popu-larity" as one word)."""
+    title = title or ''
+    return {frozenset(_tokens(title)), frozenset(_tokens(title.replace('-', '')))}
+
+
 def title_match(a, b):
-    ta, tb = set(_tokens(a)), set(_tokens(b))
-    if not ta or not tb:
-        return False
-    return len(ta & tb) / len(ta | tb) >= 0.7
+    """True when the two titles share at least 70% of their words under
+    some reading of their hyphens."""
+    for ta in _readings(a):
+        for tb in _readings(b):
+            if ta and tb and len(ta & tb) / len(ta | tb) >= 0.7:
+                return True
+    return False
 
 
 def _venue_tokens(s):
@@ -386,19 +400,30 @@ def crossref_by_doi(doi, mailto=None):
 
 def crossref_by_title(title, mailto=None, authors=()):
     """CrossRef records for a title, asked together with the first
-    MAX_QUERY_AUTHORS author names, which rank the right work first. A search
+    MAX_QUERY_AUTHORS author names, which rank the right work first. When no
+    hit matches the title, the title is asked once more with its hyphens
+    removed, because a word that a line break split ("popu-larity") survives
+    into a title copied from a PDF and matches no indexed spelling. A search
     that answers 404 or without a result list has not answered, so it raises
     NetworkError rather than return no match."""
-    query = ' '.join([title, *list(authors)[:MAX_QUERY_AUTHORS]])
-    params = {'query.bibliographic': query, 'rows': '5', 'select': CROSSREF_SELECT}
-    if mailto:
-        params['mailto'] = mailto
-    data = _get_json('https://api.crossref.org/works?' + urllib.parse.urlencode(params),
-                     {'User-Agent': _user_agent(mailto)})
-    message = (data or {}).get('message')
-    if not isinstance(message, dict) or 'items' not in message:
-        raise NetworkError('CrossRef search returned no result list')
-    return [_crossref_record(it) for it in message.get('items') or []]
+    forms = [title]
+    if '-' in title and title.replace('-', '').strip():
+        forms.append(title.replace('-', ''))
+    records = []
+    for form in forms:
+        query = ' '.join([form, *list(authors)[:MAX_QUERY_AUTHORS]])
+        params = {'query.bibliographic': query, 'rows': '5', 'select': CROSSREF_SELECT}
+        if mailto:
+            params['mailto'] = mailto
+        data = _get_json('https://api.crossref.org/works?' + urllib.parse.urlencode(params),
+                         {'User-Agent': _user_agent(mailto)})
+        message = (data or {}).get('message')
+        if not isinstance(message, dict) or 'items' not in message:
+            raise NetworkError('CrossRef search returned no result list')
+        records += [_crossref_record(it) for it in message.get('items') or []]
+        if any(title_match(title, r['title']) for r in records):
+            break
+    return records
 
 
 def _first(value):
