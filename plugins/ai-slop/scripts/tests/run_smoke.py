@@ -2082,6 +2082,22 @@ def test_scan_reference_skips_latex_comments_and_verbatim():
         assert rows[0].startswith(f"{p}:2:") and rows[1].startswith(f"{p}:6:"), f"tex: wrong rows: {rows!r}"
 
 
+def test_scan_reference_reads_any_s_verb_after_a_singular_demonstrative():
+    # After This, That, or It, a word in -s that is not on the verb lists is
+    # read as a verb ("produces"), also after "always". A noun or adjective in
+    # -ss, -us, -is, -ics, or a listed noun such as "series" is not, and after
+    # These the lists stay closed ("These tests").
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'A. This produces loss. B. It specifies the loop. C. This always mirrors it.\n'
+                 'D. This process is slow. E. This previous step ran. F. This analysis holds.\n'
+                 'G. This semantics is odd. H. This series of tests ran. I. These tests ran.\n')
+        rc, out, err = run('scan_reference.py', str(p))
+        assert rc == 0, (rc, err)
+        rows = [l.split('\t')[0].rsplit(':', 2)[1:] for l in out.splitlines()]
+        assert rows == [['1', '4'], ['1', '27'], ['1', '53']], out
+
+
 def test_scan_reference_clean_file():
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / 'clean.md'
@@ -2388,6 +2404,255 @@ def test_verify_references_merges_dblp_for_doi_entries():
     entry = {'doi': '10.1/x', 'title': 'a study of code review', 'year': '2022', 'venue': 'EMSE'}
     assert vref.verify_entry(entry, lambda d: dict(crossref), lambda t: [], lambda t: [])[0] == 'year-mismatch'
     assert vref.verify_entry(entry, lambda d: dict(crossref), lambda t: [dict(curated)], lambda t: [])[0] == 'ok'
+
+
+DBLP_DUMP = b'''<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE dblp SYSTEM "dblp.dtd">
+<dblp>
+<inproceedings key="conf/icse/Nam24"><author>Daye Nam</author><author>J&uuml;rgen M&ouml;ller</author><title>Using an LLM to Help With Code Understanding.</title><year>2024</year><booktitle>ICSE</booktitle><ee>https://doi.org/10.1145/3597503.3639187</ee></inproceedings>
+<www key="homepages/x/JaneDoe"><author>Jane Doe</author><title>Home Page</title></www>
+<article key="journals/corr/abs-2310-06770"><author>Carlos E. Jimenez</author><title>SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</title><journal>CoRR</journal><year>2023</year><ee>https://doi.org/10.48550/arXiv.2310.06770</ee></article>
+<inproceedings key="conf/iclr/Jimenez24"><author>Carlos E. Jimenez</author><title>SWE-bench: Can Language Models Resolve Real-world Github Issues?</title><year>2024</year><booktitle>ICLR</booktitle></inproceedings>
+<proceedings key="conf/x/2020"><editor>Ann &Aring;berg</editor><title>Proceedings of X &amp; Y</title><year>2020</year><booktitle>X</booktitle></proceedings>
+</dblp>
+'''
+
+
+def build_dblp_fixture(d):
+    """Build a DBLP database from DBLP_DUMP in `d` with setup_dblp.py and
+    return its path."""
+    import gzip
+    dump, db = Path(d) / 'dblp.xml.gz', Path(d) / 'dblp.db'
+    with gzip.open(dump, 'wb') as f:
+        f.write(DBLP_DUMP)
+    rc, out, err = run('setup_dblp.py', '--dump', str(dump), '--out', str(db))
+    assert rc == 0 and db.is_file(), f"setup_dblp: rc={rc} out={out!r} err={err!r}"
+    return db
+
+
+def test_setup_dblp_builds_the_database_from_a_dump():
+    # Entities are resolved, a homepage record is skipped, an edited volume
+    # lists its editors, and the title index answers a phrase query. A second
+    # run leaves the database alone, and a missing dump is a usage error.
+    import sqlite3
+    with tempfile.TemporaryDirectory() as d:
+        db = build_dblp_fixture(d)
+        con = sqlite3.connect(str(db))
+        keys = [r[0] for r in con.execute('SELECT key FROM publications ORDER BY id')]
+        assert keys == ['conf/icse/Nam24', 'journals/corr/abs-2310-06770',
+                        'conf/iclr/Jimenez24', 'conf/x/2020'], keys
+        names = {r[0] for r in con.execute('SELECT name FROM authors')}
+        assert {'Jürgen Möller', 'Ann Åberg'} <= names and 'Jane Doe' not in names, names
+        hits = con.execute("SELECT rowid FROM publications_fts WHERE publications_fts MATCH "
+                           "'\"swe bench can language models\"'").fetchall()
+        assert len(hits) == 2, hits
+        assert dict(con.execute('SELECT key, value FROM metadata'))['publication_count'] == '4'
+        con.close()
+        rc, out, err = run('setup_dblp.py', '--dump', str(Path(d) / 'dblp.xml.gz'), '--out', str(db))
+        assert rc == 0 and 'exists' in out, (rc, out, err)
+        rc, out, err = run('setup_dblp.py', '--dump', str(Path(d) / 'none.gz'), '--out', str(Path(d) / 'x.db'))
+        assert rc == 2 and 'no dump' in err, (rc, err)
+
+
+def test_setup_dblp_resolves_an_entity_split_across_chunks():
+    import io
+    sys.path.insert(0, str(SCRIPTS))
+    import setup_dblp
+
+    class Trickle(io.BytesIO):
+        def read(self, n=-1):
+            return super().read(3)
+    data = b'<a>J&uuml;rgen &amp; Ann &Aring;berg &unknown;</a>'
+    out = setup_dblp.EntityResolvingReader(Trickle(data)).read()
+    assert out == b'<a>J&#252;rgen &amp; Ann &#197;berg &unknown;</a>', out
+
+
+def test_verify_references_reads_the_local_dblp_database():
+    # A title found as a phrase, with LaTeX braces and a hyphen, returns the
+    # published record before the CoRR preprint. A missing or unreadable
+    # database reports why, and the run says so with the setup command.
+    with tempfile.TemporaryDirectory() as d:
+        dblp = vref.LocalDblp(build_dblp_fixture(d))
+        assert not dblp.error and '4 publications' in dblp.describe(), (dblp.error, dblp.describe())
+        recs = dblp.by_title('{SWE}-bench: Can Language Models Resolve Real-world {G}ithub Issues?')
+        assert [r['venue'] for r in recs] == ['ICLR', 'CoRR'], recs
+        assert recs[1]['doi'] == '10.48550/arXiv.2310.06770', recs
+        assert dblp.by_title('Using an {LLM} to help with code understanding')[0]['year'] == '2024'
+        assert dblp.by_title('A title that no record has at all') == []
+        assert 'no local DBLP database' in vref.LocalDblp(Path(d) / 'missing.db').error
+        junk = Path(d) / 'junk.db'
+        write(junk, 'not a database')
+        assert 'is not a DBLP database' in vref.LocalDblp(junk).error
+        bib = Path(d) / 'refs.bib'
+        write(bib, '@misc{nodata,\n  note = {placeholder}\n}\n')
+        rc, out, err = run('verify_references.py', str(bib), '--dblp', str(Path(d) / 'missing.db'))
+        assert rc == 0, (rc, err)
+        for token in ('setup_dblp.py', '--out', 'AI_SLOP_DBLP', 'DBLP not checked'):
+            assert token in err, f"missing {token!r}: {err!r}"
+
+
+def test_verify_references_without_dblp_reports_unchecked():
+    # Without a local DBLP database, a title that CrossRef does not hold was
+    # not asked of DBLP, so it is `unchecked`, not `not-found`.
+    verdict = vref.verify_entry({'title': 'an unmatched unique title zzz'},
+                                lambda d: None, None, lambda t: [])
+    assert verdict[0] == 'unchecked' and 'DBLP was not checked' in verdict[1], verdict
+    assert vref.verify_entry({'doi': '10.1/x', 'title': 'a study of code review'},
+                             lambda d: dict(_REC), None, lambda t: [])[0] == 'ok'
+
+
+def test_verify_references_resolves_datacite_dois_at_doi_org():
+    # A DOI that CrossRef does not hold is asked at doi.org, and its CSL JSON
+    # (no container, publisher arXiv) matches an entry filed under CoRR.
+    csl = {'title': 'SWE-bench: Can Language Models Resolve Real-World GitHub Issues?',
+           'issued': {'date-parts': [[2023]]}, 'publisher': 'arXiv',
+           'DOI': '10.48550/ARXIV.2310.06770'}
+    rec = vref._csl_record(csl)
+    assert rec['venue'] == 'arXiv' and rec['year'] == '2023', rec
+    entry = {'title': 'SWE-bench: Can Language Models Resolve Real-World GitHub Issues?',
+             'year': '2023', 'venue': 'CoRR'}
+    assert vref.compare_entry(entry, rec)[0] == 'ok'
+    saved = vref.crossref_by_doi, vref.doi_org_by_doi
+    try:
+        vref.crossref_by_doi = lambda doi, mailto=None: None
+        vref.doi_org_by_doi = lambda doi: rec
+        assert vref.lookup_doi('10.48550/arXiv.2310.06770') is rec
+        vref.doi_org_by_doi = lambda doi: None
+        assert vref.lookup_doi('10.1145/0000000.9999999') is None
+    finally:
+        vref.crossref_by_doi, vref.doi_org_by_doi = saved
+    neurips = {'title': 'A Study of Code Review', 'year': '2024', 'venue': 'NeurIPS'}
+    assert vref.compare_entry({'title': 'a study of code review', 'year': '2024',
+                               'venue': 'Advances in Neural Information Processing Systems'},
+                              neurips)[0] == 'ok'
+
+
+def test_verify_references_retries_a_rate_limit():
+    # HTTP 429 waits for the Retry-After seconds and asks again, a 404 is no
+    # record, and a 429 that persists is a network failure.
+    import io
+    import urllib.error
+    calls, sleeps = [], []
+
+    def fake_urlopen(responses):
+        def urlopen(req, timeout=None):
+            calls.append(req.full_url)
+            code = responses.pop(0)
+            if code == 200:
+                return io.BytesIO(b'{"ok": true}')
+            raise urllib.error.HTTPError(req.full_url, code, 'x', {'Retry-After': '7'}, None)
+        return urlopen
+    saved = vref.urllib.request.urlopen, vref.time.sleep, vref.MIN_INTERVAL
+    try:
+        vref.time.sleep = sleeps.append
+        vref.MIN_INTERVAL = 0
+        vref.urllib.request.urlopen = fake_urlopen([429, 200])
+        assert vref._get_json('https://api.crossref.org/works/x') == {'ok': True}
+        assert len(calls) == 2 and sleeps == [7.0], (calls, sleeps)
+        vref.urllib.request.urlopen = fake_urlopen([404])
+        assert vref._get_json('https://api.crossref.org/works/y') is None
+        vref.urllib.request.urlopen = fake_urlopen([429] * (vref.MAX_RETRIES + 1))
+        try:
+            vref._get_json('https://api.crossref.org/works/z')
+            raise AssertionError('a persistent 429 must raise NetworkError')
+        except vref.NetworkError:
+            pass
+    finally:
+        vref.urllib.request.urlopen, vref.time.sleep, vref.MIN_INTERVAL = saved
+
+
+class FakeResponse:
+    """A urlopen response with a body and headers, usable in a with block."""
+
+    def __init__(self, body, headers=None):
+        import io
+        self.stream = io.BytesIO(body)
+        self.headers = headers or {}
+
+    def read(self, n=-1):
+        return self.stream.read(n)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def test_verify_references_crossref_query_and_responses():
+    # The CrossRef search sends the title with up to three author names and a
+    # field list, and the contact address in the query and the User-Agent. A
+    # gzipped answer is decompressed, and a search without a result list is a
+    # failure, not an empty match.
+    import gzip
+    import urllib.parse
+    assert vref.author_names('Doe, {Jane} and John Smith and {OpenAI} and others') == \
+        ['Jane Doe', 'John Smith', 'OpenAI']
+    assert vref.is_contact('a@b') and not vref.is_contact('@b.de') and not vref.is_contact('x')
+    seen = []
+    body = gzip.compress(b'{"message": {"items": [{"title": ["A Study"], "DOI": "10.1/x"}]}}')
+
+    def urlopen(req, timeout=None):
+        seen.append(req)
+        return FakeResponse(body, {'Content-Encoding': 'gzip'})
+    saved = vref.urllib.request.urlopen, vref.MIN_INTERVAL
+    try:
+        vref.MIN_INTERVAL = 0
+        vref.urllib.request.urlopen = urlopen
+        recs = vref.crossref_by_title('A Study', 'me@example.org', ['A B', 'C D', 'E F', 'G H'])
+        assert recs[0]['doi'] == '10.1/x', recs
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(seen[0].full_url).query)
+        assert query['query.bibliographic'] == ['A Study A B C D E F'], query
+        assert query['select'] == [vref.CROSSREF_SELECT] and query['mailto'] == ['me@example.org']
+        assert 'mailto:me@example.org)' in seen[0].get_header('User-agent'), seen[0].headers
+        vref.urllib.request.urlopen = lambda req, timeout=None: FakeResponse(b'{"message": {}}')
+        try:
+            vref.crossref_by_title('A Study')
+            raise AssertionError('a search without items must raise NetworkError')
+        except vref.NetworkError:
+            pass
+    finally:
+        vref.urllib.request.urlopen, vref.MIN_INTERVAL = saved
+
+
+def test_setup_dblp_reads_the_checksum_before_downloading():
+    # A missing checksum leaves the gzip header check, a wrong one discards the
+    # download, and neither touches an existing dump.
+    import gzip
+    import hashlib
+    sys.path.insert(0, str(SCRIPTS))
+    import setup_dblp
+    payload = gzip.compress(b'<dblp></dblp>')
+    url = 'https://example.org/dblp-2026-09-01.xml.gz'
+
+    def opener(md5):
+        def _open(u, method='GET'):
+            if u.endswith('.md5'):
+                if md5 is None:
+                    raise OSError('no checksum')
+                return FakeResponse(f"{md5}  dblp.xml.gz\n".encode())
+            return FakeResponse(payload, {'Content-Length': str(len(payload))})
+        return _open
+    import contextlib
+    import io
+    saved = setup_dblp._open, setup_dblp.newest_snapshot
+    quiet = contextlib.ExitStack()
+    quiet.enter_context(contextlib.redirect_stdout(io.StringIO()))
+    quiet.enter_context(contextlib.redirect_stderr(io.StringIO()))
+    try:
+        setup_dblp.newest_snapshot = lambda today: url
+        with quiet, tempfile.TemporaryDirectory() as d:
+            dump = Path(d) / 'dblp.xml.gz'
+            setup_dblp._open = opener(None)
+            assert setup_dblp.download(dump) == '' and dump.read_bytes() == payload
+            dump.write_bytes(b'old')
+            setup_dblp._open = opener('0' * 32)
+            assert 'checksum' in setup_dblp.download(dump) and dump.read_bytes() == b'old'
+            setup_dblp._open = opener(hashlib.md5(payload).hexdigest())
+            assert setup_dblp.download(dump) == '' and dump.read_bytes() == payload
+            assert not (Path(d) / 'dblp.xml.gz.part').exists()
+    finally:
+        setup_dblp._open, setup_dblp.newest_snapshot = saved
 
 
 def test_find_latex_root_skips_subfiles_chapters():
@@ -2941,6 +3206,7 @@ TESTS = [
     test_scan_reference_skips_dummy_it_and_connectives,
     test_scan_reference_two_on_one_line_distinct_columns,
     test_scan_reference_skips_latex_comments_and_verbatim,
+    test_scan_reference_reads_any_s_verb_after_a_singular_demonstrative,
     test_scan_reference_clean_file,
     test_scan_reference_all_unreadable_exits_2,
     test_scan_reference_partial_read_exits_0,
@@ -3074,6 +3340,14 @@ TESTS = [
     test_scan_glyphs_and_reference_honor_nested_fences,
     test_verify_references_accepts_any_recorded_year_and_venue_abbreviations,
     test_verify_references_merges_dblp_for_doi_entries,
+    test_setup_dblp_builds_the_database_from_a_dump,
+    test_setup_dblp_resolves_an_entity_split_across_chunks,
+    test_verify_references_reads_the_local_dblp_database,
+    test_verify_references_without_dblp_reports_unchecked,
+    test_verify_references_resolves_datacite_dois_at_doi_org,
+    test_verify_references_retries_a_rate_limit,
+    test_verify_references_crossref_query_and_responses,
+    test_setup_dblp_reads_the_checksum_before_downloading,
     test_find_latex_root_skips_subfiles_chapters,
     test_find_citation_issues_follows_input_and_multiline_cites,
     test_insert_grounding_multiline_cite_comment_after_closing_line,
