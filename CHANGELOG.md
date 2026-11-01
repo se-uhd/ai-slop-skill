@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-11_rev2] - 2026-11-01
+
+- **Changed:** when no CrossRef hit matches a title, the reference check asks again with the hyphens of the title removed, and two titles match under either reading of a hyphen. A word that a line break split in a title copied from a PDF ("popu-larity") no longer causes a false `not-found` or `title-mismatch`.
+
 ## [2026-11_rev1] - 2026-11-01
 
 - **Changed:** the reference check reads DBLP from a local database and no longer queries the DBLP web API, which rate-limited a long bibliography. The new `scripts/setup_dblp.py` downloads the monthly DBLP snapshot, verifies its checksum, and builds the database at `$AI_SLOP_DBLP`, else at `~/dblp/dblp.db`. `--dblp` names a database for one run. Without a database, the check prints the setup command, still verifies the DOIs, and reports an entry without a DOI that CrossRef does not hold as `unchecked` instead of `not-found`.

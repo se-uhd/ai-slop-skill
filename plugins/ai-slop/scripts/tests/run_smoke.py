@@ -2615,6 +2615,33 @@ def test_verify_references_crossref_query_and_responses():
         vref.urllib.request.urlopen, vref.MIN_INTERVAL = saved
 
 
+def test_verify_references_retries_a_title_split_by_a_line_break():
+    # A title with a word split by a line break matches the indexed spelling,
+    # and when the first search finds no match, the title is asked again with
+    # its hyphens removed. A compound keeps its hyphen reading too.
+    import urllib.parse
+    assert vref.title_match('Modeling library popu-larity', 'Modeling Library Popularity')
+    assert vref.title_match('Model-Driven Testing of Robots', 'Model-driven testing of robots')
+    queries = []
+    answers = [b'{"message": {"items": [{"title": ["Something Else Entirely"]}]}}',
+               b'{"message": {"items": [{"title": ["Modeling Library Popularity"]}]}}']
+
+    def urlopen(req, timeout=None):
+        queries.append(urllib.parse.parse_qs(urllib.parse.urlsplit(req.full_url).query)
+                       ['query.bibliographic'][0])
+        return FakeResponse(answers[len(queries) - 1])
+    saved = vref.urllib.request.urlopen, vref.MIN_INTERVAL
+    try:
+        vref.MIN_INTERVAL = 0
+        vref.urllib.request.urlopen = urlopen
+        recs = vref.crossref_by_title('Modeling library popu-larity', None, ['A B'])
+        assert queries == ['Modeling library popu-larity A B', 'Modeling library popularity A B'], queries
+        assert vref.best_title_match('Modeling library popu-larity', recs)['title'] == \
+            'Modeling Library Popularity', recs
+    finally:
+        vref.urllib.request.urlopen, vref.MIN_INTERVAL = saved
+
+
 def test_setup_dblp_reads_the_checksum_before_downloading():
     # A missing checksum leaves the gzip header check, a wrong one discards the
     # download, and neither touches an existing dump.
@@ -3347,6 +3374,7 @@ TESTS = [
     test_verify_references_resolves_datacite_dois_at_doi_org,
     test_verify_references_retries_a_rate_limit,
     test_verify_references_crossref_query_and_responses,
+    test_verify_references_retries_a_title_split_by_a_line_break,
     test_setup_dblp_reads_the_checksum_before_downloading,
     test_find_latex_root_skips_subfiles_chapters,
     test_find_citation_issues_follows_input_and_multiline_cites,
