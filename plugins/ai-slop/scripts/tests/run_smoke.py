@@ -2595,6 +2595,90 @@ def test_scan_repeats_usage_and_unreadable_paths():
     assert rc == 2 and 'none of the 1 path(s)' in err, (rc, err)
 
 
+# ---------- scan_crossrefs.py ----------
+
+def crossref_rows(out):
+    """Map the stdout of scan_crossrefs.py to (file name, line, col, kind)."""
+    rows = []
+    for row in out.splitlines():
+        where, kind, _ = row.split('\t')
+        path, line, col = where.rsplit(':', 2)
+        rows.append((Path(path).name, int(line), int(col), kind))
+    return rows
+
+
+def test_scan_crossrefs_resolves_labels_across_files():
+    # Labels and references resolve across the root and its \input files. A
+    # float counts as referenced through any of its labels, including one in a
+    # file that the float pulls in. A reference or label in a comment, an
+    # \iffalse block, or a listing does not count.
+    main = ('\\documentclass{article}\n'
+            '\\begin{document}\n'
+            '\\input{sec/intro}\n'
+            '\\begin{figure}\\caption{A.\\label{fig:a}}\\end{figure}\n'
+            '\\begin{table}\\label{tab:b}\\end{table}\n'
+            '\\begin{figure}\\label{fig:c}\\end{figure}\n'
+            '\\begin{figure*}\\label{fig:d}\\end{figure*}\n'
+            '\\begin{figure}\\input{sec/plot}\\end{figure}\n'
+            '\\begin{table}\\caption{Unused.}\\label{tab:unused}\\end{table}\n'
+            '\\begin{figure}\\caption{No label.} % \\label{fig:e}\n'
+            '\\end{figure}\n'
+            '\\cref{fig:a,tab:b} and \\crefrange{fig:c}{fig:d}.\n'
+            '% \\ref{tab:unused} and \\ref{fig:e}\n'
+            '\\iffalse \\ref{tab:unused} \\iftoggle{x}{y}{z} \\fi\n'
+            '\\begin{lstlisting}\n\\ref{tab:unused}\n\\end{lstlisting}\n'
+            '\\end{document}\n')
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / 'sec').mkdir()
+        write(Path(d) / 'main.tex', main)
+        write(Path(d) / 'sec' / 'intro.tex', 'See Figure~\\ref{fig:plot}.\n')
+        write(Path(d) / 'sec' / 'plot.tex', '\\caption{Plot}\\label{fig:plot}\n')
+        rc, out, err = run('scan_crossrefs.py', str(Path(d) / 'main.tex'))
+        assert rc == 0, (rc, err)
+        assert crossref_rows(out) == [('main.tex', 9, 1, 'unreferenced-float'),
+                                      ('main.tex', 10, 1, 'unreferenced-float')], out
+        assert 'tab:unused | Unused.' in out and 'no label | No label.' in out, out
+        assert 'scanned 3 file(s), 7 float(s)' in err and 'unreferenced-float=2' in err, err
+
+
+def test_scan_crossrefs_lists_reference_wording():
+    # A lowercase name before \ref, a name before a command that prints the
+    # name itself, and a typed number are listed at the name, also when the
+    # reference is on the next line. A capitalized name before \ref, a bare
+    # \autoref, "line 5", the verb "listing", a lowercase letter after
+    # "appendix", text in a listing, and a label, reference, or citation key
+    # that contains "Table 1" are not.
+    main = ('\\begin{figure}\\label{fig:x}\\end{figure}\n'
+            'See section~\\ref{sec:a} and Section~\\autoref{sec:b}, or\n'
+            'Table 2 and Figure~\\ref{fig:x}, figure\n'
+            '\\ref{fig:x}, Appendix A, and Fig. 3a.\n'
+            'In line 5 of \\autoref{alg:a}, listing 5 tools, the appendix a figure.\n'
+            '\\begin{lstlisting}\ntable 2 and section~\\ref{x}\n\\end{lstlisting}\n'
+            '\\begin{table}\\label{TABLE 1: Demographics}\\end{table}\n'
+            'Table~\\ref{TABLE 1: Demographics} and \\cite{table 2}.\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'p.tex', main)
+        rc, out, err = run('scan_crossrefs.py', str(Path(d) / 'p.tex'))
+        assert rc == 0, (rc, err)
+        assert crossref_rows(out) == [('p.tex', 2, 5, 'lowercase-ref'),
+                                      ('p.tex', 2, 29, 'name-before-autoref'),
+                                      ('p.tex', 3, 1, 'hard-coded-ref'),
+                                      ('p.tex', 3, 33, 'lowercase-ref'),
+                                      ('p.tex', 4, 14, 'hard-coded-ref'),
+                                      ('p.tex', 4, 30, 'hard-coded-ref')], out
+
+
+def test_scan_crossrefs_usage_and_unreadable_root():
+    rc, out, err = run('scan_crossrefs.py')
+    assert rc == 2 and 'usage' in err, (rc, err)
+    rc, out, err = run('scan_crossrefs.py', '/nonexistent/paper.tex')
+    assert rc == 2 and 'none of the 1 root(s)' in err, (rc, err)
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'p.tex', LATEX_BODY)
+        rc, out, err = run('scan_crossrefs.py', str(Path(d) / 'p.tex'))
+        assert rc == 0 and out == '' and '0 candidate(s)' in err, (rc, out, err)
+
+
 # ---------- export_rules.py ----------
 
 EXPORT_CATALOG = """# AI Writing Tropes to Avoid
@@ -3000,6 +3084,9 @@ TESTS = [
     test_first_party_prose_avoids_possessives_on_text_units,
     test_scan_repeats_lists_pasted_and_partial_copies,
     test_scan_repeats_usage_and_unreadable_paths,
+    test_scan_crossrefs_resolves_labels_across_files,
+    test_scan_crossrefs_lists_reference_wording,
+    test_scan_crossrefs_usage_and_unreadable_root,
     test_export_rules_writes_general_layer_and_catalog,
     test_export_rules_economist_and_combined_layers,
     test_export_rules_drops_only_the_self_check_section,
