@@ -19,13 +19,18 @@ Kinds:
 
   - bare-demonstrative: a sentence-initial This / These / That / It followed
                         directly by a verb (an auxiliary, a modal, or one of the
-                        commentary verbs in the closed lists VERBS_3SG,
-                        VERBS_BASE, and VERBS_PAST, optionally after an adverb
-                        such as "also" or "in turn"). A demonstrative followed
-                        by a noun ("These tests were") is anchored and is not
-                        listed. The verb lists are closed on purpose, because a
-                        heuristic that reads every "-s" word as a verb would
-                        list "These tests".
+                        commentary verbs in the lists VERBS_3SG, VERBS_BASE,
+                        and VERBS_PAST, optionally after an adverb such as
+                        "also" or "in turn"). After This, That, or It, any
+                        other lowercase word of four or more letters that ends
+                        in -s counts as a verb too ("This produces"), unless
+                        its ending marks a noun or an adjective (-ss, -us, -is,
+                        -os, -as, -ics, as in "This process", "This previous",
+                        "This analysis") or it is one of NOUNS_ENDING_IN_S.
+                        After These the lists stay closed, because a plural
+                        noun ends in -s as well ("These tests"). A
+                        demonstrative followed by a noun ("These tests were")
+                        is anchored and is not listed.
   - such-noun:          "such" + noun anywhere in running prose ("such tools",
                         "such an approach"). Whether the text has instantiated
                         the category is the reviewer's judgment. The scan only
@@ -110,6 +115,11 @@ involved corresponded seemed appeared remained became represented constituted
 stemmed arose occurred depended relied hinged turned came went worked failed
 """.split())
 
+# After This, That, or It, a word ending in -s is a verb unless one of these
+# endings or words marks it as a noun or an adjective (see looks_3sg).
+NOUN_ENDINGS = ('ss', 'us', 'is', 'os', 'as', 'ics')
+NOUNS_ENDING_IN_S = frozenset({'series', 'species', 'news', 'lens'})
+
 # Adverbs that may sit between the pronoun and its verb ("This also shows",
 # "This, in turn, makes"), and between a dummy "It is" and its cue ("It is also
 # worth noting").
@@ -118,7 +128,7 @@ ADVERBS = (
     'clearly', 'likely', 'partly', 'largely', 'mainly', 'often', 'only',
     'ultimately', 'directly', 'further', 'already', 'again', 'indeed', 'arguably',
     'certainly', 'perhaps', 'not', 'now', 'generally', 'widely', 'well', 'quite',
-    'rather', 'very', 'entirely', 'hardly', 'no longer',
+    'rather', 'very', 'entirely', 'hardly', 'no longer', 'always', 'sometimes',
 )
 ADVERB_RE = '|'.join(re.escape(a) for a in ADVERBS)
 
@@ -171,13 +181,21 @@ def truncate(text, limit=120):
     return text if len(text) <= limit else text[: limit - 3] + '...'
 
 
+def looks_3sg(word):
+    """True for a lowercase word of four or more letters that ends in -s like
+    a third-person verb ("produces", "yields"), and not like a noun or an
+    adjective ("process", "previous", "analysis", "semantics", "series")."""
+    return (len(word) >= 4 and word.islower() and word.endswith('s')
+            and not word.endswith(NOUN_ENDINGS) and word not in NOUNS_ENDING_IN_S)
+
+
 def verb_fits(pron, verb):
-    """True when `verb` is a listed form that agrees with `pron`."""
+    """True when `verb` is a verb form that agrees with `pron`."""
     if verb in VERBS_PAST:
         return True
     if pron == 'These':
         return verb in VERBS_BASE
-    return verb in VERBS_3SG
+    return verb in VERBS_3SG or looks_3sg(verb)
 
 
 def is_dummy_it(pron, verb, rest):

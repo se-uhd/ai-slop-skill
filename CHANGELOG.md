@@ -2,6 +2,15 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-11_rev1] - 2026-11-01
+
+- **Changed:** the reference check reads DBLP from a local database and no longer queries the DBLP web API, which rate-limited a long bibliography. The new `scripts/setup_dblp.py` downloads the monthly DBLP snapshot, verifies its checksum, and builds the database at `$AI_SLOP_DBLP`, else at `~/dblp/dblp.db`. `--dblp` names a database for one run. Without a database, the check prints the setup command, still verifies the DOIs, and reports an entry without a DOI that CrossRef does not hold as `unchecked` instead of `not-found`.
+- **Fixed:** a DOI that CrossRef does not hold, such as the DataCite DOIs of arXiv and Zenodo, is resolved at doi.org instead of being reported as `doi-not-found`.
+- **Fixed:** the reference check spaces its requests to one host and retries an HTTP 429 or 503 after the delay that the server asks for, so a CrossRef rate limit no longer produces `unchecked-offline`. It allows doi.org 45 seconds, since a DataCite record can take that long, and decompresses a gzipped answer.
+- **Changed:** the CrossRef title search sends the first three author names with the title and asks only for the fields that the comparison reads. A search that returns no result list counts as a failed lookup, not as a missing work. `--mailto` defaults to `$CROSSREF_MAILTO`, the address also goes into the User-Agent, and a value that is not an email address is dropped with a warning.
+- **Changed:** the venue comparison expands NeurIPS, ICML, ICLR, ACL, EMNLP, NAACL, KDD, CHI, and CSCW, and reads CoRR as arXiv.
+- **Fixed:** `scan_reference.py` lists a sentence-initial This, That, or It before any verb that ends in -s, such as "This produces", not only before the verbs on its lists. A word with a noun or adjective ending (-ss, -us, -is, -os, -as, -ics) is not read as a verb.
+
 ## [2026-11] - 2026-11-01
 
 - **Added:** `scripts/scan_crossrefs.py`, a cross-reference scan for LaTeX papers. It follows `\input` and `\include` from the root and lists figures and tables that no reference names (`S.refer-to-every-figure`), a lowercase name before a reference such as "section~\ref" (`S.capitalize-cross-references`), a name before `\autoref` or `\cref`, which print the name themselves, and a typed number such as "Table 2" (both `L.cross-reference-macros`). It skips comments, `\iffalse` blocks, and verbatim and listing environments. `/ai-slop:review` runs it on the root. When the text already discusses an unreferenced figure or table, the review suggests adding the reference to that sentence, and it lists the rest under author judgment. `/ai-slop:review-diff` keeps the rows on changed lines.
