@@ -252,7 +252,12 @@ cannot tell a well-placed dash from a misplaced one.
   this background.
 - **Caption punctuation** (`L.caption-punctuation`). The run-in caption default (`.`, switching to `:` before
   a list or grammatical continuation) follows the same bias toward
-  the period in the training data.
+  the period in the training data. The `acmart` exception was checked by
+  compiling the class. `\paragraph{Title}` renders "Title.", `\paragraph{Title.}`
+  renders a single period, and a caption ending in a colon or a question mark
+  renders as written. A review that asks for the period in the source therefore
+  changes nothing on the page, and an earlier review of an `acmart` paper had to
+  clear such findings by hand.
 - **Capitalization after a colon** (`G.colon-capitalization`). Because AI text reliably lowercases the
   first word after a colon regardless of whether a full sentence follows, the
   project convention to capitalize after a colon followed by a complete sentence

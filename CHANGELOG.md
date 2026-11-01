@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-11_rev3] - 2026-11-01
+
+- **Changed:** **Caption punctuation** (`L.caption-punctuation`) accepts a `\paragraph{}` caption without a period under a class that appends the period itself. `acmart` renders `\paragraph{Title}` as "Title.", so a review no longer asks for a period that changes nothing on the page. A colon still renders as written, and a `\textbf{}` caption still needs its punctuation in the source.
+
 ## [2026-11_rev2] - 2026-11-01
 
 - **Changed:** when no CrossRef hit matches a title, the reference check asks again with the hyphens of the title removed, and two titles match under either reading of a hyphen. A word that a line break split in a title copied from a PDF ("popu-larity") no longer causes a false `not-found` or `title-mismatch`.
