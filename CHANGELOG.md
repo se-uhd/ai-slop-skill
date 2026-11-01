@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-11] - 2026-11-01
+
+- **Added:** `scripts/scan_crossrefs.py`, a cross-reference scan for LaTeX papers. It follows `\input` and `\include` from the root and lists figures and tables that no reference names (`S.refer-to-every-figure`), a lowercase name before a reference such as "section~\ref" (`S.capitalize-cross-references`), a name before `\autoref` or `\cref`, which print the name themselves, and a typed number such as "Table 2" (both `L.cross-reference-macros`). It skips comments, `\iffalse` blocks, and verbatim and listing environments. `/ai-slop:review` runs it on the root. When the text already discusses an unreferenced figure or table, the review suggests adding the reference to that sentence, and it lists the rest under author judgment. `/ai-slop:review-diff` keeps the rows on changed lines.
+
 ## [2026-10_rev12] - 2026-10-29
 
 - **Removed:** the command wrappers in `plugins/ai-slop/commands/`. Claude Code now serves each `/ai-slop:` command from its skill and loads the `SKILL.md` directly, with the same commands and arguments.
