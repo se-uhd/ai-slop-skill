@@ -405,9 +405,9 @@ def read_text(abspath):
 
 
 def commit_selector(spec):
-    """Translate a --commits spec into the `git log` selector arguments. A count
+    """Translate a --commits spec into the arguments that select commits for `git log`. A count
     (int or all-digit string) becomes `-n N`, `all` selects the full history (no
-    limiter), and anything else is passed through as a revision range argument
+    limiter), and anything else is passed through to `git log` as a revision range
     (e.g. `main..HEAD`)."""
     if isinstance(spec, int):
         return ['-n', str(spec)]

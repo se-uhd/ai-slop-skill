@@ -2,6 +2,14 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-11_rev4] - 2026-11-03
+
+- **Added:** **Unstack noun chains** (`G.noun-stacks`) in the general layer. A chain of three or more nouns that the text assembled for the occasion ("absolute dotfile backup path handling") is restated with a preposition, a verb, or a clause, and a term of the field or of the document stays. A count alone is no finding, since technical prose stacks nouns as terms.
+- **Changed:** **Keep *that* in formal prose** (`G.keep-that`) also names the clause after an adjective ("confident that the fix holds") and the purpose clause, where a bare "so" is ambiguous between purpose and result.
+- **Changed:** **No invented compounds or verbs-as-nouns** is now **No invented compounds or conversions between noun and verb** (`G.no-coinages`) and covers a noun used as a verb where the register has a verb phrase ("calendar the review", "action the feedback"). An established conversion stays (to email, to log, to mock a dependency).
+- **Changed:** the personification part of **Use figurative language with a clear purpose** (`G.no-figurative-language`) names a bodily action, a memory, and a commitment as predicate classes ("the asymmetry bites", "the check forgot", "the docstring promises") and limits the metonymy that names a document for its authors to verbs of stating, showing, and requesting.
+- **Changed:** the rationale entries for these rules, for `G.possessive-on-things`, and for `E.sentence-flow` cite corpus and training evidence that a length pressure in post-training selects the shorter member of each alternation, and the Sources section lists the study. The prose of the bundle was swept for noun chains and for purpose clauses with a bare "so".
+
 ## [2026-11_rev3] - 2026-11-01
 
 - **Changed:** **Caption punctuation** (`L.caption-punctuation`) accepts a `\paragraph{}` caption without a period under a class that appends the period itself. `acmart` renders `\paragraph{Title}` as "Title.", so a review no longer asks for a period that changes nothing on the page. A colon still renders as written, and a `\textbf{}` caption still needs its punctuation in the source.

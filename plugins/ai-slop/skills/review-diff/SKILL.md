@@ -3,7 +3,7 @@ name: review-diff
 description: Review only the modified parts of a git-versioned document for AI slop and rule violations. Use when the user has uncommitted edits or a feature branch and wants to audit only what they changed, not the whole draft. Triggers on prompts such as "check my edits", "review what I just changed", "audit this branch's prose", or `/ai-slop:review-diff`. Uses the same layered rules as `/ai-slop:review` (general by default; `--scientific` and LaTeX layers as detected; `--ste` for the Simplified Technical English layer; `--economist` for core Economist style advice), scoped to the diff. Writes a structured Markdown report that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev3"
+  version: "2026-11_rev4"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -55,7 +55,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
 3. **Compute the diff.** Run `git diff --unified=0 <base> -- '*.tex' '*.md' '*.txt'` to list changed lines. Parse the unified-diff hunk headers (`@@ -<old_start>,<old_count> +<new_start>,<new_count> @@`) to extract per-file line ranges of added or modified lines in the new tree (the working-tree side). Track these as the **changed-line set** per file. `git diff` does not list untracked files, so also run `git ls-files --others --exclude-standard -- '*.tex' '*.md' '*.txt'` and add every line of each listed file to the changed-line set. If no matching files changed, write an empty report (Summary: "No changes since `<base>`."), print it, and stop.
 
-4. **Expand to paragraph context.** For each changed-line range, expand outward in the new file to the nearest preceding and following blank line so the changed prose is reviewed in its full paragraph. Record both:
+4. **Expand to paragraph context.** For each changed-line range, expand outward in the new file to the nearest preceding and following blank line so that the changed prose is reviewed in its full paragraph. Record both:
    - the **changed lines** (used to scope what counts as a finding), and
    - the **surrounding paragraph** (used as context so multi-line tropes or sentence-length checks have enough text to operate on).
 
@@ -97,7 +97,7 @@ If the working directory is not inside a git repository (`git rev-parse --is-ins
 
     Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations. After the third pass, proceed regardless of what the linter reports. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
-    Then read the file back and quote its contents verbatim in your reply, rather than writing the report text a second time, so the printed version is identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
+    Then read the file back and quote its contents verbatim in your reply, rather than writing the report text a second time, so that the printed version is identical to the file. Use the report template from `../review/SKILL.md` "Report template" with one extra header line:
 
     ```text
     **Diff scope:** base=<base ref>, files=<list of changed files in the diff pathspec>

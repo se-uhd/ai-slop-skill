@@ -68,6 +68,15 @@ The rules draw on these bodies of evidence:
 - Empirical studies of AI-to-human word-frequency ratios, which identify the
   vocabulary, transitions, and punctuation marks that large language models
   over-produce relative to human authors.
+- A psycholinguistic study of LLM output across chat, agentic coding, and
+  essays (Clark, Martin, and Mahowald, "Why is AI-generated language so hard
+  to understand?", arXiv:2610.29162, 2026). Relative to paraphrases of the
+  same content and to human corpora, frontier models over-use reduced object
+  relatives, denominal verbs, inanimate subjects with animate verbs, long
+  dependencies, chains of three or more nouns, and rare word pairs, and a
+  training experiment shows that a length penalty alone produces the
+  preference for the shorter member of a syntactic alternation. The entries
+  below cite it where a rule targets one of these compressed forms.
 - APA style (7th edition), for number formatting, statistical reporting, and
   verb tense by section.
 - IEEE and ACM author conventions for software-engineering venues, which take
@@ -96,7 +105,7 @@ two overlap (see **Precedence over the trope catalog** (`G.catalog-precedence`))
 The listed words (`G.restricted-words`) are legitimate in formal writing but appear far more often
 in AI-generated text than in human prose, and the excess makes a paragraph read
 as machine-written even when no single word is wrong. The table gives plainer
-substitutes so each remaining use is a deliberate choice.
+substitutes so that each remaining use is a deliberate choice.
 
 "Significant" (`S.significant`) gets its own rule in the scientific layer because in empirical work it carries a precise
 statistical meaning. Used as a generic intensifier it creates ambiguity about
@@ -109,11 +118,11 @@ Several pressures converge on one connective (`G.consequence-connectives`). In g
 
 Which word the concentration lands on follows the register that the prompt sets. A chat answer or a blog draft gets "so", and a prompt for a paper gets "therefore" and "thus", because the same preference for the locally most likely option operates inside whichever register the model has adopted. A rule that replaced every "so" would therefore replace one monotony with another in an academic draft. That is why the rule counts the family together and treats substitution as the last fix. Deletion helps only when the relation remains clear without extra effort. A consequence marker can distinguish an inference from a chronological sequence, and removing it can make the argument harder to follow. Sentence-initial position alone does not make a connective empty.
 
-The **Use plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to classes that the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision that the plain form loses) and carry a short seed list for recall. The seed list also catches words that a reviewer with the writer's habit would miss. A literal match identifies a candidate that the reviewer might otherwise miss. The reviewer must still explain its effect in context under `G.context-first`; familiar wording is not a defect by itself. "Shape" is on the seed list although it is an everyday word. In prose about documents and rules, the noun and the verb stand for a property that the text does not name, such as a format, an order, or a wording, and the plain word names that property. Statistics and array code use "shape" in a defined sense, which the rule keeps. "Cut" is on the seed list in the sense of creating or publishing, as in "cut a release", a common phrase in release engineering. Its first meaning is "remove", the sense of **Cut padding at the sentence level** (`G.sentence-padding`), so "cut a new reference" can mean that a reference was deleted.
+The **Use plain, literal language** (`G.plain-language`) rules extend the same logic from single listed words to classes that the table cannot enumerate: invented compounds and verb-to-noun coinages, colorful or insider synonyms for plain words, and figurative language. A closed list cannot catch these because the offenders are unbounded, so the rules state a test (keep the word only for precision that the plain form loses) and carry a short seed list for recall. The seed list also catches words that a reviewer with the writer's habit would miss. Three of the seeds, "surface", "gate", and "shepherd", are nouns used as verbs, the denominal verbs that Clark, Martin, and Mahowald (2026) find over-used relative to paraphrases of the same content, where a model takes "calendar it" over "put it on the calendar" because the conversion saves words. The coinage rule covers the conversion in both directions for that reason. A literal match identifies a candidate that the reviewer might otherwise miss. The reviewer must still explain its effect in context under `G.context-first`; familiar wording is not a defect by itself. "Shape" is on the seed list although it is an everyday word. In prose about documents and rules, the noun and the verb stand for a property that the text does not name, such as a format, an order, or a wording, and the plain word names that property. Statistics and array code use "shape" in a defined sense, which the rule keeps. "Cut" is on the seed list in the sense of creating or publishing, as in "cut a release", a common phrase in release engineering. Its first meaning is "remove", the sense of **Cut padding at the sentence level** (`G.sentence-padding`), so "cut a new reference" can mean that a reference was deleted.
 
 "Gate" and "checkpoint" used vaguely for checks (`G.plain-words`) leave the reader to infer what must pass. A "green checkpoint" says only that some check passed at some point, and the reader cannot tell which build, test, or command ran. Naming the check or requirement makes the statement more informative. The examples illustrate this choice without prescribing a fixed replacement. Established technical senses, such as a logic gate or a model checkpoint that training resumes from, remain covered by the precision exception.
 
-Personification (`G.no-figurative-language`) comes from the conversational register. Talk about software gives tools motives ("git wants a commit message", "the compiler is complaining"), and a model tuned for chat carries that register into formal prose. A motive is also shorter than a mechanism. "The sentence wants a comma" leaves out the rule that requires the comma, and "the model wants to agree" leaves out that the training objective rewards agreement. A reader can check a mechanism or a behavior and cannot check a motive, which is why the fix names one of the two. In a paper about language models the pattern is also a claim: "the model believes" or "the model refuses" asserts an internal state that the study did not measure. The rule is stated on the predicate because a list of subjects leaves out most instances. The same verbs attach to sentences, sections, figures, rules, and methods as to code and models. A verb that names a defined behavior (a socket listens, a model learns) and the author metonymy of academic prose (the paper argues) stay, because every reader resolves them to the operation or to the authors.
+Personification (`G.no-figurative-language`) comes from the conversational register. Talk about software gives tools motives ("git wants a commit message", "the compiler is complaining"), and a model tuned for chat carries that register into formal prose. A motive is also shorter than a mechanism. "The sentence wants a comma" leaves out the rule that requires the comma, and "the model wants to agree" leaves out that the training objective rewards agreement. A reader can check a mechanism or a behavior and cannot check a motive, which is why the fix names one of the two. In a paper about language models the pattern is also a claim: "the model believes" or "the model refuses" asserts an internal state that the study did not measure. The rule is stated on the predicate because a list of subjects leaves out most instances. The same verbs attach to sentences, sections, figures, rules, and methods as to code and models. A verb that names a defined behavior (a socket listens, a model learns) and the author metonymy of academic prose (the paper argues) stay, because every reader resolves them to the operation or to the authors. Clark, Martin, and Mahowald (2026) measure the construction directly, as an inanimate subject with a verb that takes an animate one, and find it above the human baseline for all nine frontier models and above the paraphrase baseline for almost all of them in all three settings. Their account is the same compression. "The asymmetry bites" stands in for "the asymmetry causes an issue", and the shorter form costs the reader a violated selectional restriction and the reanalysis that follows. Their examples run through bodily actions, memory, and commitment ("eating its own tail", "forgot its sibling", "the docstring promises"), which is why the rule names those classes beside desire, belief, and duty, and limits the metonymy exemption to stating, showing, and requesting.
 
 ## Terminology consistency
 
@@ -158,6 +167,14 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   by the model, reinforced by the copyediting advice to cut *that*. In "the results
   show the effect persists", the reader first takes "the effect" as the object
   of "show" and has to re-read once "persists" arrives.
+  A third source is the length pressure of post-training. Clark, Martin, and
+  Mahowald (2026) find that frontier models use fewer object relatives with
+  *that* and more without than paraphrases of their own output, and that a
+  length penalty during reinforcement learning makes a model drop the optional
+  *that* almost categorically, including after adjectives and in purpose
+  clauses that the training never showed. That transfer is why the rule names
+  the adjective complement and "so that" beside the relative and the reporting
+  verb.
 - **Relative *whose* on things** (`G.whose-on-things`). *Whose* is the only relative pronoun that attaches
   a property of the head noun in one word. *With* needs a noun phrase for the
   property, a participle needs a verb that the head can take, and a conditional
@@ -178,8 +195,12 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   genitive can carry. Corpus studies of genitive variation (Rosenbach 2002;
   Hinrichs and Szmrecsanyi 2007) find that short, topical possessors favor 's
   and that press English extended it to inanimate possessors over the
-  twentieth century, and press and web text dominate the training data. The
-  habit shows as a displaced of-form rather than as a high density. Before the
+  twentieth century, and press and web text dominate the training data.
+  The length pressure of post-training points the same way. In the training
+  experiment of Clark, Martin, and Mahowald (2026), a length penalty without
+  KL regularization made a model prefer "the old house's roof" to "the roof
+  of the old house", an alternation that the training items never contained.
+  The habit shows as a displaced of-form rather than as a high density. Before the
   sweep for 2026-10_rev5, the prose of this bundle used "report's" 14 times
   and "of the report" once. Usage guides accept 's on things, so the rule tests
   each instance for the relation that it compresses (a part, an attribute, or
@@ -204,6 +225,21 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   enough detail to reproduce or understand a change. Current-use instructions usually need
   the current behavior alone. Actual relocation names its source and destination, while
   physical movement and established technical senses remain precise uses of the words.
+- **Unstack noun chains** (`G.noun-stacks`). A chain of nouns is the shortest
+  way to write a relation, because it drops every preposition, article, and
+  verb that would name it, and a model under a length pressure selects it for
+  the reason that it selects the reduced relative and the 's genitive. Clark,
+  Martin, and Mahowald (2026) count chains of three or more nouns and find most
+  frontier models above the human baseline in chat and above paraphrases of
+  their own output in chat and coding, with little change in essays. The
+  reading studies that they cite show the cost. The reader has to resolve the
+  bracketing, as in the headline "Squad Helps Dog Bite Victim", and reads a
+  novel compound more slowly than a familiar one. Technical registers stack
+  nouns as terms ("software engineering research", "unit test generation"),
+  and in a research article most chains of three are terms that the reader
+  resolves at once, which is why the rule tests whether a chain is a term or
+  a compression made for the occasion and treats a count as no signal. A
+  human writer coins a chain rarely and defines it when they do.
 
 ## Voice and verb tense
 
@@ -442,6 +478,11 @@ at runtime. The rules and examples are written for this bundle.
   Nested clauses and long gaps between subject and verb matter more than a
   length count. A clear long sentence can remain, and a short one can need
   repair. STE sentence limits apply only when STE is also selected.
+  Clark, Martin, and Mahowald (2026) find longer syntactic dependencies,
+  standardized for sentence length, in the chat output of most frontier
+  models than in human conversation, a smaller shift in coding, and none in
+  essays, which is why the general layer carries no rule on the gap and this
+  layer does.
 - **Edit the argument before polishing sentences** (`E.structure-and-pace`).
   Editing begins with whether the document makes its intended case. A concise
   paragraph can still be in the wrong place or skip a step. Academic articles

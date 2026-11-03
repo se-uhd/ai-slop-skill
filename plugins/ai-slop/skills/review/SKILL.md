@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user names a draft, hands you a path to a `.tex`, `.pdf`, or text file, or asks to check, audit, or review prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, LaTeX source loads all three, and `--ste` adds a Simplified Technical English (STE) layer to any input. `--economist` adds core Economist style advice. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev3"
+  version: "2026-11_rev4"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -80,7 +80,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
    - A concrete suggested replacement that solves the stated problem while preserving purpose, logical relations, scope, emphasis, and voice.
    - A **Reason** that explains the problem in context and the benefit of the replacement. A rule name or a preference for shorter or more explicit wording is not sufficient. Identify a correction required only by an explicit convention as a convention correction.
 
-   For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite) and for an empty head noun (`G.be-concrete`), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so revise mode does not insert a guessed noun.
+   For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite) and for an empty head noun (`G.be-concrete`), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so that revise mode does not insert a guessed noun.
 
    In STE mode, when the STE rewrite of a sentence would lose meaning, precision, or force (`T.keep-original`), record no STE finding for it. List it under **Items requiring author judgment** instead, with the STE rule and a short reason, so revise mode leaves it alone. No suggested revision changes a quotation or a literal string (`T.quotations`, `T.literals`).
 
@@ -122,19 +122,19 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations. After the third pass, proceed regardless of what the linter reports. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
-   Then read the file back and quote its contents verbatim in your reply, rather than writing the report text a second time, so the printed version is identical to the file. Use the report template below. Name the selected optional layers in the Summary. Write the report prose and suggested revisions under those layers too (`T.scope`, `E.scope`), keeping quotations unchanged.
+   Then read the file back and quote its contents verbatim in your reply, rather than writing the report text a second time, so that the printed version is identical to the file. Use the report template below. Name the selected optional layers in the Summary. Write the report prose and suggested revisions under those layers too (`T.scope`, `E.scope`), keeping quotations unchanged.
 
 8. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
 
 ## Report template
 
-The report schema is stable so revise mode can parse it. Each finding has `Rule`, `Location`, `Quote`, and `Suggested revision`. Revise mode locates the `Quote` in the paper and replaces it with `Suggested revision`.
+The report schema is stable so that revise mode can parse it. Each finding has `Rule`, `Location`, `Quote`, and `Suggested revision`. Revise mode locates the `Quote` in the paper and replaces it with `Suggested revision`.
 
 ````markdown
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-11_rev3
+**Skill version:** 2026-11_rev4
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
