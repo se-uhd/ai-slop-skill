@@ -3,7 +3,7 @@ name: revise
 description: Apply the findings of an `/ai-slop:review` report to the source, replacing each flagged quote with its suggested revision and inserting `% GROUNDING` TODO stubs for ungrounded citations. Use when the user has a generated `ai-slop-report.md` (or equivalent) and wants the suggestions applied to the paper.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev3"
+  version: "2026-11_rev4"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -58,7 +58,7 @@ Both inputs default to the current working directory. No arguments are required.
 6. **Summarize.** Print a summary to the console with the following lists:
    - **Applied:** findings with the `Quote` located and replaced, plus grounding stubs inserted.
    - **Skipped:** findings with a `Quote` that could not be uniquely located or a suggestion that was unsafe to apply, with reasons.
-   - **Author judgment required:** findings copied from the "Items requiring author judgment" section, so the user knows what still needs manual attention.
+   - **Author judgment required:** findings copied from the "Items requiring author judgment" section, so that the user knows what still needs manual attention.
 
 7. **Stop.** Do not regenerate the report. Do not commit the changes. The user runs `git diff` to inspect and `git commit` when satisfied.
 

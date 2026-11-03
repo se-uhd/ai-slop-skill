@@ -3,7 +3,7 @@ name: review-repo
 description: Review the natural-language text of a whole code repository for AI slop and rule violations, covering every Markdown and plain-text file plus the comments and doc-comments of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, and the comments in code and config). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research article layer, `--ste` adds the Simplified Technical English layer, and `--economist` adds core Economist style advice. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev3"
+  version: "2026-11_rev4"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -36,7 +36,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
 **Scope of the text scanned.** `scripts/scan_repo.py` decides which text to scan (see Workflow). In a git repository it scans the tracked files and so excludes `.gitignore`d build output and dependencies automatically. Outside a git repository it walks the whole tree, and in both cases it skips a denylist of vendored, build, dependency, and test-fixture directories. The script reads Markdown, plain-text, and LaTeX files in full, including the `%` comments in a `.tex` file, and extracts only the comments and doc-comments from source and config files. It also scans the commit messages of the repository (their subject and body), dropping merge commits and the standard trailer lines such as `Co-authored-by` and `Signed-off-by`. It skips generated files (a `DO NOT EDIT` or `@generated` marker on a comment line in the first ten lines, each named on stderr), lockfiles, dependency pins, and binaries. In Markdown, the script treats a fenced block as prose when its info string names a prose format (`markdown`, `text`), so a quoted template counts as content. It skips other fenced code, YAML front matter, and indented code blocks.
 
-**Commit message scope.** By default the scan covers the most recent 200 commits. Pass `--commits=<N>` for a different count, `--commits=all` for the full history, `--commits=<range>` for a git revision range (for example `--commits=main..HEAD` to review just the commits on a branch before they are pushed), or `--no-commits` to skip commit messages entirely. Pushed commit history is rewritten only by a deliberate repair, so commit message findings are mostly advisory: a guide for future messages, or for rewording the not-yet-pushed commits on a branch with an interactive rebase. `/ai-slop:revise` does not touch commit messages.
+**Commit message scope.** By default the scan covers the most recent 200 commits. Pass `--commits=<N>` for a different count, `--commits=all` for the full history, `--commits=<range>` for a git revision range (for example `--commits=main..HEAD` to review just the commits on a branch before they are pushed), or `--no-commits` to skip commit messages entirely. Pushed commit history is rewritten only by a deliberate repair, so findings on commit messages are mostly advisory: a guide for future messages, or for rewording the not-yet-pushed commits on a branch with an interactive rebase. `/ai-slop:revise` does not touch commit messages.
 
 **Rule layers.** The general layer always loads. Pass `--scientific` to also load the research article layer when the prose of the repository is research writing (e.g., the Markdown or LaTeX of a thesis or paper repo). `.tex` files are scanned as prose (their body and `%` comments) against the general (and, with `--scientific`, the research article) layer. Repo mode does not load the dedicated LaTeX layer. Pass `--ste` to also load the Simplified Technical English layer (`rules-ste.md`) for a repository that writes its prose in STE. Pass `--economist` to also load the core Economist advice (`rules-economist.md`). Both flags can be combined, keeping the stricter STE limits (`E.precedence`).
 
@@ -82,7 +82,7 @@ The skill scans the repository rooted at the current working directory by defaul
    **Repo scope:** root=<repo root>, files=<N scanned>, commits=<N scanned>, prose lines=<N>
    ```
 
-   The Summary should state that the review covered the Markdown, plain-text, LaTeX, code/config comments, and commit messages in the repository, and name what the scan skipped (generated files, binaries, vendored directories, merge commits, and trailer lines). When commit message findings exist, note that they are advisory, since pushed history is rewritten only by a deliberate repair.
+   The Summary should state that the review covered the Markdown, plain-text, LaTeX, code/config comments, and commit messages in the repository, and name what the scan skipped (generated files, binaries, vendored directories, merge commits, and trailer lines). When there are findings on commit messages, note that they are advisory, since pushed history is rewritten only by a deliberate repair.
 
 8. **Stop after the report.** Do not modify the repository. `/ai-slop:revise` operates on one document at a time, so a repo-wide report is not auto-applied. The user fixes each file directly, or runs `/ai-slop:revise ai-slop-report.md <file>` for one file, which applies the findings under the `### <relpath>` heading for that file. Findings under a `### commit <sha>` heading name no file and are never applied.
 
@@ -98,6 +98,6 @@ Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested 
 ## Constraints
 
 - **Do not modify the repository.** Repo mode writes only `ai-slop-report.md` in the working directory, plus the report name in the top-level `.gitignore` when that line is missing (step 7).
-- **Quote verbatim.** Quote the actual text of the file, not the marker-stripped scan line, so a reader can find it.
+- **Quote verbatim.** Quote the actual text of the file, not the marker-stripped scan line, so that a reader can find it.
 - **Code is not prose.** The extractor is heuristic. If a flagged line is code that the extractor emitted by accident, drop the finding rather than rewriting code.
 - **Do not stash, commit, or alter the working tree.** The skill reads files and writes the report. It never runs `git add`, `git stash`, `git commit`, or any other state-changing git command.

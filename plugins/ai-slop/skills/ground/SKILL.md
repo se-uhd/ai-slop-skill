@@ -3,7 +3,7 @@ name: ground
 description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify` stub with a reason when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the grounding to-do from a review. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev3"
+  version: "2026-11_rev4"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -58,7 +58,7 @@ The skill operates on the LaTeX paper in the current working directory. No argum
    - Find a short verbatim quote from the source that supports the claim(s). Return it only if the source was actually retrieved and the quote is copied from it, together with the URL or local path that it read as `source`, so step 6 can check the quote against it.
    - Otherwise return a TODO with a reason: `paywalled`, `abstract-only` (only the abstract was reachable and it does not contain the support), `book` (no digital full text), `not-found` (the source could not be located), or `source-does-not-support` (the source was read but does not back the claim).
 
-   Run the agents in slices of at most 8, staying within the client's available agent slots, so a burst does not trip server-side rate limits. If delegation is unavailable, process the same per-source prompts sequentially. The run is resumable. Any source that errored or was skipped simply stays without a quote, so its site keeps the missing comment or the `TODO verify` stub and a later `/ai-slop:ground` picks it up and fills it.
+   Run the agents in slices of at most 8, staying within the client's available agent slots, so that a burst does not trip server-side rate limits. If delegation is unavailable, process the same per-source prompts sequentially. The run is resumable. Any source that errored or was skipped simply stays without a quote, so its site keeps the missing comment or the `TODO verify` stub and a later `/ai-slop:ground` picks it up and fills it.
 
 5. **Assemble the quotes file.** Collect the agents' results into `grounding-quotes.json`, mapping each key to either `{"quote": "<verbatim text>", "source": "<url or path>"}` or `{"todo": "<reason>"}`. Write nothing for a key if its agent failed entirely. Leaving it absent keeps it for a future run.
 
@@ -69,14 +69,14 @@ The skill operates on the LaTeX paper in the current working directory. No argum
 8. **Summarize.** Tell the user, in plain terms:
    - How many citations were grounded with a retrieved quote, and how many of those quotes step 6 confirmed mechanically.
    - How many got a TODO, broken down by reason (`unverified` marks a returned quote that the check could not find in its source).
-   - **The `source-does-not-support` cases, called out first.** Each one flags a likely miscitation (a wrong key, or a citation that claims more than the source says), because the source was read and does not back the claim. Report each one with its key and the claim so the author can fix the citation, not just the comment.
+   - **The `source-does-not-support` cases, called out first.** Each one flags a likely miscitation (a wrong key, or a citation that claims more than the source says), because the source was read and does not back the claim. Report each one with its key and the claim so that the author can fix the citation, not just the comment.
    - Any keys missing `.bib` metadata.
 
 9. **Stop.** Leave the edits in the working tree. The user inspects them with `git diff` and commits when satisfied. Do not commit, and do not run a review.
 
 ## Reusable workflow pattern
 
-The grounding fan-out is a chunked-`parallel()` workflow. The per-source claim bundles are passed in as `args.sources` (built from `by_key` / `meta`). Each source gets one schema-validated agent, and the agents run in fixed-size slices to stay under rate limits. Author it inline:
+The grounding fan-out is a chunked-`parallel()` workflow. The bundles of claims, one per source, are passed in as `args.sources` (built from `by_key` / `meta`). Each source gets one schema-validated agent, and the agents run in fixed-size slices to stay under rate limits. Author it inline:
 
 ```javascript
 export const meta = {

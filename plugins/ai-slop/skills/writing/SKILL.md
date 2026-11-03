@@ -3,7 +3,7 @@ name: writing
 description: Generate a project-local WRITING.md file from the layered writing rules and add a reference to it in the AGENTS.md of the repository (creating AGENTS.md if it does not exist). Use when the user wants the writing conventions stored in their repo as an editable, project-local file. Triggers on prompts such as "set up writing rules in this repo", "generate WRITING.md", or `/ai-slop:writing`. Writes WRITING.md, updates AGENTS.md, and preserves Claude Code loading through a CLAUDE.md import. Does not modify your content. For rules that the assistant applies to its own output in every project, use `/ai-slop:init`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev3"
+  version: "2026-11_rev4"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -83,7 +83,7 @@ The skill operates on the current working directory. No arguments are required.
 ## Bundled files
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, `../../shared/rules-latex.md`, `../../shared/rules-economist.md`, and `../../shared/rules-ste.md` are the rule layers. The scope and the `--scientific`, `--general`, `--economist`, and `--ste` flags select which layers provide the rules section of WRITING.md.
-- `../../scripts/build_writing.py` assembles and writes `WRITING.md` (step 3). It calls `../../scripts/fetch_tropes.py` for the catalog, so the inlined catalog is current at the moment of generation.
+- `../../scripts/build_writing.py` assembles and writes `WRITING.md` (step 3). It calls `../../scripts/fetch_tropes.py` for the catalog, so that the inlined catalog is current at the moment of generation.
 - `../../scripts/detect_scope.py` selects the rule layers (step 2), and `../../scripts/lint_markdown.py` lints the instruction files that the skill edits (step 5).
 
 ## Constraints
