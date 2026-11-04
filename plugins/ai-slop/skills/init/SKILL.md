@@ -3,7 +3,7 @@ name: init
 description: Set up the general writing rules and AI trope catalog for Claude Code, Codex, or pi across projects, or export them as one Markdown file for a system prompt. Use when the user wants the assistant's replies, edits, comments, and commit messages to follow these rules, or runs `/ai-slop:init`. Claude Code uses ~/.claude/rules/ai-slop.md. Codex and pi use ai-slop.md in their home or agent directory with a reference in their global instructions. For an editable WRITING.md in one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev5"
+  version: "2026-11_rev6"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -57,7 +57,7 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
     Create the selected file if missing. Keep the rules themselves in the export file. The separate file keeps the global instruction file small, and a later run replaces the rules without touching the user's own instructions. A Markdown link or Claude's `@path` syntax alone does not substitute for this explicit read instruction. If permissions prevent updating the global file, report that the export succeeded but registration did not, and show the reference to add. Claude Code reads its rules directory automatically, so the registration step does not apply.
 
-4. **Print a summary** in two or three lines:
+4. **Print a short summary** that covers:
    - The file: created or replaced at `<output>`, with the layers and its size in tokens, rounded to the nearest thousand. The whole file stays in the context of every session that loads it.
    - How it loads. For the Codex or pi default, name the global instruction file updated or already referencing the export. For Claude Code, its user rules directory loads in every project and `.claude/rules/` in a repository loads in that project. An explicit path outside those Claude directories is an export only. Explain how to load it in the target client: an explicit read instruction in the `AGENTS.md` of Codex or pi, an `@<path>` import in Claude's `CLAUDE.md`, or a system prompt attachment.
    - Start a new session to use the setup automatically. The exported rules occupy context when read.
@@ -66,7 +66,7 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 ## Bundled files
 
-- `../../scripts/export_rules.py` assembles and writes the file. Unless `--force` is passed, it replaces only a file from an earlier run, including one from `/ai-slop:export`, the former name of this mode.
+- `../../scripts/export_rules.py` assembles and writes the file. Unless `--force` is passed, it replaces only a file that an earlier run wrote.
 - `../../scripts/fetch_tropes.py` fetches the catalog from tropes.fyi. `export_rules.py` calls it unless `--tropes=<path>` is passed.
 - `../../shared/rules-general.md`, `../../shared/rules-economist.md`, and `../../shared/rules-ste.md` are the rule layers available for the file.
 

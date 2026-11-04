@@ -21,7 +21,7 @@ The catalog comes from fetch_tropes.py, the only source, through the loader of
 export_rules.py. `--tropes=PATH` (repeatable) reads local files instead,
 concatenated in the order given. The catalog loses its title and preamble
 (everything before the first `## ` heading), and its headings move one level
-down, so the whole catalog is nested under one `## AI Writing Tropes to Avoid`
+down, so the whole catalog is nested under one `## AI writing tropes to avoid`
 section. Each `**Avoid patterns like:**` label is followed by a blank line
 before its list, which the Markdown linter requires. The status line of each
 entry stays, since it carries the frequency rating and category of the catalog.
@@ -155,11 +155,11 @@ def build(bodies, catalog, version):
     parts += [body.strip() for body in bodies]
     parts += [
         '---',
-        '## AI Writing Tropes to Avoid',
+        '## AI writing tropes to avoid',
         'The catalog below is sourced from [tropes.fyi](https://tropes.fyi) by '
         '[ossama.is](https://ossama.is) and inlined here so co-authors and '
-        'offline tooling can read it without re-fetching. The skill fetches the '
-        'live catalog on every run. This inlined copy is for reading by humans '
+        'offline tooling can read it without re-fetching. The review skills fetch '
+        'the live catalog on every run. This inlined copy is for reading by humans '
         'and other Agent Skills clients.',
         catalog,
     ]
