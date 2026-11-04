@@ -57,9 +57,8 @@ The context determines the difference.
 Counts and catalog frequency ratings help a reviewer decide where to look.
 They do not establish that an individual passage is unclear or that its author
 used an LLM. Concrete conventions, such as American spelling or required
-citation syntax, remain requirements, but a correction for a convention should
-be identified as such. It need not be presented as a defect in meaning or
-reading flow.
+citation syntax, remain requirements, but a review should report a correction
+for a convention as a convention, not as a defect in meaning or reading flow.
 
 ## Sources
 
@@ -113,6 +112,8 @@ whether a statistical test was actually run, so it is reserved for reporting
 statistical results.
 
 "Navigate" is restricted only in its metaphorical sense (e.g., navigating complexity, challenges, or a landscape), because that sense reads as AI prose. Its literal sense, moving through a UI, website, menu, or file tree, is precise and not flagged. "Worked example" is listed under **Phrases to avoid** (`G.phrases-to-avoid`) because the "worked" qualifier is usually empty padding that "example" already carries, with the lone exception of a fully solved problem presented step by step.
+
+"Need not" and "need only" (`G.phrases-to-avoid`) are grammatical in formal English. The bare modal *need* declined sharply in written British English between 1961 and 1992 (Leech, "Modality on the move", 2003), which makes it a marked choice in current prose. "Need not" is two words shorter than "does not have to", so the length pressure of post-training described under `G.keep-that` favors it. A reader of "need not" also has to infer whether it means "is not required to" or "is not necessarily", and each plain form names one sense. The frame "X need not be a Y" can state the requirement as a category. "The folder need not be a complete copy of the server" leaves the reader to work out which property of a copy is meant, and "contain every file on the server" names it.
 
 Several pressures converge on one connective (`G.consequence-connectives`). In general English corpora "so" outnumbers therefore, hence, and thus by a wide margin, and those three concentrate in academic, legal, and mathematical prose, a thin slice of the training text. Preference tuning adds to the base rate, because raters comparing two answers favor the one that reads as approachable and "therefore" reads as stiff. Post-training also narrows the variety of the choice, which means the top-ranked option is selected almost every time, where a human writer uses several for the same relation without deciding to. "So" is also the loosest in meaning, covering strict entailment, loose consequence, and a plain change of topic, where "therefore" asserts that the conclusion follows and can be shown wrong. Because "so" is rarely wrong in any one position, training leaves it with high probability in many. Sentence-initial "So," has a separate source, the spoken answer opener of the interview transcripts and question-and-answer text that instruction tuning is trained on.
 
@@ -449,7 +450,7 @@ cannot tell a well-placed dash from a misplaced one.
   abstract. An abstract drops the caveats, scope conditions, and negative results
   that decide whether a claim is supported, so a sentence that matches the
   abstract can still misstate what the study found.
-- **No citations in the abstract** (`S.no-abstract-citations`). Because many ACM, EMSE, and IEEE author
+- **Avoid citations in the abstract** (`S.no-abstract-citations`). Because many ACM, EMSE, and IEEE author
   guidelines require the abstract to stand alone, references move to the
   introduction.
 - **The body must stand independent of the abstract** (`S.body-independent`). The abstract is read

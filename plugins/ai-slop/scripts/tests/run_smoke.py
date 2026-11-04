@@ -666,7 +666,7 @@ def test_lint_markdown_finding_block_clean_passes():
 
 def test_lint_markdown_writing_md_h1_in_tropes_section():
     content = (b"# Writing rules for this project\n\n"
-               b"## AI Writing Tropes to Avoid\n\nintro\n\n"
+               b"## AI Writing Tropes to Avoid\n\nintro\n\n"  # the title-case heading still counts
                b"# Spurious\n\nbody\n")
     with tempfile.TemporaryDirectory() as d:
         p = _write_md(d, 'WRITING.md', content)
@@ -684,7 +684,7 @@ def test_lint_markdown_writing_md_no_tropes_section():
         assert rc == 1, f"writing no-tropes: rc={rc}"
         assert 'writing-md-structure' in out, \
             f"writing no-tropes: rule missing: {out!r}"
-        assert 'no `## AI Writing Tropes to Avoid` section' in out, \
+        assert 'no `## AI writing tropes to avoid` section' in out, \
             f"writing no-tropes: wrong message: {out!r}"
 
 
@@ -2310,6 +2310,26 @@ def test_rule_keys_unique_and_resolvable():
             assert key in defined, f"keys: {key} cited in {path.name} is not defined in any layer"
 
 
+# An umbrella rule, the policy for fixes, and the scope and precedence of the
+# STE layer have nothing to scan for.
+SELF_CHECK_EXEMPT = {'G.plain-language', 'G.reformulate', 'T.scope', 'T.precedence'}
+
+
+def test_every_rule_key_in_a_self_check_item():
+    """Every rule key appears in the self-check section of its layer, except the
+    keys in SELF_CHECK_EXEMPT."""
+    shared = SCRIPTS.parent / 'shared'
+    for name in LAYERS:
+        text = (shared / name).read_text(encoding='utf-8')
+        heading = SELF_CHECK_HEADING_RE.search(text)
+        rules, checks = text[:heading.start()], text[heading.end():]
+        cited = set(KEY_REF_RE.findall(checks))
+        for m in KEY_DEF_RE.finditer(rules):
+            key = m.group('key')
+            assert key in cited or key in SELF_CHECK_EXEMPT, \
+                f"self-check: {key} in {name} is in no self-check item"
+
+
 
 # ---------- rev17 regressions ----------
 
@@ -3177,7 +3197,7 @@ def test_export_rules_usage_and_bad_catalog():
 def test_build_writing_assembles_layers_and_catalog():
     """WRITING.md holds the header, every selected layer verbatim from its first
     `## ` heading (self-check included), and the catalog under one
-    `## AI Writing Tropes to Avoid` section with demoted headings, status lines,
+    `## AI writing tropes to avoid` section with demoted headings, status lines,
     and spaced lists. A heading that repeats one of an earlier layer gets the
     layer name, so a LaTeX project lints clean. An existing file stays until
     --force is passed, and --scientific and --latex select their layers."""
@@ -3197,7 +3217,7 @@ def test_build_writing_assembles_layers_and_catalog():
                              .read_text(encoding='utf-8'))['version']
         assert f'(skill version {version})' in text, text[:900]
         assert 'maintainer' not in text.lower(), "maintainer note leaked"
-        rules, catalog_part = text.split('\n## AI Writing Tropes to Avoid\n')
+        rules, catalog_part = text.split('\n## AI writing tropes to avoid\n')
         for name in ('rules-general.md', 'rules-scientific.md', 'rules-latex.md'):
             body = export_rules.from_first_h2((shared / name).read_text(encoding='utf-8'))
             for line in body.splitlines():
@@ -3263,6 +3283,7 @@ TESTS = [
     test_scan_sentences_skips_non_prose,
     test_scan_sentences_usage_and_unreadable_paths,
     test_rule_keys_unique_and_resolvable,
+    test_every_rule_key_in_a_self_check_item,
     test_skills_serve_the_slash_commands,
     test_skill_commands_from_another_project,
     test_find_latex_root_empty,

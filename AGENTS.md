@@ -8,14 +8,15 @@ development guide for the repo itself, not the `WRITING.md` that
 
 Releases use CalVer with a per-month revision counter: `YYYY-MM` for the first
 release of a month (implicit `rev0`), then `YYYY-MM_rev1`, `_rev2`, ... (see README
-"Versioning"). Every release MUST follow these rules. They exist because they
-have been broken before:
+"Versioning"). Every release follows these rules, because each release is a
+pushed tag that others can pull:
 
 1. **Release once the change is settled, not once per iteration.** A rev is a
    published release, so make one only when the work is finished and has been
    checked against the main use of the bundle (academic writing) and against the
    existing rule layers, rather than at the first version that passes the smoke
-   suite. A correction to a release made in the same session, such as a fix to
+   suite. Ask the maintainer before the release commit, the tag, and the push.
+   A correction to a release made in the same session, such as a fix to
    the design of a rule that shipped minutes earlier, is a squash into that rev,
    not a new rev. Soft-reset to the previous release, fold the work
    into one commit, restore the version strings and merge the CHANGELOG entries
@@ -33,18 +34,18 @@ have been broken before:
    it is a NEW rev with a NEW commit and tag. Amending a released commit orphans
    its tag and breaks the linear release history. A history repair that the
    maintainer asks for is an exception, and so is the same-session squash in
-   rule 1, which uses its own procedure. A repair comes with obligations. Rewrite with `git filter-branch
+   rule 1, which uses its own procedure. For a repair, rewrite with `git filter-branch
    --tag-name-filter cat -- --branches --tags` so every tag points to its corresponding rewritten
    commit. Verify against `refs/original` that the trees are unchanged and that
    no tag is left off `main`. Force-push `main` and `--tags` together, because a
    forced branch push alone leaves every tag on a commit that the branch no
-   longer reaches. The commit message cleanups recorded in the 2026-09_rev15 and
-   2026-09_rev23 changelog entries are the precedent.
+   longer reaches. Record the repair in the CHANGELOG entry of the release that
+   includes it, as the 2026-09_rev15 entry does.
 4. **Keep the 11 version callsites in sync.** The version string is in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
-   `.claude-plugin/marketplace.json`, the `version:` frontmatter of each
-   `SKILL.md`, and the `**Skill version:**` line in `review/SKILL.md`'s report
-   template. `export_rules.py` and `build_writing.py` read it from
+   `.claude-plugin/marketplace.json`, the `metadata.version` frontmatter of
+   each `SKILL.md`, and the `**Skill version:**` line in the report template of
+   `review/SKILL.md`. `export_rules.py` and `build_writing.py` read it from
    `plugin.json`. `test_version_strings_in_sync` in the smoke suite enforces
    this.
 5. **Run the smoke suite before every commit:**
@@ -69,13 +70,16 @@ have been broken before:
 - **Changing the rules is an edit in three places.** A new or reworded rule in
   `shared/rules-general.md`, `shared/rules-scientific.md`,
   `shared/rules-latex.md`, `shared/rules-economist.md`, or `shared/rules-ste.md`
-  also needs its numbered item in the self-check section of that layer, and an entry in
+  also needs a self-check item of that layer that cites its key, either a new
+  item or an existing one, and an entry in
   `shared/rules-rationale.md` whenever a reader could push back on it. Every
   rule carries a stable key (`G.`/`S.`/`L.`/`E.`/`T.` plus a slug) that reports and
   cross-references cite. `test_rule_keys_unique_and_resolvable` in the smoke
   suite enforces the key invariants: one key per rule bullet, unique across the
   layers, a key in every self-check item, and no dangling key in the layers,
-  the rationale, or a `SKILL.md`.
+  the rationale, or a `SKILL.md`. `test_every_rule_key_in_a_self_check_item`
+  fails when a key is in no self-check item of its layer. Its exempt list names
+  the rules that have nothing to scan for, such as the scope of a layer.
 - **Commit messages follow the general layer.** They are prose, and
   `/ai-slop:review-repo` scans them with every other file. Correcting a pushed
   message means rewriting history, which rule 3 above allows only as a

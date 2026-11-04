@@ -7,8 +7,9 @@ The checks against `ai-slop-report.md` and `WRITING.md`:
                                 (`**Rule:**`, `**Location:**`, `**Quote:**`,
                                 `**Suggested revision:**`).
   writing-md-structure          `WRITING.md`: not exactly one
-                                `## AI Writing Tropes to Avoid` section,
-                                or an H1 appears inside that section. A
+                                `## AI writing tropes to avoid` section,
+                                matched regardless of case, or an H1
+                                appears inside that section. A
                                 WRITING.md is recognized by its H1, which
                                 `/ai-slop:writing` writes as "Writing rules for
                                 this project" (older files say "paper").
@@ -22,7 +23,9 @@ SKILL_NAME = "ai-slop"
 
 REPORT_H1_BODY = "AI Slop Review"
 WRITING_H1_BODIES = ("Writing rules for this project", "Writing rules for this paper")
-WRITING_TROPES_H2_BODY = "AI Writing Tropes to Avoid"
+# Compared regardless of case, so a WRITING.md with the title-case heading
+# still passes.
+WRITING_TROPES_H2_BODY = "AI writing tropes to avoid"
 FINDING_LABELS = (
     "**Rule:**",
     "**Location:**",
@@ -82,7 +85,7 @@ def schema_findings(text, path):
                     is_writing = True
             if in_trope_section and level == 1:
                 h1_in_trope_section.append((i, body))
-            if level == 2 and body == WRITING_TROPES_H2_BODY:
+            if level == 2 and body.casefold() == WRITING_TROPES_H2_BODY.casefold():
                 in_trope_section = True
             elif level <= 2:
                 in_trope_section = False
@@ -114,22 +117,22 @@ def schema_findings(text, path):
 
     if is_writing:
         trope_h2 = [(ln, b) for ln, lvl, b in headings
-                    if lvl == 2 and b == WRITING_TROPES_H2_BODY]
+                    if lvl == 2 and b.casefold() == WRITING_TROPES_H2_BODY.casefold()]
         if not trope_h2:
             findings.append((
                 1, 'writing-md-structure',
-                'no `## AI Writing Tropes to Avoid` section',
+                'no `## AI writing tropes to avoid` section',
             ))
         elif len(trope_h2) > 1:
             for ln, _ in trope_h2[1:]:
                 findings.append((
                     ln, 'writing-md-structure',
-                    'duplicate `## AI Writing Tropes to Avoid` section',
+                    'duplicate `## AI writing tropes to avoid` section',
                 ))
         for ln, _ in h1_in_trope_section:
             findings.append((
                 ln, 'writing-md-structure',
-                'H1 inside `## AI Writing Tropes to Avoid` section',
+                'H1 inside `## AI writing tropes to avoid` section',
             ))
 
     return findings
