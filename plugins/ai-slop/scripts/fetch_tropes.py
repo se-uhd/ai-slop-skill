@@ -12,7 +12,7 @@ review without the network, pass an explicit catalog file to the skill with
 The site serves the catalog inside a rendered HTML page rather than as raw
 markdown. `extract_markdown` therefore unwraps it: first from the
 `data:text/markdown` URI of the download link (percent-encoded or base64),
-then from the `<pre>` block that renders the same text. Both come from the
+then from the `<pre>` block that renders the same text. Both copies come from the
 generator of the site itself and carry the same bytes. Whatever is extracted,
 and a body that arrives as plain text, is accepted only when it is structured
 like the catalog (see `looks_like_catalog`): a Markdown H1 as its first

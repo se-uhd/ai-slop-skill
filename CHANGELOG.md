@@ -2,6 +2,12 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [2026-11_rev5] - 2026-11-03
+
+- **Added:** **Attach the noun to a sentence-initial quantifier** (`G.bare-quantifiers`) in the general layer. A quantifier used as a pronoun at the start of a sentence ("Neither is a symbolic link") takes its noun ("Neither file is a symbolic link") or joins the sentence that names the noun. The bare form stays after its noun in the same sentence, before an of-phrase that names the set, and where the text names the referents with different nouns.
+- **Added:** **Restate *no* + noun phrase as a negated clause** (`G.no-plus-noun`) in the general layer. The rule covers *no* + adjective + noun ("systems that have no public code"), *no such* + noun, a light verb with *no* + nominalization ("has no effect on"), *there is no* + generic noun, and a trailing *with no*. The fix negates the verb or makes the property the subject ("systems for which the code is not publicly available"). *No* before the absent thing itself, a quantification over a set, and an established term stay.
+- **Changed:** `scan_reference.py` lists a sentence-initial *Both*, *Neither*, *Either*, *Each*, *None*, *All*, *Some*, *Most*, *Several*, *Many*, or *Few* before a verb as a `bare-quantifier` candidate, and `/ai-slop:review` applies the new rule to the rows. The prose of the bundle was swept for both patterns.
+
 ## [2026-11_rev4] - 2026-11-03
 
 - **Added:** **Unstack noun chains** (`G.noun-stacks`) in the general layer. A chain of three or more nouns that the text assembled for the occasion ("absolute dotfile backup path handling") is restated with a preposition, a verb, or a clause, and a term of the field or of the document stays. A count alone is no finding, since technical prose stacks nouns as terms.

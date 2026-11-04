@@ -44,7 +44,7 @@ def scope_for_dir(path):
         [sys.executable, str(FIND_LATEX_ROOT), str(path)],
         capture_output=True, text=True,
     )
-    # rc 0: unique LaTeX root; rc 2: multiple candidate roots. Either is LaTeX.
+    # rc 0: unique LaTeX root; rc 2: multiple candidate roots. Either return code means LaTeX.
     return 'latex' if result.returncode in (0, 2) else 'general'
 
 

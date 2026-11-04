@@ -3,7 +3,7 @@ name: ground
 description: Fill the grounding comments that review only flags as missing. For each `\cite{}` in a LaTeX paper that has no quote-backed grounding comment, whether no comment at all or a `TODO verify` stub left by revise mode or an earlier run, fetch the cited source, extract a verbatim quote that supports the claim, and write a `% GROUNDING` comment carrying that quote into the source, or a `TODO verify` stub with a reason when the source cannot be retrieved. Use when the user asks to ground citations, fill grounding comments, or close the grounding to-do from a review. LaTeX source only.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev4"
+  version: "2026-11_rev5"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -28,7 +28,7 @@ Invoke this skill when the user:
 1. Asks to ground citations, fill `% GROUNDING:` comments, or "close the grounding to-do" from an `/ai-slop:review`.
 2. Runs `/ai-slop:ground`.
 
-Do not invoke for a fresh review (use `/ai-slop:review`), to apply the prose suggestions of a review report (use `/ai-slop:revise`), or on a non-LaTeX document. Grounding writes an inline LaTeX comment, so it is LaTeX-only. Markdown and PDF have no equivalent inline-comment mechanism for the audit trail.
+Do not invoke for a fresh review (use `/ai-slop:review`), to apply the prose suggestions of a review report (use `/ai-slop:revise`), or on a non-LaTeX document. Grounding writes an inline LaTeX comment, so it is LaTeX-only. Neither Markdown nor PDF has an inline comment syntax that could hold the audit trail.
 
 ## Inputs
 
@@ -50,7 +50,7 @@ The skill operates on the LaTeX paper in the current working directory. No argum
 
    The script prints to stderr a one-line summary (sites, unique keys, groundable sites still missing a comment, metadata coverage). Add `grounding-cites.json` and `grounding-quotes.json` to the top-level `.gitignore` (resolve the root with `git rev-parse --show-toplevel`, and create the file if absent). Both files are generated artifacts and must not be committed.
 
-3. **Pick the keys to ground.** From `by_key`, take the keys with at least one site where `groundable` is true and `grounded` is false. `grounded` is true only for a quote-backed comment, so sites carrying a quote-less `TODO verify` stub are selected and filled. Keys already grounded everywhere need no work. Keys that appear only in style-only helpers (`\citeauthor` / `\citeyear`, `groundable: false`) are context, not insertion targets. If a key has no entry in `meta`, note it. The `.bib` lacks that key, so the agent has only the claim text to work from, and the result is likely a `not-found` TODO.
+3. **Pick the keys to ground.** From `by_key`, take the keys with at least one site where `groundable` is true and `grounded` is false. `grounded` is true only for a quote-backed comment, so sites carrying a quote-less `TODO verify` stub are selected and filled. Keys already grounded everywhere are skipped. Keys that appear only in style-only helpers (`\citeauthor` / `\citeyear`, `groundable: false`) are context, not insertion targets. If a key has no entry in `meta`, note it. The `.bib` lacks that key, so the agent has only the claim text to work from, and the result is likely a `not-found` TODO.
 
 4. **Ground each unique source, one agent per key, chunked.** Author an inline grounding Workflow (see the reusable pattern below). Each agent receives the bundle for one key (its `meta` and its list of `claims`) and is told to:
    - Identify the source from the metadata (DOI first, then title + author + year, using the `url` / `eprint` if present, or a user-supplied local file).

@@ -137,7 +137,7 @@ COMMENT_SPECS = {
     'sql': SQL, 'lua': LUA, 'el': SEMI, 'lisp': SEMI, 'clj': SEMI, 'cljs': SEMI,
 }
 
-# Files with no informative extension, matched on the full basename.
+# Files that the extension does not identify, matched on the full basename.
 NAME_SPECS = {
     'Dockerfile': HASH, 'Makefile': HASH, 'makefile': HASH, 'CMakeLists.txt': HASH,
     '.gitignore': HASH, '.gitattributes': HASH, '.editorconfig': HASH,

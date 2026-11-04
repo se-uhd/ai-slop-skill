@@ -66,7 +66,7 @@ SKIPPED_COMMANDS, IGNORED_COMMANDS, or with empty `{}` are excluded.
 The `cluster` and `missing-grounding` counts are not disjoint. A citation with
 three or more keys and no nearby grounding comment emits two stdout rows
 (one of each kind) and increments both counters. The two counts should not be
-summed. Both are subsets of `considered`, but a clean citation (one or two
+summed. Both counts are subsets of `considered`, but a clean citation (one or two
 keys, has grounding) still counts toward `considered` while contributing
 to neither subset.
 

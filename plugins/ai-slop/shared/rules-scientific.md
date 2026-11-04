@@ -54,7 +54,7 @@ is in `rules-rationale.md`, which the skills do not load.
 
 A shift from past to present within a paragraph is acceptable when moving from what was found to what it means. Make the shift deliberate, not accidental.
 
-**Present tense for the paper, past tense for the study** (`S.paper-vs-study`). Statements about what the paper *is* or *does* (e.g., its contributions, definitions, scope, structure) take present tense, because the paper exists in the reader's hands now. Statements about empirical actions performed during the study take past tense. Both can appear in one contributions list without inconsistency:
+**Present tense for the paper, past tense for the study** (`S.paper-vs-study`). Statements about what the paper *is* or *does* (e.g., its contributions, definitions, scope, structure) take present tense, because the paper exists in the reader's hands now. Statements about empirical actions performed during the study take past tense. Both tenses can appear in one contributions list without inconsistency:
 
 > (1) We **document** eight configuration mechanisms ... *(what the paper contains)*
 > (2) We **analyzed** the adoption of these mechanisms in 2,853 repositories ... *(empirical action)*
@@ -111,7 +111,7 @@ Rules below follow APA 7th edition conventions where they align with SE practice
 - **Report exact p-values** (`S.exact-p-values`) to two or three decimal places (e.g., *p* = 0.034), not as inequalities (*p* < 0.05), unless *p* < 0.001.
 - **Always include leading zeros** (`S.leading-zeros`) before decimal values (e.g., *p* = 0.034, *r* = 0.82, *d* = 0.45). SE papers follow IEEE/ACM conventions, not APA, on this point.
 - **Confidence intervals** (`S.confidence-intervals`). Report as "95% CI [lower, upper]" using square brackets.
-- **Use *N* for total sample size, *n* for subgroup sizes** (`S.sample-size-symbols`). Both are italicized.
+- **Use *N* for total sample size, *n* for subgroup sizes** (`S.sample-size-symbols`). Both symbols are italicized.
 - **Italicize statistical symbols** (`S.italic-symbols`) that are Latin letters: *M*, *SD*, *t*, *F*, *p*, *n*, *N*, *d*, *r*, *R²*, *df*. Do not italicize Greek letters (e.g., α, β, χ²) or abbreviations that are not variables (e.g., ANOVA, CI, OR).
 - **Spell out statistical terms when used as nouns in running text** (`S.spell-out-statistics`). Write "the mean was 4.2" not "the *M* was 4.2." Use the symbol form inside parentheses: (*M* = 4.2, *SD* = 1.1).
 - **Do not repeat in text what a table already shows** (`S.no-table-repetition`). Highlight key findings and refer the reader to the table for full results.
