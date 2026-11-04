@@ -1266,7 +1266,7 @@ def test_verify_references_no_doi_paths():
 
 
 def test_verify_references_subprocess_unchecked_no_network():
-    # An entry with neither DOI nor title needs no lookup, so the script runs
+    # An entry with neither DOI nor title is not looked up, so the script runs
     # fully offline and reports `unchecked`.
     with tempfile.TemporaryDirectory() as d:
         bib = Path(d) / 'refs.bib'
@@ -2136,6 +2136,25 @@ def test_scan_reference_lists_stand_ins():
         assert len(rows) == 6, f"stand-in: expected 6 rows, got {len(rows)}: {rows!r}"
         assert not any(l.startswith(f"{p}:3:") for l in rows), f"stand-in: false positive on line 3: {rows!r}"
         assert 'stand-in=6' in err, f"stand-in: summary wrong: {err!r}"
+
+
+def test_scan_reference_lists_bare_quantifiers():
+    # A sentence-initial quantifier used as a pronoun before a verb is listed
+    # as bare-quantifier. A quantifier followed by its noun, by "of", or by a
+    # word that is not a verb is anchored and is not listed, and a lowercase
+    # quantifier after a colon is mid-sentence.
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / 'doc.md'
+        write(p, 'They are separate files: both are small. Neither is a symbolic link. Both are 5 lines.\n'
+                 'Each has five lines. Each requires a header. Some are flaky. None passes.\n'
+                 'Neither file is a link. Both of them pass. None of the tests ran. Each process is slow. All tests pass. Either way, X.\n')
+        rc, out, err = run('scan_reference.py', str(p))
+        assert rc == 0, f"quantifier: rc={rc} err={err!r}"
+        rows = [l for l in out.split('\n') if '\tbare-quantifier\t' in l]
+        lines = sorted(int(r.split('\t')[0].split(':')[-2]) for r in rows)
+        assert lines == [1, 1, 2, 2, 2, 2], f"quantifier: rows on wrong lines: {rows!r}"
+        assert not any('\tbare-demonstrative\t' in l for l in out.split('\n')), f"quantifier: demonstrative row: {out!r}"
+        assert 'bare-quantifier=6' in err, f"quantifier: summary wrong: {err!r}"
 
 
 # ---------- scan_sentences.py ----------
@@ -3238,6 +3257,7 @@ TESTS = [
     test_scan_reference_all_unreadable_exits_2,
     test_scan_reference_partial_read_exits_0,
     test_scan_reference_lists_stand_ins,
+    test_scan_reference_lists_bare_quantifiers,
     test_scan_sentences_counts_long_sentences_and_uniform_runs,
     test_scan_sentences_lists_passives_and_nominalizations,
     test_scan_sentences_skips_non_prose,

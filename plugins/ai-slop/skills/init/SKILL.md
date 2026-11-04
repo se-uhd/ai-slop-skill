@@ -3,7 +3,7 @@ name: init
 description: Set up the general writing rules and AI trope catalog for Claude Code, Codex, or pi across projects, or export them as one Markdown file for a system prompt. Use when the user wants the assistant's replies, edits, comments, and commit messages to follow these rules, or runs `/ai-slop:init`. Claude Code uses ~/.claude/rules/ai-slop.md. Codex and pi use ai-slop.md in their home or agent directory with a reference in their global instructions. For an editable WRITING.md in one project, use `/ai-slop:writing`.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev4"
+  version: "2026-11_rev5"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -33,11 +33,11 @@ Do not invoke when the user wants the rules of one project as an editable file (
 
 ## Inputs
 
-**Client.** Use the current client unless the user names a different target. If the client cannot be identified, ask which client to set up. An explicit export path needs no client selection.
+**Client.** Use the current client unless the user names a different target. If the client cannot be identified and the user has not given an export path, ask which client to set up.
 
 **Output path.** A positional path sets the file to write and skips the automatic Codex or pi registration step. With no path, Claude Code uses `~/.claude/rules/ai-slop.md`. Codex uses `<codex-home>/ai-slop.md`, where `<codex-home>` is the configured `CODEX_HOME` or `~/.codex` when unset. Pi uses `<pi-agent-dir>/ai-slop.md`, where `<pi-agent-dir>` is the configured `PI_CODING_AGENT_DIR` or `~/.pi/agent` when unset. Expand these paths before passing them to the helper. Never export the full rules into an existing `AGENTS.md`, `AGENTS.override.md`, or `CLAUDE.md` as part of automatic setup.
 
-**Flags.** `--economist` adds core advice from *Writing with Style: The Economist Guide* (`../../shared/rules-economist.md`). `--ste` adds the Simplified Technical English layer (`../../shared/rules-ste.md`). Both apply to any prose and can be combined, with the stricter STE limits retained (`E.precedence`). `--tropes=<path>` (repeatable) reads the catalog from local files instead of tropes.fyi, concatenated in the order given, as in `/ai-slop:review`. The scientific and LaTeX layers are not available here, since they apply to research articles and LaTeX source. `/ai-slop:writing` writes them into the `WRITING.md` of a paper project.
+**Flags.** `--economist` adds core advice from *Writing with Style: The Economist Guide* (`../../shared/rules-economist.md`). `--ste` adds the Simplified Technical English layer (`../../shared/rules-ste.md`). Both layers apply to any prose and can be combined, with the stricter STE limits retained (`E.precedence`). `--tropes=<path>` (repeatable) reads the catalog from local files instead of tropes.fyi, concatenated in the order given, as in `/ai-slop:review`. The scientific and LaTeX layers are not available here, since they apply to research articles and LaTeX source. `/ai-slop:writing` writes them into the `WRITING.md` of a paper project.
 
 ## Workflow
 
@@ -55,7 +55,7 @@ Do not invoke when the user wants the rules of one project as an editable file (
     Read `/absolute/path/to/ai-slop.md` before writing prose, and apply its rules to replies, edited files, comments, and commit messages. Project-specific writing conventions take precedence.
     ```
 
-    Create the selected file if missing. Keep the rules themselves in the export file. The separate file keeps the global instruction file small, and a later run replaces the rules without touching the user's own instructions. A Markdown link or Claude's `@path` syntax alone does not substitute for this explicit read instruction. If permissions prevent updating the global file, report that the export succeeded but registration did not, and show the reference to add. Claude Code needs no registration because it reads its rules directory automatically.
+    Create the selected file if missing. Keep the rules themselves in the export file. The separate file keeps the global instruction file small, and a later run replaces the rules without touching the user's own instructions. A Markdown link or Claude's `@path` syntax alone does not substitute for this explicit read instruction. If permissions prevent updating the global file, report that the export succeeded but registration did not, and show the reference to add. Claude Code reads its rules directory automatically, so the registration step does not apply.
 
 4. **Print a summary** in two or three lines:
    - The file: created or replaced at `<output>`, with the layers and its size in tokens, rounded to the nearest thousand. The whole file stays in the context of every session that loads it.

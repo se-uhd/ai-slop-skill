@@ -5,9 +5,8 @@ Recall aid for the **Reference** rules in the general layer. The per-section rev
 pass is an LLM reading prose, and it misses unanchored references the same way
 it undercounts Unicode glyphs. A sentence-initial "This shows that ..." reads
 fluently, so the reviewer does not stop on it. This scan lists every candidate
-so the reviewer applies the test in the rule ("the [noun] just mentioned") to each
-one. It
-prints one tab-separated line per candidate to stdout:
+so the reviewer applies the test of its rule to each one. It prints one
+tab-separated line per candidate to stdout:
 
     <file>:<line>:<col>\\t<kind>\\t<context>
 
@@ -31,6 +30,16 @@ Kinds:
                         noun ends in -s as well ("These tests"). A
                         demonstrative followed by a noun ("These tests were")
                         is anchored and is not listed.
+  - bare-quantifier:    a sentence-initial quantifier used as a pronoun (Both,
+                        Neither, Either, Each, None, All, Some, Most, Several,
+                        Many, Few) followed directly by a verb, under the same
+                        verb test. After Neither, Either, Each, and None, a
+                        lowercase -s word counts as a verb as it does after This
+                        ("Each requires"), and after a plural quantifier the
+                        lists stay closed, as after These ("Both files"). A
+                        quantifier followed by its noun ("Neither file is") or
+                        by "of" ("None of the reports") is anchored and is not
+                        listed.
   - such-noun:          "such" + noun anywhere in running prose ("such tools",
                         "such an approach"). Whether the text has instantiated
                         the category is the reviewer's judgment. The scan only
@@ -54,7 +63,7 @@ connectives, not references, and are skipped too.
 
 A one-line summary is always printed to stderr:
 
-    scanned 1 file(s); 5 reference candidate(s) [bare-demonstrative=3 such-noun=1 stand-in=1]
+    scanned 1 file(s); 6 reference candidate(s) [bare-demonstrative=3 bare-quantifier=1 such-noun=1 stand-in=1]
 
 Exits 0 when at least one input file was read, whether or not candidates were
 found. Exits 2 on a usage error: no arguments, or none of the given paths could
@@ -82,7 +91,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from scan_io import FenceTracker, report_unreadable  # noqa: E402
 
-KINDS = ('bare-demonstrative', 'such-noun', 'stand-in')
+KINDS = ('bare-demonstrative', 'bare-quantifier', 'such-noun', 'stand-in')
+
+# Quantifiers that work as a pronoun at the start of a sentence. The singular
+# ones take the verb test of This, the plural ones that of These, and None
+# takes either agreement.
+QUANTIFIERS = ('Both', 'Neither', 'Either', 'Each', 'None', 'All', 'Some', 'Most',
+               'Several', 'Many', 'Few')
+PLURAL = frozenset({'These', 'Both', 'All', 'Some', 'Most', 'Several', 'Many', 'Few'})
 
 # Verbs that follow a bare demonstrative, by form. Third-person singular forms
 # follow This / That / It, base forms follow These, and past forms follow any.
@@ -150,15 +166,15 @@ DUMMY_RE = re.compile(
 
 # A sentence start: line start (optionally a Markdown list marker or heading, or
 # a LaTeX \item), or sentence-final punctuation plus any closing quote/bracket
-# and whitespace. Then optional opening quotes/brackets, the pronoun, optional
-# adverbs, and the candidate verb.
+# and whitespace. Then optional opening quotes/brackets, the pronoun (a
+# demonstrative or a quantifier), optional adverbs, and the candidate verb.
 SENTENCE_START = (
     r'(?:^\s*(?:[-*+]\s+|\d+[.)]\s+|#+\s+)?|\\item\s+|[.!?;:]["\')\]]*\s+)'
 )
-DEMONSTRATIVE_RE = re.compile(
+PRONOUN_RE = re.compile(
     SENTENCE_START
     + r'[(\["\'`]*'
-    + r'(?P<pron>This|These|That|It)\b'
+    + r'(?P<pron>This|These|That|It|' + '|'.join(QUANTIFIERS) + r')\b'
     + r'(?P<adv>(?:,?\s*(?:' + ADVERB_RE + r'),?)*)'
     + r'\s+(?P<verb>[A-Za-z]+)\b'
 )
@@ -193,8 +209,10 @@ def verb_fits(pron, verb):
     """True when `verb` is a verb form that agrees with `pron`."""
     if verb in VERBS_PAST:
         return True
-    if pron == 'These':
+    if pron in PLURAL:
         return verb in VERBS_BASE
+    if pron == 'None':
+        return verb in VERBS_3SG or verb in VERBS_BASE or looks_3sg(verb)
     return verb in VERBS_3SG or looks_3sg(verb)
 
 
@@ -251,13 +269,14 @@ def scan_file(path, stats):
     stats['files'] += 1
     for line_idx, line, prose in prose_lines(path, text):
         rows = []
-        for m in DEMONSTRATIVE_RE.finditer(prose):
+        for m in PRONOUN_RE.finditer(prose):
             pron, verb, rest = m.group('pron'), m.group('verb'), prose[m.end():]
             if not verb_fits(pron, verb):
                 continue
             if is_dummy_it(pron, verb, rest) or is_connective(pron, verb, rest):
                 continue
-            rows.append((m.start('pron'), 'bare-demonstrative'))
+            kind = 'bare-quantifier' if pron in QUANTIFIERS else 'bare-demonstrative'
+            rows.append((m.start('pron'), kind))
         for m in SUCH_RE.finditer(prose):
             rows.append((m.start('such'), 'such-noun'))
         for m in STAND_IN_RE.finditer(prose):

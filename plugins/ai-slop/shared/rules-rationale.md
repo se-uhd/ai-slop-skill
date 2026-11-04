@@ -43,7 +43,7 @@ removes that purpose and repeats the questions below it. The abstraction
 in the original contributes meaning; it is not empty filler under `G.be-concrete`.
 Likewise, "an ecosystem formed" can summarize publications and tools that
 the next sentences identify, and "despite believing the opposite" can clearly
-refer to a slowdown stated in the same sentence. Neither requires expansion
+refer to a slowdown stated in the same sentence. Neither phrase requires expansion
 just because a more explicit alternative exists.
 
 The test still identifies real problems. If "its aspects" follows a discussion
@@ -161,6 +161,17 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   [adjective] ones" is itself a frequent chunk. A human editor rewrites the
   clause instead. The reader of the unedited version has to find the noun and
   work out the relation.
+- **Bare quantifiers** (`G.bare-quantifiers`). *Both*, *Neither*, and *Each* work as
+  a determiner and as a pronoun, and the pronoun saves the noun that the previous
+  sentence supplied. The anti-repetition pressure that selects *It* over the
+  repeated noun selects the bare quantifier too, and the length pressure of
+  post-training described under `G.keep-that` selects the shorter member of the
+  alternation. The form is common where a model reports the results of checks
+  that it ran ("Both are 1,128 bytes. Neither is a symbolic link."), one short
+  sentence per result, each without its noun. The rule asks for the noun by
+  default, where `G.anchor-pronouns` asks for it only when the referent is
+  unclear, because the determiner is the ordinary form of a quantifier in edited
+  prose and the noun costs one word.
 - **Explicit *that*** (`G.keep-that`). Leaving out *that* is standard in conversation and fiction and
   rare in academic prose (Biber et al., *Longman Grammar of Spoken and Written
   English*). Its appearance in formal text is a conversational default imported
@@ -209,6 +220,23 @@ benefit, and a generator tuned for fluency and concision strips redundancy.
   the relation is not ownership, which also removes the mild personification
   that gives a sentence a purpose or a section a claim of its own.
 
+- **Restate *no* + noun phrase as a negated clause** (`G.no-plus-noun`). Once the
+  model has written "systems that have", a negation can enter the clause only
+  through the object, so *no* lands on the noun phrase and the predicate that the
+  author meant ("is not publicly available") is compressed into an adjective in
+  front of the noun. The entries for *whose* and the stand-in word above describe
+  the same mechanism. The negative determiner is also shorter than the negated
+  verb ("has no effect on" against "does not affect"), so the length pressure of
+  post-training described under `G.keep-that` points the same way, and "there is
+  no", "has no", "with no", and "no such" are frames that the model can continue
+  with any noun. For the reader, "no public code" does not say whether the code
+  exists, and "there is no way to" does not say who cannot. The tropes.fyi
+  catalog lists "a planning tool with no fixed unit" among its quotable
+  one-liners, where the compression lets a claim read as a definition. Usage
+  guides accept *no* + noun, and "there is no evidence that" is the standard form
+  of a negative result, so the rule tests the noun phrase for a lifted adjective,
+  a *such*, a nominalization, or a generic noun, and keeps *no* before the thing
+  itself.
 - **Be concrete** (`G.be-concrete`). The generic noun is the referential form of the pressure that
   **Consequence connectives** (`G.consequence-connectives`) describes. At the position where the noun is emitted,
   "thing" fits every continuation and the specific noun commits to one, and an option that cannot be
@@ -398,7 +426,7 @@ cannot tell a well-placed dash from a misplaced one.
   aphorisms, and evaluative sentences are handled like restricted words,
   hedges, and one-sentence paragraphs. In each case, density is a signal, and a
   single use is not banned. One such sentence can open a section or mark that
-  a result matters. Several in one paragraph are filler.
+  a result matters. Several such sentences in one paragraph are filler.
 - **Concision and continuity** (`G.sentence-padding`, `G.paragraph-padding`).
   A transition can connect an established claim to the next point without
   introducing a new fact. That function is substantive when readers need it to
@@ -506,8 +534,8 @@ at runtime. The rules and examples are written for this bundle.
   and relative changes can mislead without units, baselines, periods, and
   comparable measures. These checks help general prose as well as research
   papers. Essential missing context follows `E.keep-original`, without an
-  invented denominator or a guessed kind of average. Context that is irrelevant
-  to the claim needs no query.
+  invented denominator or a guessed kind of average. The reviewer does not ask
+  for context that is irrelevant to the claim.
 - **Match numerical detail to its purpose** (`E.number-precision`). The book
   suggests limiting numerical density and rounding for general readers. A
   fixed quota or automatic conversion to fractions would discard information
@@ -543,7 +571,7 @@ layer.
   **Sentence length** (`G.sentence-length`), so the two layers agree on
   length. A quotation or a literal string counts as one word
   (`T.quotations`, `T.literals`). The writer cannot shorten either one, so
-  counting their words would flag sentences that have no fix.
+  counting their words would flag sentences that cannot be fixed.
 - **Varied length** (`T.vary-length`). A strict STE rewrite yields runs of short
   sentences of similar length. Uniform length is the low burstiness that the
   general layer names as a mark of machine-written text (`G.sentence-length`),
