@@ -232,6 +232,79 @@ def test_fetch_tropes_usage_error_with_arguments():
     assert 'usage' in err, f"usage: err={err!r}"
 
 
+def _run_fetch_response(response=None, error=None, read_error=None):
+    """Exercise the downloader without making a network request."""
+    import contextlib
+    import io
+    from unittest.mock import MagicMock, patch
+    import fetch_tropes
+    source = MagicMock()
+    source.__enter__.return_value = source
+    source.read.return_value = response
+    source.read.side_effect = read_error
+    out, err = io.StringIO(), io.StringIO()
+    with patch.object(fetch_tropes.urllib.request, 'urlopen',
+                      return_value=source, side_effect=error) as opened:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            rc = fetch_tropes.main(['fetch_tropes.py'])
+    return rc, out.getvalue(), err.getvalue(), opened, source
+
+
+def test_fetch_tropes_preserves_network_error_details():
+    import socket
+    import ssl
+    import urllib.error
+    import fetch_tropes
+    cases = [
+        (urllib.error.URLError(socket.gaierror(-2, 'name not known')), 'DNS lookup failed'),
+        (socket.gaierror(-2, 'name not known'), 'DNS lookup failed'),
+        (urllib.error.HTTPError(fetch_tropes.VIEWER_URL, 403, 'Forbidden', {}, None),
+         'HTTP 403: Forbidden'),
+        (urllib.error.URLError(ssl.SSLCertVerificationError('certificate verify failed')),
+         'TLS connection failed'),
+        (socket.timeout('timed out'), 'request timed out'),
+        (urllib.error.URLError(socket.timeout('timed out')), 'request timed out'),
+        (urllib.error.URLError(ConnectionRefusedError('connection refused')),
+         'ConnectionRefusedError: connection refused'),
+    ]
+    for error, expected in cases:
+        rc, out, err, _, _ = _run_fetch_response(error=error)
+        assert rc == 1 and out == '', f'{expected}: rc={rc}, stdout={out!r}'
+        assert expected in err, f'{expected}: diagnostic lost: {err!r}'
+        assert '--tropes=<path>' in err, f'{expected}: local catalog option missing'
+        assert 'no valid catalog' not in err, f'{expected}: transport failure called invalid content'
+
+
+def test_fetch_tropes_reports_response_failures():
+    import http.client
+    import fetch_tropes
+    for body, expected in [
+        (b' \n\t', 'empty response'),
+        (b'x' * (fetch_tropes.MAX_BYTES + 1), 'response exceeds'),
+        (b'<!doctype html><html>Not the catalog</html>', 'response has no valid catalog'),
+    ]:
+        rc, out, err, _, _ = _run_fetch_response(response=body)
+        assert rc == 1 and out == '', f'{expected}: rc={rc}, stdout={out!r}'
+        assert expected in err and '--tropes=<path>' in err, err
+    for error in (ConnectionResetError('connection reset'),
+                  http.client.IncompleteRead(b'partial catalog', 100)):
+        rc, out, err, _, _ = _run_fetch_response(read_error=error)
+        assert rc == 1 and out == '', f'read error: rc={rc}, stdout={out!r}'
+        assert type(error).__name__ in err and '--tropes=<path>' in err, err
+
+
+def test_fetch_tropes_downloader_keeps_request_and_output_contract():
+    import fetch_tropes
+    rc, out, err, opened, source = _run_fetch_response(response=RENDERED_PAGE.encode())
+    assert rc == 0 and out == CATALOG, f'download: rc={rc}, stdout={out!r}, stderr={err!r}'
+    assert 'sha256' in err and 'error:' not in err, err
+    request = opened.call_args.args[0]
+    assert request.full_url == fetch_tropes.VIEWER_URL
+    assert request.get_header('User-agent') == fetch_tropes.USER_AGENT
+    assert opened.call_args.kwargs['timeout'] == fetch_tropes.TIMEOUT
+    source.read.assert_called_once_with(fetch_tropes.MAX_BYTES + 1)
+
+
 def test_fetch_tropes_passes_plain_markdown_through():
     import fetch_tropes
     assert fetch_tropes.extract_markdown(CATALOG) == CATALOG, "extract: markdown altered"
@@ -3297,6 +3370,9 @@ TESTS = [
     test_fetch_tropes_writes_catalog_to_stdout,
     test_fetch_tropes_fails_when_the_site_is_unreachable,
     test_fetch_tropes_usage_error_with_arguments,
+    test_fetch_tropes_preserves_network_error_details,
+    test_fetch_tropes_reports_response_failures,
+    test_fetch_tropes_downloader_keeps_request_and_output_contract,
     test_fetch_tropes_passes_plain_markdown_through,
     test_fetch_tropes_unwraps_markdown_from_rendered_page,
     test_fetch_tropes_unwraps_markdown_from_pre_block,

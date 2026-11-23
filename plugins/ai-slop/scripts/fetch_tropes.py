@@ -30,6 +30,9 @@ reproducible review keeps its own copy and passes it with `--tropes=<path>`.
 
 The site answers the default urllib user agent with 403, so requests carry
 USER_AGENT (this skill and its repository URL).
+Fetch errors go to stderr with the underlying network or response failure.
+In particular, a DNS error can come from restricted network access in the
+calling environment and does not establish that the site is down.
 
 Exit codes
 ----------
@@ -41,8 +44,10 @@ import base64
 import binascii
 import hashlib
 import html
+import http.client
 import re
 import socket
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -59,16 +64,38 @@ PRE_RE = re.compile(r'<pre[^>]*>(.*?)</pre>', re.DOTALL)
 HEADING_RE = re.compile(r'^## \S', re.M)
 
 
+def fetch_error_message(error):
+    """Describe a transport error without losing a wrapped urllib cause."""
+    if isinstance(error, urllib.error.HTTPError):
+        return f"HTTP {error.code}: {error.reason}"
+    if isinstance(error, urllib.error.URLError):
+        error = error.reason
+    if isinstance(error, socket.gaierror):
+        return f"DNS lookup failed: {error}"
+    if isinstance(error, TimeoutError):
+        return f"request timed out (timeout: {TIMEOUT} seconds): {error}"
+    if isinstance(error, ssl.SSLError):
+        return f"TLS connection failed: {error}"
+    return f"{type(error).__name__}: {error}"
+
+
 def try_fetch(url):
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
             raw = response.read(MAX_BYTES + 1)
             if len(raw) > MAX_BYTES:
+                print(f"error: fetching {url} failed: response exceeds "
+                      f"{MAX_BYTES} bytes", file=sys.stderr)
                 return None
             body = raw.decode('utf-8', errors='replace')
-            return body if body.strip() else None
-    except (urllib.error.URLError, socket.timeout, UnicodeDecodeError):
+            if not body.strip():
+                print(f"error: fetching {url} failed: empty response", file=sys.stderr)
+                return None
+            return body
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as error:
+        print(f"error: fetching {url} failed: {fetch_error_message(error)}",
+              file=sys.stderr)
         return None
 
 
@@ -134,9 +161,13 @@ def main(argv):
     if len(argv) > 1:
         print("usage: fetch_tropes.py", file=sys.stderr)
         return 2
-    body = extract_markdown(try_fetch(VIEWER_URL))
+    response = try_fetch(VIEWER_URL)
+    body = extract_markdown(response)
     if not body:
-        print(f"error: no catalog from {VIEWER_URL}; pass --tropes=<path> to "
+        reason = ("catalog download failed" if response is None else
+                  "response has no valid catalog (expected an H1 and at least "
+                  f"{MIN_HEADINGS} trope headings)")
+        print(f"error: {reason} from {VIEWER_URL}; pass --tropes=<path> to "
               "review against a local copy", file=sys.stderr)
         return 1
     sys.stdout.write(body)

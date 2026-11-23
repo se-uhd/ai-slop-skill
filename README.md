@@ -63,6 +63,8 @@ The reference check reads DBLP from a local database, since the DBLP web API rat
 
 The catalog has one source and no bundled copy, so a run stops when fetching it fails, unless you pass a catalog file with `--tropes=<path>`. `fetch_tropes.py` accepts only a body structured like the catalog (a title and its trope headings) and prints the size, heading count, and content hash of what it accepted to stderr, which makes a changed catalog visible. The catalog is third-party text that the skills hand to the model as rules to apply. A paper repository that needs a reproducible review keeps its own copy and passes it with `--tropes`.
 
+If the download fails, stderr reports the underlying cause, such as a DNS lookup failure, an HTTP status, a TLS error, or a timeout. Empty or oversized responses and responses without a valid catalog are reported separately. A DNS failure can come from restricted network access in the calling environment, even when the site is reachable elsewhere. Run the command in an environment with network access or supply an explicit local catalog with `--tropes=<path>`.
+
 ## Install as a Claude Code plugin
 
 ```text

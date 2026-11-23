@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [Unreleased]
+
+- **Fixed:** the catalog downloader reports DNS, HTTP, TLS, timeout, and response read errors instead of hiding them behind "no catalog". It also distinguishes an empty or oversized response from content without a valid catalog. A failed download still exits non-zero with empty stdout, and the explicit `--tropes=<path>` option remains available for offline runs.
+
 ## [2026-11_rev6] - 2026-11-04
 
 - **Added:** "need not" and "need only" under **Phrases to avoid** (`G.phrases-to-avoid`), with the replacements "does not have to" and "only has to". When a noun phrase after "need not be" stands for a property, the rewrite names the property ("The folder need not be a complete copy of the server." -> "The folder does not have to contain every file on the server."). Where "need not" means "is not necessarily", the replacement is "does not necessarily", or "is not necessarily" for "need not be". The prose of the bundle was swept for both phrases.
