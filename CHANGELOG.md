@@ -2,7 +2,7 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
-## [Unreleased]
+## [2026-11_rev7] - 2026-11-23
 
 - **Fixed:** the catalog downloader reports DNS, HTTP, TLS, timeout, and response read errors instead of hiding them behind "no catalog". It also distinguishes an empty or oversized response from content without a valid catalog. A failed download still exits non-zero with empty stdout, and the explicit `--tropes=<path>` option remains available for offline runs.
 
