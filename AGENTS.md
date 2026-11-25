@@ -98,8 +98,8 @@ pushed tag that others can pull:
 - **The bundle follows its own rules.** When a rule is added or tightened, sweep
   the prose of the repository itself for the pattern in the same rev: the
   Markdown files, the skill files, and the Python docstrings and
-  comments. The opt-in STE layer is an exception. The prose of the bundle does
-  not follow it, so an STE rule change needs no sweep. Between sweeps,
+  comments. The opt-in STE layer is an exception. Only the changelog follows
+  it, so an STE rule change needs no sweep. Between sweeps,
   `test_first_party_prose_avoids_the_plain_words_seeds` runs `scan_repo.py` over
   the repository and fails when "lives in", "shape", or "cut" before a release,
   tag, branch, or reference appears outside a quoted example, and
@@ -108,8 +108,15 @@ pushed tag that others can pull:
   example or code span.
   `/ai-slop:review-repo` finds clause-joining semicolons on the next sweep,
   since a count cannot tell them from list separators. Released `CHANGELOG.md`
-  entries are edited only to correct or complete the record, never to restate
-  it. Upstream-owned files are left to their own repo.
+  entries are edited only to correct or complete the record, or in a sweep of
+  their prose or format that the maintainer asks for, and never to change what
+  they record. Upstream-owned files are left to their own repo.
+- **The changelog has one bullet per change.** Each release in `CHANGELOG.md`
+  lists its changes under the headings `### Added`, `### Changed`,
+  `### Removed`, `### Fixed`, and `### Unchanged`, in this order and only
+  where they apply. A bullet records one change, which is a change to one
+  component or one behavior, with its details and reasons. Unlike the rest of
+  the bundle prose, the changelog follows the STE layer.
 - **The root `package.json` is the pi package manifest and has no `version`
   field on purpose.** Do not add one. Pi pins a git install to a release tag,
   so the tag carries the version and the version callsites stay at twelve.

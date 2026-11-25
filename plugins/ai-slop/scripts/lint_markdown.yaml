@@ -13,6 +13,8 @@ extensions:
 plugins:
   md013:
     enabled: false
+  md024:
+    siblings_only: true
   md033:
     enabled: false
   md041:
