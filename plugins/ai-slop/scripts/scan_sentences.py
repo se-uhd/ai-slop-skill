@@ -46,10 +46,18 @@ passive with an unknown actor stays, and a light verb before a noun that names
 a thing rather than an action is not a nominalization.
 
 Skipped up front, because they are not running prose: fenced code blocks
-(nesting honored), YAML front matter, Markdown headings, tables, block quotes,
-and HTML comments, and in a `.tex` file the comments, the preamble before
-\\begin{document}, the sectioning commands, and the verbatim, code, math, and
-tabular environments.
+(nesting honored), YAML front matter, Markdown headings, block quotes, and
+HTML comments, and in a `.tex` file the comments, the preamble before
+\\begin{document}, the sectioning commands, and the verbatim, code, and math
+environments.
+
+Tables are read cell by cell, since the STE layer covers table cells
+(`T.scope`, `T.keep-articles`). Each cell of a Markdown table body, and of a
+LaTeX tabular or tabularx environment, is a paragraph of its own, so a
+sentence never runs across cells, and the rows are not compared with each
+other for uniform runs. A Markdown header row and its delimiter row are
+skipped, and so are the rule commands of a LaTeX table (\\hline, \\toprule,
+\\midrule, ...) and the column specification after \\begin.
 
 A one-line summary is always printed to stderr:
 
@@ -77,6 +85,9 @@ Known limitations:
     clears it.
   - An action noun used as a sentence subject ("Validation of the input
     happens in the parser") is not scanned. Only the light-verb pattern is.
+  - A Markdown table is recognized by rows that start with a pipe. A LaTeX
+    cell keeps the brace arguments of a command such as \\multicolumn, so its
+    count can include the column number and the alignment.
 """
 import bisect
 import re
@@ -136,6 +147,7 @@ renewcommand setlength usepackage documentclass
 MD_HEADING_RE = re.compile(r'^\s{0,3}#{1,6}(?:\s|$)')
 MD_BREAK_RE = re.compile(r'^\s{0,3}(?:[-*_=]\s*){3,}$')
 MD_TABLE_RE = re.compile(r'^\s*\|')
+MD_DELIMITER_RE = re.compile(r'^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$')
 MD_QUOTE_RE = re.compile(r'^\s{0,3}>')
 MD_LIST_RE = re.compile(r'^\s*(?:[-*+]|\d+[.)])\s+')
 MD_COMMENT_LINE_RE = re.compile(r'^\s*<!--.*-->\s*$')
@@ -143,9 +155,16 @@ MD_COMMENT_LINE_RE = re.compile(r'^\s*<!--.*-->\s*$')
 TEX_COMMENT_RE = re.compile(r'(?<!\\)%.*$')
 TEX_SKIP_ENVS = (
     'verbatim', 'lstlisting', 'minted', 'comment', 'equation', 'align',
-    'gather', 'multline', 'displaymath', 'eqnarray', 'tabular', 'tabularx',
+    'gather', 'multline', 'displaymath', 'eqnarray',
     'tikzpicture', 'algorithm', 'algorithmic',
 )
+TEX_TABLE_BEGIN_RE = re.compile(r'\\begin\{(?:tabular|tabularx|tabular\*)\}')
+TEX_TABLE_END_RE = re.compile(r'\\end\{(?:tabular|tabularx|tabular\*)\}')
+TEX_ROW_END_RE = re.compile(r'\\\\(?:\[[^\]]*\])?|\\tabularnewline\b')
+TEX_CELL_SEP_RE = re.compile(r'(?<!\\)&')
+TEX_RULE_RE = re.compile(
+    r'\\(?:hline|toprule|midrule|bottomrule|addlinespace|cline|cmidrule|specialrule)'
+    r'(?![A-Za-z])(?:\([^)]*\))?(?:\[[^\]]*\])?(?:\{[^}]*\})*')
 TEX_SKIP_BEGIN_RE = re.compile(r'\\begin\{(?:' + '|'.join(TEX_SKIP_ENVS) + r')\*?\}')
 TEX_SKIP_END_RE = re.compile(r'\\end\{(?:' + '|'.join(TEX_SKIP_ENVS) + r')\*?\}')
 TEX_DOC_BEGIN_RE = re.compile(r'\\begin\{document\}')
@@ -383,9 +402,37 @@ def truncate(text, limit=120):
     return text if len(text) <= limit else text[: limit - 3] + '...'
 
 
+def markdown_cells(line):
+    """Return (col, text) for each cell of a Markdown table row, with `col`
+    at the first non-blank character of the cell. A pipe inside a code span
+    or escaped as `\\|` does not end a cell."""
+    cells, in_code = [], False
+    i = start = line.index('|') + 1
+    while i < len(line):
+        c = line[i]
+        if c == '\\' and i + 1 < len(line):
+            i += 2
+            continue
+        if c == '`':
+            in_code = not in_code
+        elif c == '|' and not in_code:
+            cells.append((start, line[start:i]))
+            start = i + 1
+        i += 1
+    if line[start:].strip():
+        cells.append((start, line[start:]))
+    out = []
+    for col, cell in cells:
+        stripped = cell.strip()
+        if stripped:
+            out.append((col + len(cell) - len(cell.lstrip()), stripped))
+    return out
+
+
 def markdown_paragraphs(text):
     """Return the paragraphs of a Markdown or plain-text file. Each paragraph
-    is a list of (line_idx, col, text) segments, one per source line."""
+    is a list of (line_idx, col, text) segments, one per source line. Each
+    cell of a table body is a paragraph of its own."""
     lines = text.splitlines()
     paragraphs, para = [], []
 
@@ -411,8 +458,15 @@ def markdown_paragraphs(text):
             in_comment = '-->' not in line
             continue
         stripped = line.strip()
+        if MD_TABLE_RE.match(line):
+            flush()
+            header = idx + 1 < len(lines) and MD_DELIMITER_RE.match(lines[idx + 1])
+            if not header and not MD_DELIMITER_RE.match(line):
+                for col, cell in markdown_cells(line):
+                    paragraphs.append([(idx, col, cell)])
+            continue
         if (not stripped or MD_HEADING_RE.match(line) or MD_BREAK_RE.match(line)
-                or MD_TABLE_RE.match(line) or MD_QUOTE_RE.match(line)):
+                or MD_QUOTE_RE.match(line)):
             flush()
             continue
         if stripped.startswith('<!--'):
@@ -433,9 +487,28 @@ def markdown_paragraphs(text):
     return paragraphs
 
 
+def tex_cells(pieces):
+    """Split the (line_idx, col, text) pieces of one tabular row at each
+    unescaped `&` and return the cells, each a list of pieces."""
+    cells, cur = [], []
+    for idx, col, text in pieces:
+        start = 0
+        for m in TEX_CELL_SEP_RE.finditer(text):
+            if text[start:m.start()].strip():
+                cur.append((idx, col + start, text[start:m.start()]))
+            cells.append(cur)
+            cur = []
+            start = m.end()
+        if text[start:].strip():
+            cur.append((idx, col + start, text[start:]))
+    cells.append(cur)
+    return [cell for cell in cells if cell]
+
+
 def tex_paragraphs(text):
     """Return the paragraphs of a LaTeX file in the same format as
-    markdown_paragraphs."""
+    markdown_paragraphs. Each cell of a tabular or tabularx environment is a
+    paragraph of its own."""
     lines = text.splitlines()
     paragraphs, para = [], []
 
@@ -450,10 +523,41 @@ def tex_paragraphs(text):
             start = i + 1
             break
     in_env = False
+    in_table, row = False, []
     for idx in range(start, len(lines)):
         line = lines[idx]
         cm = TEX_COMMENT_RE.search(line)
         prose = line[:cm.start()] if cm else line
+        if not in_table:
+            tb = TEX_TABLE_BEGIN_RE.search(prose)
+            if tb:
+                flush()
+                in_table, row = True, []
+                rest = tb.end()
+                while rest < len(prose) and prose[rest] in '[{':
+                    close = group_end(prose, rest)
+                    if close < 0:
+                        rest = len(prose)
+                        break
+                    rest = close
+                prose = ' ' * rest + prose[rest:]
+        if in_table:
+            te = TEX_TABLE_END_RE.search(prose)
+            body = prose[:te.start()] if te else prose
+            body = TEX_RULE_RE.sub(lambda m: ' ' * len(m.group(0)), body)
+            pos = 0
+            for m in TEX_ROW_END_RE.finditer(body):
+                if body[pos:m.start()].strip():
+                    row.append((idx, pos, body[pos:m.start()]))
+                paragraphs.extend(tex_cells(row))
+                row = []
+                pos = m.end()
+            if body[pos:].strip():
+                row.append((idx, pos, body[pos:]))
+            if te:
+                paragraphs.extend(tex_cells(row))
+                in_table, row = False, []
+            continue
         if in_env:
             in_env = not TEX_SKIP_END_RE.search(prose)
             continue

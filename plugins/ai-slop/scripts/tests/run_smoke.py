@@ -860,7 +860,7 @@ def test_pi_package_manifest():
     directory under `pi.skills`, declares no extensions or prompts, and carries
     no version,
     because pi pins a git install to a release tag and the version callsites
-    stay at eleven (see AGENTS.md)."""
+    stay at twelve (see AGENTS.md)."""
     import json
 
     plugin_root = SCRIPTS.parent           # plugins/ai-slop
@@ -890,7 +890,8 @@ def test_pi_package_manifest():
     assert skills_dir == (plugin_root / 'skills').resolve(), skills_dir
     names = sorted(p.parent.name for p in skills_dir.glob('*/SKILL.md'))
     assert names == sorted(['review', 'review-diff', 'review-repo', 'revise',
-                            'ground', 'glossary', 'writing', 'init']), names
+                            'ground', 'glossary', 'glossary-repo', 'writing',
+                            'init']), names
 
 
 def test_skills_portable_for_pi():
@@ -1155,7 +1156,7 @@ def test_scan_repo_python_docstring_and_hash():
            '    return label\n')
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'm.py', src)
-        rc, out, err = run('scan_repo.py', d)
+        rc, out, err = run('scan_repo.py', d, '--no-strings')
         assert rc == 0, f"py: rc={rc} err={err!r}"
         text = _scan_text(out)
         assert 'A module docstring about brewing.' in text, f"py docstring missing: {out!r}"
@@ -1168,7 +1169,7 @@ def test_scan_repo_shell_comments_skip_shebang():
     src = '#!/usr/bin/env bash\n# a real shell comment\necho "# not a comment"\n'
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 's.sh', src)
-        rc, out, err = run('scan_repo.py', d)
+        rc, out, err = run('scan_repo.py', d, '--no-strings')
         assert rc == 0, f"sh: rc={rc} err={err!r}"
         text = _scan_text(out)
         assert 'a real shell comment' in text, f"sh comment missing: {out!r}"
@@ -1279,6 +1280,448 @@ def test_scan_repo_bad_commits_value_is_usage_error():
     with tempfile.TemporaryDirectory() as d:
         rc, out, err = run('scan_repo.py', d, '--commits=')
         assert rc == 2 and 'usage' in err, f"empty --commits: rc={rc} err={err!r}"
+
+
+def test_scan_repo_extracts_prose_string_literals():
+    # A message that users read is extracted with its quotes. A short
+    # string, an SQL statement, and a `#` inside a string are not prose or
+    # comments, and the summary counts the extracted string.
+    src = ('def load(path):\n'
+           '    key = "id"\n'
+           '    query = "SELECT id FROM users WHERE name = ?"\n'
+           '    raise ValueError("Could not open the session folder.")  # a note\n'
+           '    log("value # not a comment")\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'app.py', src)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"strings: rc={rc} err={err!r}"
+        lines = _scan_lines(out)
+        assert 'app.py:4:"Could not open the session folder."' in lines, f"strings: message missing: {out!r}"
+        assert 'app.py:4:a note' in lines, f"strings: comment after the string missing: {out!r}"
+        assert 'app.py:5:"value # not a comment"' in lines, f"strings: prose string missing: {out!r}"
+        assert not any(line.endswith(':not a comment"') for line in lines), f"strings: # read as a comment: {out!r}"
+        assert 'SELECT' not in out and ':"id"' not in out, f"strings: non-prose string extracted: {out!r}"
+        assert '2 string literal(s)' in err, f"strings: summary count wrong: {err!r}"
+
+
+def test_scan_repo_skips_strings_in_tests_and_markup():
+    # Test strings are inputs and expected output, and the quotes of a markup
+    # attribute other than a text attribute delimit a value such as a class
+    # list. Their comments are still read.
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / 'tests').mkdir()
+        write(Path(d) / 'tests' / 'test_app.py',
+              '# a comment in a test\nassert f() == "the data show that it works"\n')
+        write(Path(d) / 'page.html', '<div class="one two three four">Text</div>\n<!-- a markup comment -->\n')
+        write(Path(d) / 'cli.ts', 'console.log("Writing the report to the working directory.");\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"test strings: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'a comment in a test' in text and 'a markup comment' in text, f"test strings: comments missing: {out!r}"
+        assert 'the data show' not in text, f"test strings: test string extracted: {out!r}"
+        assert 'one two three' not in text, f"test strings: HTML attribute extracted: {out!r}"
+        assert '"Writing the report to the working directory."' in text, f"test strings: source string missing: {out!r}"
+
+
+def test_scan_repo_reads_markup_and_template_text():
+    page = ('<!doctype html>\n'
+            '<html><head><title>Coffee &amp; beans</title><style>.a { color: red; }</style></head>\n'
+            '<body>\n'
+            '  <p class="muted cc-x">Signed in as <strong>{{ name }}</strong></p>\n'
+            '  <button aria-label="Remove a coffee" (click)="undo()"><mat-icon>undo</mat-icon> Undo last cup</button>\n'
+            '  <!-- a markup comment -->\n'
+            '  @if (isOwn(selectedId())) {\n'
+            '  <span [attr.title]="busy() ? \'Saving the expense\' : \'Save\'">'
+            '{{ done ? \'Done editing\' : \'d MMMM y\' }}</span>\n'
+            '  }\n'
+            '  <script>var x = "not text for users";</script>\n'
+            '</body></html>\n')
+    component = ('@Component({\n'
+                 '  selector: \'cc-x\',\n'
+                 '  template: `\n'
+                 '    <h2>Kitty history</h2>\n'
+                 '    <p>Only an admin can record a kitty-funded expense.</p>\n'
+                 '    <cc-toggle toggleAriaLabel="Toggle the kitty form"></cc-toggle>\n'
+                 '    <!-- a template comment -->\n'
+                 '  `,\n'
+                 '  styles: [\n'
+                 '    `\n'
+                 '      /* the card keeps its height */\n'
+                 '      .card { display: flex; }\n'
+                 '    `,\n'
+                 '  ],\n'
+                 '})\n'
+                 'export class X {\n'
+                 '  // a code comment\n'
+                 '  readonly hint = `The kitty would go negative\n'
+                 '    if this expense were recorded.`;\n'
+                 '  readonly url = `${base}/api\n'
+                 '    // ${id}/x`;\n'
+                 '}\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'page.html', page)
+        write(Path(d) / 'x.component.ts', component)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"markup: rc={rc} err={err!r}"
+        lines = {tuple(line.split(':', 2)) for line in out.splitlines()}
+        expected = {
+            ('page.html', '2', '>Coffee & beans<'), ('page.html', '4', '>Signed in as<'),
+            ('page.html', '5', '"Remove a coffee"'), ('page.html', '5', '>Undo last cup<'),
+            ('page.html', '6', 'a markup comment'), ('page.html', '8', "'Saving the expense'"),
+            ('page.html', '8', "'Save'"), ('page.html', '8', "'Done editing'"),
+            ('x.component.ts', '4', '>Kitty history<'),
+            ('x.component.ts', '5', '>Only an admin can record a kitty-funded expense.<'),
+            ('x.component.ts', '6', '"Toggle the kitty form"'),
+            ('x.component.ts', '7', 'a template comment'),
+            ('x.component.ts', '11', 'the card keeps its height'),
+            ('x.component.ts', '17', 'a code comment'),
+            ('x.component.ts', '18', '`The kitty would go negative`'),
+            ('x.component.ts', '19', '`if this expense were recorded.`'),
+        }
+        assert lines == expected, (f"markup: missing {sorted(expected - lines)!r}, "
+                                   f"unexpected {sorted(lines - expected)!r}")
+        rc, out, err = run('scan_repo.py', d, '--no-strings')
+        assert rc == 0, f"markup no-strings: rc={rc} err={err!r}"
+        texts = {line.split(':', 2)[2] for line in out.splitlines()}
+        assert texts == {'a markup comment', 'a template comment', 'the card keeps its height',
+                         'a code comment'}, f"markup no-strings: wrong lines: {out!r}"
+
+
+def test_scan_repo_reads_jsx_text():
+    tsx = ("import React from 'react';\n"
+           '\n'
+           'const f = <T,>(x: T): T => x;\n'
+           "const [q, setQ] = useState<string>('');\n"
+           '\n'
+           'export function Dialog({ open, n }: Props) {\n'
+           '  // a code comment\n'
+           '  if (n < 3 && open) {\n'
+           '    return (\n'
+           '      <>\n'
+           '        <h2 className="Big Thing">Don\'t close the kitty</h2>\n'
+           '        <button aria-label="Close the dialog" title={\'Close\'}'
+           ' onClick={() => alert(\'Saved the expense to the kitty.\')}>\n'
+           '          {/* a JSX comment */}\n'
+           '          Close\n'
+           '        </button>\n'
+           '        {open && <p>Nested text for users</p>}\n'
+           "        <span>{n}{' changed '}</span>\n"
+           '        <input placeholder={`Search ${n} beans`} />\n'
+           '        <code>npm run build</code>\n'
+           '      </>\n'
+           '    );\n'
+           '  }\n'
+           '  return null;\n'
+           '}\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'dialog.tsx', tsx)
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"jsx: rc={rc} err={err!r}"
+        lines = {tuple(line.split(':', 2)[1:]) for line in out.splitlines()}
+        expected = {
+            ('7', 'a code comment'), ('11', ">Don't close the kitty<"),
+            ('12', '"Close the dialog"'), ('12', "'Close'"), ('12', "'Saved the expense to the kitty.'"),
+            ('13', 'a JSX comment'), ('14', '>Close<'), ('16', '>Nested text for users<'),
+            ('17', "' changed '"), ('18', '`Search ${n} beans`'),
+        }
+        assert lines == expected, (f"jsx: missing {sorted(expected - lines)!r}, "
+                                   f"unexpected {sorted(lines - expected)!r}")
+        rc, out, err = run('scan_repo.py', d, '--no-strings')
+        texts = {line.split(':', 2)[2] for line in out.splitlines()}
+        assert texts == {'a code comment', 'a JSX comment'}, f"jsx no-strings: wrong lines: {out!r}"
+
+
+def test_scan_repo_reads_text_keys_catalogs_and_features():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'menu.ts', "const items = [{ path: '/users', label: 'Manage users', icon: 'group' }];\n"
+                                   "if (item.label === 'Users') { go(); }\n")
+        write(Path(d) / 'Api.kt', '@Operation(summary = "Delete a user.", operationId = "deleteUserById")\n')
+        (Path(d) / 'src' / 'i18n').mkdir(parents=True)
+        write(Path(d) / 'src' / 'i18n' / 'en.json', '{\n  "login.button": "Sign in",\n  "count": "{{n}}"\n}\n')
+        write(Path(d) / 'package.json', '{\n  "description": "A tool that reads the whole repository."\n}\n')
+        write(Path(d) / 'site.webmanifest', '{\n  "name": "Campus Coffee",\n  "theme_color": "#ffffff",\n'
+                                            '  "start_url": "index.html"\n}\n')
+        write(Path(d) / 'counting.feature', 'Feature: Counting coffees\n  A user adds a coffee.\n')
+        write(Path(d) / 'eslint.config.js', '// ESLint config, generated by `ng add` and then tuned by hand.\n'
+                                            'module.exports = {};\n')
+        rc, out, err = run('scan_repo.py', d)
+        assert rc == 0, f"text keys: rc={rc} err={err!r}"
+        lines = {tuple(line.split(':', 2)) for line in out.splitlines()}
+        expected = {
+            ('menu.ts', '1', "'Manage users'"), ('Api.kt', '1', '"Delete a user."'),
+            ('src/i18n/en.json', '2', '"Sign in"'), ('site.webmanifest', '2', '"Campus Coffee"'),
+            ('counting.feature', '1', 'Feature: Counting coffees'), ('counting.feature', '2', '  A user adds a coffee.'),
+            ('eslint.config.js', '1', 'ESLint config, generated by `ng add` and then tuned by hand.'),
+        }
+        assert lines == expected, (f"text keys: missing {sorted(expected - lines)!r}, "
+                                   f"unexpected {sorted(lines - expected)!r}")
+        assert 'generated' not in err, f"text keys: a hand-tuned file was skipped as generated: {err!r}"
+
+
+def test_scan_repo_no_strings_flag():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'app.py', 'print("Could not open the session folder.")  # a note\n')
+        rc, out, err = run('scan_repo.py', d, '--no-strings')
+        assert rc == 0, f"no-strings: rc={rc} err={err!r}"
+        text = _scan_text(out)
+        assert 'a note' in text, f"no-strings: comment missing: {out!r}"
+        assert 'session folder' not in text, f"no-strings: string extracted: {out!r}"
+        assert '0 string literal(s)' in err, f"no-strings: summary count wrong: {err!r}"
+
+
+def test_scan_repo_exclude_patterns():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'README.md', 'project prose\n')
+        write(Path(d) / 'CHANGELOG.md', 'record prose\n')
+        (Path(d) / 'data').mkdir()
+        write(Path(d) / 'data' / 'collected.md', 'collected prose\n')
+        rc, out, err = run('scan_repo.py', d, '--exclude=data/*', '--exclude=CHANGELOG.md')
+        assert rc == 0, f"exclude: rc={rc} err={err!r}"
+        assert _scan_paths(out) == {'README.md'}, f"exclude: wrong files: {out!r}"
+        rc, out, err = run('scan_repo.py', d, '--exclude=')
+        assert rc == 2 and 'usage' in err, f"exclude: empty pattern accepted: rc={rc} err={err!r}"
+
+
+# ---------- scan_glossary.py ----------
+
+GLOSSARY_FORMAT = (
+    '# Glossary\n\n'
+    'This glossary covers `docs/`. A source that starts with "Proposed" marks an inferred definition.\n\n'
+    '## Builds\n\n'
+    '| Term | Definition | Code | Source |\n'
+    '|---|---|---|---|\n'
+    '| bundle | The archive that the server installs. | `Bundle` | `README.md:4`, "the archive" |\n\n'
+    '## Vocabulary to avoid\n\n'
+    '| Avoid | Use instead | Scope and reason |\n'
+    '|---|---|---|\n'
+    '| artifact, package | bundle | For the archive. |\n'
+    '| dev build | test build | One name for the build. |\n'
+    '| VM | production server | The machine. |\n'
+)
+
+
+def _run_stdin(script, text, *args):
+    cmd = [PYTHON, str(SCRIPTS / script)] + list(args)
+    result = subprocess.run(cmd, input=text, capture_output=True, text=True)
+    return result.returncode, result.stdout, result.stderr
+
+
+def _glossary_rows(out):
+    return [line.split('\t') for line in out.split('\n') if line]
+
+
+def test_scan_glossary_matches_words_of_the_avoid_table():
+    doc = ('We build one artifact per plugin.\n'
+           'Two artifacts are built.\n'
+           'The key `artifact` names it in code.\n'
+           'The dev\n'
+           'build runs nightly.\n'
+           'The vm stays lowercase, and the packaged file is fine.\n'
+           'The VM is down.\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'GLOSSARY.md', GLOSSARY_FORMAT)
+        write(Path(d) / 'doc.md', doc)
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'),
+                           str(Path(d) / 'doc.md'), str(Path(d) / 'GLOSSARY.md'))
+        assert rc == 0, f"glossary: rc={rc} err={err!r}"
+        found = {(row[0].rsplit(':', 1)[1], row[1], row[2]) for row in _glossary_rows(out)}
+        assert found == {('1', 'artifact', 'bundle'), ('2', 'artifact', 'bundle'),
+                         ('4', 'dev build', 'test build'), ('7', 'VM', 'production server')}, \
+            f"glossary: wrong candidates: {sorted(found)!r}"
+        assert 'GLOSSARY.md:' not in out, f"glossary: the glossary itself was listed: {out!r}"
+        assert '4 candidate(s) in 1 file(s)' in err, f"glossary: summary wrong: {err!r}"
+
+
+def test_scan_glossary_reads_older_formats():
+    old = ('# Glossary\n\n'
+           '- **user**: A person who drinks coffee.\n'
+           '  Avoid: member, drinker.\n\n'
+           '| Do not use | Use instead | Why |\n|---|---|---|\n'
+           '| **scaffold**, **framework** | harness | One name. |\n\n'
+           '| Retired | Write instead | Why |\n|---|---|---|\n'
+           '| "ledger" for the capture bookkeeping | "the tracking files" | Plain words. |\n\n'
+           '| Avoid | Use instead | Scope and reason |\n|---|---|---|\n'
+           '| conversation, for the messages of an email exchange | thread | Another sense. |\n'
+           '| setting, level (for the value of a degree of freedom) | value | One word. |\n\n'
+           '| Draft wording | Assessment | Treatment |\n|---|---|---|\n'
+           '| Trust--productivity paradox | Undefined. | Removed from the title. |\n\n'
+           '- **sign in**: To open a session with a password.\n'
+           '  Avoid: log in, login (for the act).\n\n'
+           '| Retired | Use instead |\n|---|---|\n'
+           '| member | all users |\n'
+           '| 2fa | two-factor authentication |\n\n'
+           '- **two-factor authentication**: A second factor.\n'
+           '  Avoid: 2FA.\n')
+    sys.path.insert(0, str(SCRIPTS))
+    import scan_glossary
+    entries = scan_glossary.read_entries(old)
+    assert entries == [('member', 'user', ''), ('drinker', 'user', ''),
+                       ('scaffold', 'harness', 'One name.'), ('framework', 'harness', 'One name.'),
+                       ('ledger', '"the tracking files"', '"ledger" for the capture bookkeeping; Plain words.'),
+                       ('conversation', 'thread',
+                        'conversation, for the messages of an email exchange; Another sense.'),
+                       ('setting', 'value', 'setting, level (for the value of a degree of freedom); One word.'),
+                       ('level', 'value', 'setting, level (for the value of a degree of freedom); One word.'),
+                       ('Trust--productivity paradox', 'Removed from the title.', 'Undefined.'),
+                       ('log in', 'sign in', 'log in, login (for the act)'),
+                       ('login', 'sign in', 'log in, login (for the act)'),
+                       ('member', 'all users', ''),
+                       ('2fa', 'two-factor authentication', ''),
+                       ('2FA', 'two-factor authentication', '')], entries
+    merged = scan_glossary.merge_entries(entries)
+    assert [m for m in merged if m[0] in ('member', '2fa')] == [
+        ('member', 'user / all users', '', True),
+        ('2fa', 'two-factor authentication', '', True)], merged
+    assert len(merged) == len(entries) - 2, "glossary: a word listed twice was not merged"
+    pattern = scan_glossary.word_pattern('Trust--productivity paradox')
+    assert pattern.search('the trust-productivity paradoxes'), "glossary: hyphenated phrase not matched"
+    assert not scan_glossary.word_pattern('ai').search('the ai-slop skill'), "glossary: matched inside a hyphenated word"
+
+
+def test_scan_glossary_reads_scan_repo_output_from_stdin():
+    scan = ('GLOSSARY.md:12:| artifact, package | bundle | For the archive. |\n'
+            'CHANGELOG.md:3:Renamed the artifact.\n'
+            'docs/build.md:8:Each package is signed.\n'
+            'src/app.py:20:"Uploading the artifact."\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'GLOSSARY.md', GLOSSARY_FORMAT)
+        rc, out, err = _run_stdin('scan_glossary.py', scan, str(Path(d) / 'GLOSSARY.md'),
+                                  f'--root={d}', '--exclude=CHANGELOG.md')
+        assert rc == 0, f"stdin: rc={rc} err={err!r}"
+        paths = [row[0] for row in _glossary_rows(out)]
+        assert paths == ['docs/build.md:8', 'src/app.py:20'], f"stdin: wrong rows: {out!r}"
+        rc, out, err = _run_stdin('scan_glossary.py', scan, str(Path(d) / 'GLOSSARY.md'),
+                                  f'--root={d}', '--counts')
+        assert rc == 0, f"counts: rc={rc} err={err!r}"
+        assert _glossary_rows(out) == [['2', '2', 'artifact', 'bundle', 'For the archive.'],
+                                       ['1', '1', 'package', 'bundle', 'For the archive.'],
+                                       ['0', '0', 'dev build', 'test build', 'One name for the build.'],
+                                       ['0', '0', 'VM', 'production server', 'The machine.']], \
+            f"counts: wrong rows: {out!r}"
+
+
+def test_scan_glossary_skips_terms_and_identifier_references():
+    glossary = ('# Glossary\n\n'
+                '| Term | Definition | Code | Source |\n|---|---|---|---|\n'
+                '| login name | The name that an admin signs in with. | `login` | Proposed, `a.kt:2` |\n'
+                '| bean purchase (purchase of beans) | An expense for beans. | | Proposed, `a.kt:4` |\n\n'
+                '## Vocabulary to avoid\n\n'
+                '| Avoid | Use instead | Scope and reason |\n|---|---|---|\n'
+                '| login | sign-in | For the act. |\n'
+                '| purchase | expense | Except for a bean purchase. |\n'
+                '| value | score | For the number. |\n')
+    kotlin = ('/**\n'
+              ' * Checks the login name and the [value].\n'
+              ' * Each login is logged.\n'
+              ' * A bean purchase is fine.\n'
+              ' * A purchase is not.\n'
+              ' */\n')
+    typescript = ('/** Reads the {@link Score.value} once. */\n'
+                  'const m = `Your login failed`;\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'GLOSSARY.md', glossary)
+        write(Path(d) / 'a.kt', kotlin)
+        write(Path(d) / 'b.ts', typescript)
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'),
+                           str(Path(d) / 'a.kt'), str(Path(d) / 'b.ts'))
+        assert rc == 0, f"terms: rc={rc} err={err!r}"
+        found = {(Path(row[0].rsplit(':', 1)[0]).name, row[0].rsplit(':', 1)[1], row[1])
+                 for row in _glossary_rows(out)}
+        assert found == {('a.kt', '3', 'login'), ('a.kt', '5', 'purchase'), ('b.ts', '2', 'login')}, \
+            f"terms: wrong candidates: {sorted(found)!r}"
+    sys.path.insert(0, str(SCRIPTS))
+    import scan_glossary
+    assert scan_glossary.read_terms(glossary) == ['login name', 'bean purchase', 'purchase of beans'], \
+        scan_glossary.read_terms(glossary)
+    capital = scan_glossary.merge_entries([('My Coffee', 'landing page', 'My Coffee (with a capital C)')])
+    pattern = scan_glossary.word_pattern(capital[0][0], capital[0][3])
+    assert pattern.search('Open My Coffee.') and not pattern.search('Open My coffee.'), \
+        "glossary: a word avoided in its capitals matched another spelling"
+
+
+def test_scan_glossary_reports_avoided_terms():
+    """A glossary term is never avoided vocabulary, in the format and in the
+    older list format: the scan names the row, leaves the word out, and exits
+    with status 1, and both glossary skills run --lint after writing."""
+    table = ('# Glossary\n\n'
+             '| Term | Definition | Code | Source |\n|---|---|---|---|\n'
+             '| rating | One score of a bean. | `Rating` | Proposed, `doc.md:1` |\n'
+             '| score | The number of a rating. | `value` | Proposed, `doc.md:1` |\n'
+             '| SYSTEM | The reserved actor. | | Proposed, `doc.md:2` |\n\n'
+             '## Vocabulary to avoid\n\n'
+             '| Avoid | Use instead | Scope and reason |\n|---|---|---|\n'
+             '| rating | score | For the number. |\n'
+             '| system | SYSTEM | In lowercase, as the actor. |\n'
+             '| value | score | In prose. |\n')
+    entries = ('# Glossary\n\n'
+               '- **ratings**: The summary of the ratings of each bean.\n'
+               '- **score**: The number of a rating.\n'
+               '  Avoid: value (in prose), rating (for the number).\n')
+    doc = 'A rating of 5 is the best value.\nThe system wrote it, and SYSTEM is the actor.\n'
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'doc.md', doc)
+        for name, glossary in (('table', table), ('entries', entries)):
+            write(Path(d) / 'GLOSSARY.md', glossary)
+            rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), str(Path(d) / 'doc.md'))
+            words = {row[1] for row in _glossary_rows(out)}
+            assert rc == 1 and '"rating" as vocabulary to avoid' in err, \
+                f"{name}: avoided term not reported: rc={rc} err={err!r}"
+            assert 'rating' not in words and 'value' in words, f"{name}: wrong candidates: {out!r}"
+            rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), '--lint')
+            assert rc == 1 and not out and '1 avoided word(s) that are terms' in err, \
+                f"{name}: --lint: rc={rc} err={err!r}"
+        write(Path(d) / 'GLOSSARY.md', table)
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), str(Path(d) / 'doc.md'))
+        system = [row[0] for row in _glossary_rows(out) if row[1] == 'system']
+        assert len(system) == 1 and system[0].endswith(':2') and '"system"' not in err, \
+            f"lowercase: system matched SYSTEM or conflicted with it: {out!r} {err!r}"
+        write(Path(d) / 'GLOSSARY.md', GLOSSARY_FORMAT)
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), '--lint')
+        assert rc == 0 and '0 avoided word(s) that are terms' in err, f"format example: rc={rc} err={err!r}"
+    for name in ('glossary', 'glossary-repo'):
+        text = (SCRIPTS.parent / 'skills' / name / 'SKILL.md').read_text(encoding='utf-8')
+        assert 'scan_glossary.py" <glossary> --lint' in text, f"{name}: does not lint the glossary"
+    sys.path.insert(0, str(SCRIPTS))
+    import scan_glossary
+    words = scan_glossary.avoided_words('fund, the fund (as nouns, not the verb in "fund the kitty")')
+    assert words == ['fund', 'the fund'], f"a quotation in a parenthetical sense was read as a word: {words!r}"
+
+
+def test_scan_glossary_exit_codes():
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'GLOSSARY.md', '# Glossary\n\nNo table of avoided words.\n')
+        write(Path(d) / 'doc.md', 'An artifact.\n')
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), str(Path(d) / 'doc.md'))
+        assert rc == 0 and not out and 'no vocabulary to avoid' in err, f"no table: rc={rc} err={err!r}"
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'missing.md'))
+        assert rc == 2, f"missing glossary: rc={rc} err={err!r}"
+        write(Path(d) / 'GLOSSARY.md', GLOSSARY_FORMAT)
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), str(Path(d) / 'missing.md'))
+        assert rc == 2 and 'could be read' in err, f"unreadable files: rc={rc} err={err!r}"
+        rc, out, err = run('scan_glossary.py')
+        assert rc == 2 and 'usage' in err, f"no arguments: rc={rc} err={err!r}"
+
+
+def test_glossary_format_example_parses():
+    """The example in shared/glossary-format.md is the reference for the Avoid
+    column, so scan_glossary.py reads it exactly, and both glossary skills
+    point to the format instead of repeating it."""
+    sys.path.insert(0, str(SCRIPTS))
+    import scan_glossary
+    fmt = (SCRIPTS.parent / 'shared' / 'glossary-format.md').read_text(encoding='utf-8')
+    example = fmt[fmt.index('## Example'):]
+    example = example[example.index('```markdown\n') + len('```markdown\n'):example.rindex('```')]
+    entries = scan_glossary.read_entries(example)
+    assert [(word, use) for word, use, _ in entries] == [
+        ('artifact', 'bundle'), ('package', 'bundle'), ('dev build', 'test build'),
+        ('ship', 'publish'), ('shipping', 'publish')], entries
+    assert entries[0][2] == 'For the archive. "Package" remains correct for a Go package.', entries
+    for name in ('glossary', 'glossary-repo'):
+        text = (SCRIPTS.parent / 'skills' / name / 'SKILL.md').read_text(encoding='utf-8')
+        assert '../../shared/glossary-format.md' in text, f"{name}: does not point to the format"
+        assert '| Avoid | Use instead |' not in text, f"{name}: repeats the format"
+    rc, out, err = run('lint_markdown.py', str(SCRIPTS.parent / 'shared' / 'glossary-format.md'))
+    assert rc == 0, f"glossary-format.md: lint rc={rc} out={out!r} err={err!r}"
 
 
 # ---------- verify_references.py ----------
@@ -2298,7 +2741,7 @@ def test_scan_sentences_skips_non_prose():
           'for a while now` is fine.\n\n'
           '```python\nx = "The value is computed by the function."\n```\n\n'
           '> A block quote is generated by someone.\n\n'
-          '| a | the table row is generated |\n\n'
+          '| a | The header is generated |\n|---|---|\n\n'
           '- A list item is written here.\n'
           '- Another item.\n\n'
           'The data is fine. <!-- the passive is written in a comment -->\n')
@@ -2318,9 +2761,9 @@ def test_scan_sentences_skips_non_prose():
         rc, out, err = run('scan_sentences.py', str(pm))
         assert rc == 0, f"skips md: rc={rc} err={err!r}"
         rows = [tuple(l.split('\t')[:2]) for l in out.split('\n') if l]
-        # Front matter, heading, code span, fence, block quote, table, and an
-        # inline HTML comment add nothing. The list item stays.
-        assert rows == [(f"{pm}:17:15", 'passive')], f"skips md: {rows!r}"
+        # Front matter, heading, code span, fence, block quote, a table header,
+        # and an inline HTML comment add nothing. The list item stays.
+        assert rows == [(f"{pm}:18:15", 'passive')], f"skips md: {rows!r}"
         rc, out, err = run('scan_sentences.py', str(pt))
         assert rc == 0, f"skips tex: rc={rc} err={err!r}"
         rows = [tuple(l.split('\t')[:2]) for l in out.split('\n') if l]
@@ -2329,6 +2772,44 @@ def test_scan_sentences_skips_non_prose():
         # passive.
         assert (f"{pt}:5:1", 'long-sentence') in rows, f"skips tex: {rows!r}"
         assert not any(kind == 'passive' for _, kind in rows), f"skips tex: passive listed: {rows!r}"
+
+
+def test_scan_sentences_reads_table_cells():
+    """The STE layer covers table cells, so each body cell is a paragraph of
+    its own. The header row is skipped, a sentence does not run across cells,
+    and rows are not compared for uniform runs."""
+    long_cell = ('The archive that the server installs is built every night by the release '
+                 'task from the tagged commit of the plugin and then copied to the shared '
+                 'folder.')                                                    # 28 words
+    half = 'One cell holds a sentence of exactly fifteen words that ends here at the end'
+    md = ('| Term | The header is generated |\n'
+          '|---|---|\n'
+          f'| bundle | {long_cell} |\n'
+          f'| `a|b` | {half} | {half} |\n'
+          '| x | One short cell with nine words in it today. |\n'
+          '| y | Another short cell with nine words in it now. |\n'
+          '| z | A third short cell with nine words in it here. |\n')
+    tex = ('\\documentclass{article}\n\\begin{document}\n'
+           '\\begin{tabularx}{\\linewidth}{lX}\n\\toprule\n'
+           'Term & Definition \\\\\n\\midrule\n'
+           'test build & A bundle that is kept on the machine\n'
+           '  of the developer & third cell \\\\ \\bottomrule\n'
+           '\\end{tabularx}\n'
+           'The text after the table is written here.\n\\end{document}\n')
+    with tempfile.TemporaryDirectory() as d:
+        pm, pt = Path(d) / 'table.md', Path(d) / 'table.tex'
+        write(pm, md)
+        write(pt, tex)
+        rc, out, err = run('scan_sentences.py', str(pm))
+        assert rc == 0, f"md table: rc={rc} err={err!r}"
+        rows = [tuple(l.split('\t')[:2]) for l in out.split('\n') if l]
+        assert rows == [(f"{pm}:3:12", 'long-sentence'), (f"{pm}:3:49", 'passive')], \
+            f"md table: {rows!r}"
+        rc, out, err = run('scan_sentences.py', str(pt))
+        assert rc == 0, f"tex table: rc={rc} err={err!r}"
+        rows = [tuple(l.split('\t')[:2]) for l in out.split('\n') if l]
+        assert rows == [(f"{pt}:7:28", 'passive'), (f"{pt}:10:26", 'passive')], \
+            f"tex table: {rows!r}"
 
 
 def test_scan_sentences_usage_and_unreadable_paths():
@@ -2377,7 +2858,8 @@ def test_rule_keys_unique_and_resolvable():
         for item in re.finditer(r'^\d+\. \*\*.*$', checks, re.M):
             assert KEY_REF_RE.search(item.group(0)), f"keys: self-check item without a key in {name}: {item.group(0)[:70]!r}"
     assert len(defined) > 80, f"keys: only {len(defined)} keys defined"
-    referencing = [shared / n for n in LAYERS] + [shared / 'rules-rationale.md'] + sorted((SCRIPTS.parent / 'skills').glob('*/SKILL.md'))
+    referencing = ([shared / n for n in LAYERS] + [shared / 'rules-rationale.md', shared / 'glossary-format.md']
+                   + sorted((SCRIPTS.parent / 'skills').glob('*/SKILL.md')))
     for path in referencing:
         for key in KEY_REF_RE.findall(path.read_text(encoding='utf-8')):
             assert key in defined, f"keys: {key} cited in {path.name} is not defined in any layer"
@@ -3354,6 +3836,7 @@ TESTS = [
     test_scan_sentences_counts_long_sentences_and_uniform_runs,
     test_scan_sentences_lists_passives_and_nominalizations,
     test_scan_sentences_skips_non_prose,
+    test_scan_sentences_reads_table_cells,
     test_scan_sentences_usage_and_unreadable_paths,
     test_rule_keys_unique_and_resolvable,
     test_every_rule_key_in_a_self_check_item,
@@ -3436,6 +3919,20 @@ TESTS = [
     test_scan_repo_no_commits_flag_suppresses,
     test_scan_repo_commits_count_selector,
     test_scan_repo_bad_commits_value_is_usage_error,
+    test_scan_repo_extracts_prose_string_literals,
+    test_scan_repo_skips_strings_in_tests_and_markup,
+    test_scan_repo_reads_markup_and_template_text,
+    test_scan_repo_reads_jsx_text,
+    test_scan_repo_reads_text_keys_catalogs_and_features,
+    test_scan_repo_no_strings_flag,
+    test_scan_repo_exclude_patterns,
+    test_scan_glossary_matches_words_of_the_avoid_table,
+    test_scan_glossary_reads_older_formats,
+    test_scan_glossary_reads_scan_repo_output_from_stdin,
+    test_scan_glossary_skips_terms_and_identifier_references,
+    test_scan_glossary_reports_avoided_terms,
+    test_scan_glossary_exit_codes,
+    test_glossary_format_example_parses,
     test_rule_layers_exist,
     test_rule_layers_lint_clean,
     test_no_dangling_rules_md_references,

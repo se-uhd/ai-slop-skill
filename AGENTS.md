@@ -41,7 +41,7 @@ pushed tag that others can pull:
    forced branch push alone leaves every tag on a commit that the branch no
    longer reaches. Record the repair in the CHANGELOG entry of the release that
    includes it, as the 2026-09_rev15 entry does.
-4. **Keep the 11 version callsites in sync.** The version string is in
+4. **Keep the 12 version callsites in sync.** The version string is in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
    `.claude-plugin/marketplace.json`, the `metadata.version` frontmatter of
    each `SKILL.md`, and the `**Skill version:**` line in the report template of
@@ -112,10 +112,19 @@ pushed tag that others can pull:
   it. Upstream-owned files are left to their own repo.
 - **The root `package.json` is the pi package manifest and has no `version`
   field on purpose.** Do not add one. Pi pins a git install to a release tag,
-  so the tag carries the version and the version callsites stay at eleven.
+  so the tag carries the version and the version callsites stay at twelve.
   The manifest lists `./plugins/ai-slop/skills` under `pi.skills`, so pi picks
   up a new skill directory without a manifest change.
   `test_pi_package_manifest` in the smoke suite enforces this.
+- **The glossary format and the repository scan are shared.**
+  `shared/glossary-format.md` defines the `GLOSSARY.md` format for
+  `/ai-slop:glossary` and `/ai-slop:glossary-repo`, and neither `SKILL.md`
+  repeats it. `scan_glossary.py` parses the table of vocabulary to avoid in
+  that format and in the older formats that its docstring lists, so a change
+  to the Avoid column changes the parser and its smoke tests in the same rev.
+  `scan_repo.py` extracts the text for `/ai-slop:review-repo` and
+  `/ai-slop:glossary-repo`, and `scan_glossary.py` imports its `extract_file`
+  to read files in the same way.
 - Generated artifacts (`ai-slop-report.md`, `grounding-cites.json`,
   `grounding-quotes.json`) are never committed. The skills add them to the
   `.gitignore` of the target repo.

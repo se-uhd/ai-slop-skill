@@ -1,6 +1,6 @@
 # AI Slop Review Skill
 
-An [Agent Skill](https://agentskills.io/home) bundle that catches AI slop in prose and enforces conventions for clear writing. It works on any text, such as a Markdown draft, documentation, or a blog post, and adds a scientific layer for empirical software engineering papers (e.g., voice and tense, statistical reporting per APA/IEEE/ACM, citations) and a LaTeX layer for LaTeX source (e.g., BibTeX, `\citeauthor`, `% GROUNDING`). Both layers load automatically for `.tex` source, and `--scientific` opts a non-LaTeX manuscript into the scientific layer. Optional layers apply rules based on ASD-STE100 Simplified Technical English (`--ste`) and core advice from *Writing with Style: The Economist Guide* (`--economist`) to any input. Agent Skills is an open standard originally developed by Anthropic and now read by Claude Code, Cursor, GitHub Copilot, OpenAI Codex, and pi, among others. The [client list](https://agentskills.io/clients) names the rest.
+An [Agent Skill](https://agentskills.io/home) bundle that catches AI slop in prose and enforces conventions for clear writing. It works on any text, such as a Markdown draft, documentation, or a blog post, and on the text of a whole repository, including code comments and the messages that a program shows. A glossary of one term for each concept keeps the terminology of a document or a repository consistent. The bundle adds a scientific layer for empirical software engineering papers (e.g., voice and tense, statistical reporting per APA/IEEE/ACM, citations) and a LaTeX layer for LaTeX source (e.g., BibTeX, `\citeauthor`, `% GROUNDING`). Both layers load automatically for `.tex` source, and `--scientific` opts a non-LaTeX manuscript into the scientific layer. Optional layers apply rules based on ASD-STE100 Simplified Technical English (`--ste`) and core advice from *Writing with Style: The Economist Guide* (`--economist`) to any input. Agent Skills is an open standard originally developed by Anthropic and now read by Claude Code, Cursor, GitHub Copilot, OpenAI Codex, and pi, among others. The [client list](https://agentskills.io/clients) names the rest.
 
 The writing rules are in layers (see Rule layers), and the skills fetch a general AI trope catalog at runtime from [tropes.fyi](https://tropes.fyi), its only source. The catalog names patterns such as negative parallelism, em-dash addiction, and rule-of-three groupings, and tags each with a status.
 
@@ -20,7 +20,7 @@ The writing rules ship as five layers. Which of the first three load depends on 
 
 `rules-ste.md` is the optional STE layer, and `--ste` adds it to any row of the table. It applies part of ASD-STE100 Simplified Technical English: short sentences with the subject and verb near the start, active voice, one topic per paragraph, one meaning per word, verbs instead of nominalizations, and no dropped articles. It changes the ASD-STE100 rules on sentence length and style. Sentence length varies around a target of 25 words, with a tolerance up to 35. Each unit (a reply, a headed section, or a text without headings) carries one stylistic device at most. Quotations and literal strings stay as written. Where the STE layer and the general layer set different limits for the same construction, the STE limit applies. The STE rules carry `T.` keys.
 
-When an STE rewrite of an existing sentence would lose meaning, precision, or force, the sentence stays as written, and a review lists it for author judgment. `scripts/scan_sentences.py` lists the candidates that a count or a word pattern can find: sentences over 25 words, runs of sentences of similar length, passive verbs, and a light verb followed by an action noun ("make a decision").
+When an STE rewrite of an existing sentence would lose meaning, precision, or force, the sentence stays as written, and a review lists it for author judgment. `scripts/scan_sentences.py` lists the candidates that a count or a word pattern can find: sentences over 25 words, runs of sentences of similar length, passive verbs, and a light verb followed by an action noun ("make a decision"). It reads each table cell as a paragraph of its own, so the rows of a table are not compared with each other.
 
 `rules-economist.md` is the optional Economist layer, selected by `--economist`.
 It distills the core advice in Lane Greene's *Writing with Style: The Economist
@@ -49,7 +49,7 @@ Examples:
 
 ## Versioning
 
-The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string appears at eleven callsites, and the smoke suite checks that they agree: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `metadata.version` field of each of the eight `SKILL.md` files, and the `**Skill version:**` line in the report template of `review/SKILL.md`. `export_rules.py` and `build_writing.py` read the version from `plugin.json` when they write a file. Git tags follow the same scheme. The pi package manifest (`package.json`) has no version field, because pi pins a git install to a tag.
+The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string appears at twelve callsites, and the smoke suite checks that they agree: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `metadata.version` field of each of the nine `SKILL.md` files, and the `**Skill version:**` line in the report template of `review/SKILL.md`. `export_rules.py` and `build_writing.py` read the version from `plugin.json` when they write a file. Git tags follow the same scheme. The pi package manifest (`package.json`) has no version field, because pi pins a git install to a tag.
 
 ## Dependencies
 
@@ -72,20 +72,21 @@ If the download fails, stderr reports the underlying cause, such as a DNS lookup
 /plugin install ai-slop
 ```
 
-Eight slash commands become available:
+Nine slash commands become available:
 
 | Command | What it does |
 |---|---|
 | `/ai-slop:review` | Reviews one document against the rules and writes `ai-slop-report.md`. |
 | `/ai-slop:review-diff` | Reviews only the lines that changed against a git base (default `HEAD`). |
-| `/ai-slop:review-repo` | Reviews the files, code comments, and commit messages of a whole repository. |
+| `/ai-slop:review-repo` | Reviews the files, code comments, user-facing strings, and commit messages of a whole repository. |
 | `/ai-slop:revise` | Applies the suggested revisions of a report to the source. |
 | `/ai-slop:ground` | Fills the missing `% GROUNDING` comments of a LaTeX paper with quotes from the cited sources. |
-| `/ai-slop:glossary` | Creates or maintains `GLOSSARY.md` and checks the document for competing terms. |
+| `/ai-slop:glossary` | Creates or maintains `GLOSSARY.md` for one document and checks the document for competing terms. |
+| `/ai-slop:glossary-repo` | Creates or maintains `GLOSSARY.md` for a whole repository and checks its files for competing terms. |
 | `/ai-slop:writing` | Copies the rules into a project-local `WRITING.md` and references it from `AGENTS.md`. |
 | `/ai-slop:init` | Sets up the general rules for the current client across projects. |
 
-`review`, `review-diff`, and `writing` choose the rule layers by the table under Rule layers. `review-repo` loads the general layer, adds the scientific layer with `--scientific`, and never loads the LaTeX layer, since it reviews the prose and code comments of a repository rather than a single paper. `--ste` and `--economist` add their optional layers in `review`, `review-diff`, `review-repo`, `writing`, and `init`.
+`review`, `review-diff`, and `writing` choose the rule layers by the table under Rule layers. `review-repo` loads the general layer, adds the scientific layer with `--scientific`, and never loads the LaTeX layer, since it reviews the prose and code comments of a repository rather than a single paper. `--ste` and `--economist` add their optional layers in `review`, `review-diff`, `review-repo`, `writing`, and `init`, and `--ste` also in `glossary` and `glossary-repo`.
 
 Run the commands from your project directory. An explicit path as an argument overrides the input that a command detects there. The sections under Skill workflows describe each command. The skills also trigger on matching requests (e.g., "audit this draft for AI slop", "check my edits before I commit", "apply the review report", "ground the citations", "set up writing rules in this repo").
 
@@ -107,13 +108,13 @@ codex plugin marketplace add se-uhd/ai-slop-skill
 codex plugin add ai-slop@ai-slop
 ```
 
-For a local checkout, pass its absolute path instead of `se-uhd/ai-slop-skill` to the marketplace command. In Codex, use `/skills` or type `$` to select one of the eight `ai-slop:` skills, then provide the path and flags. For example, select `ai-slop:review` and add `draft.md --ste`. The `/ai-slop:` examples throughout this README are Claude Code slash commands. In Codex they refer to the corresponding skill. Natural-language requests can activate the skills in both clients.
+For a local checkout, pass its absolute path instead of `se-uhd/ai-slop-skill` to the marketplace command. In Codex, use `/skills` or type `$` to select one of the nine `ai-slop:` skills, then provide the path and flags. For example, select `ai-slop:review` and add `draft.md --ste`. The `/ai-slop:` examples throughout this README are Claude Code slash commands. In Codex they refer to the corresponding skill. Natural-language requests can activate the skills in both clients.
 
 See the official [plugin installation guidance](https://developers.openai.com/plugins/build/plugins) and [Codex skill invocation guidance](https://learn.chatgpt.com/docs/build-skills). Python 3 and the network requirements listed above apply to both clients.
 
 ## Install in pi
 
-The repository root is a [pi package](https://pi.dev) whose `package.json` points pi at the eight skills. Install it from a release tag, replacing `<tag>` with a tag from the [tag list](https://github.com/se-uhd/ai-slop-skill/tags):
+The repository root is a [pi package](https://pi.dev) whose `package.json` points pi at the nine skills. Install it from a release tag, replacing `<tag>` with a tag from the [tag list](https://github.com/se-uhd/ai-slop-skill/tags):
 
 ```bash
 pi install git:github.com/se-uhd/ai-slop-skill@<tag>
@@ -129,9 +130,9 @@ If another installed package provides a skill with the same name, such as `revie
 
 ## Use in other Agent Skills clients
 
-The skills follow the [Agent Skills specification](https://agentskills.io/specification). The `plugins/ai-slop/` bundle contains eight workflows under `skills/`, with shared content in `shared/` and helper scripts in `scripts/`. Keep the whole bundle together. Copying a single skill directory omits its shared dependencies. Each workflow resolves bundled paths from the location of its own `SKILL.md` supplied by the client, and runs helpers by absolute path while keeping the user's project as the working directory. No Claude-specific environment variable is needed.
+The skills follow the [Agent Skills specification](https://agentskills.io/specification). The `plugins/ai-slop/` bundle contains nine workflows under `skills/`, with shared content in `shared/` and helper scripts in `scripts/`. Keep the whole bundle together. Copying a single skill directory omits its shared dependencies. Each workflow resolves bundled paths from the location of its own `SKILL.md` supplied by the client, and runs helpers by absolute path while keeping the user's project as the working directory. No Claude-specific environment variable is needed.
 
-For Claude Code, Codex, and pi, use the installation instructions above. For another client, register the eight skill directories while preserving their relative paths to `shared/` and `scripts/`. The [Agent Skills client list](https://agentskills.io/clients) links to each client's installation instructions.
+For Claude Code, Codex, and pi, use the installation instructions above. For another client, register the nine skill directories while preserving their relative paths to `shared/` and `scripts/`. The [Agent Skills client list](https://agentskills.io/clients) links to each client's installation instructions.
 
 ## Use as a system prompt
 
@@ -162,18 +163,30 @@ candidate is used directly, with a question only when discovery finds no documen
 or leaves genuine ambiguity.
 
 Glossary mode reads a paper or document, groups its terms by concept, and creates
-or maintains `GLOSSARY.md`. Definitions carry source locations and supporting
-passages, with inferred definitions and naming preferences marked as proposed.
-Existing definitions, distinctions, accepted abbreviations, and scoped vocabulary
-restrictions are preserved rather than replaced by newly extracted preferences.
+or maintains `GLOSSARY.md` in the format of `shared/glossary-format.md`. Each
+group of concepts has a table of terms with their accepted variants,
+definitions, and sources. A table of vocabulary to avoid and a list of open
+questions follow. Each fact is in one place, so the format has no separate
+tables for variants, identifiers, or decisions. Definitions carry source
+locations and short supporting passages, and an inferred definition is marked
+as proposed until the authors confirm it. Existing definitions, distinctions,
+accepted abbreviations, and scoped vocabulary restrictions are preserved rather
+than replaced by newly extracted preferences, and an existing glossary keeps its
+structure unless you ask for a conversion.
 
 The same invocation validates the document against the glossary and writes
 `ai-slop-report.md` with concrete source suggestions and questions for the author.
 The check includes synonyms, conflicting meanings, undefined technical terms,
 and newly invented names for concepts that already have a term. It compares
 meanings in context, so a glossary does not have to enumerate every future coinage,
-and the ordinary sense of a word is not automatically forbidden. The document stays
-unchanged, and `/ai-slop:revise` can apply concrete source suggestions.
+and the ordinary sense of a word is not automatically forbidden.
+`scripts/scan_glossary.py` lists each use of a word that the glossary avoids,
+and the scope of its row decides whether the use is a finding. A term of the
+glossary is never a word to avoid, and the script reports a glossary that lists
+one, so that the definition of the term states the distinction. The document
+stays unchanged, and `/ai-slop:revise` can apply concrete source suggestions.
+With `--ste`, the check also gives each key word one meaning (`T.one-meaning`),
+and the glossary definitions follow the STE rules.
 
 ```text
 /ai-slop:glossary
@@ -181,6 +194,7 @@ unchanged, and `/ai-slop:revise` can apply concrete source suggestions.
 /ai-slop:glossary draft.md
 /ai-slop:glossary draft.md --check
 /ai-slop:glossary paper.pdf --glossary=terminology/GLOSSARY.md
+/ai-slop:glossary main.tex --ste
 ```
 
 `--check` validates against an existing glossary without editing it.
@@ -190,6 +204,38 @@ without fetching the trope catalog. The glossary is maintained project content,
 while the generated report is ignored by git. `/ai-slop:review`, `/ai-slop:review-diff`, and
 `/ai-slop:review-repo` also check terminology against the project glossary.
 
+### `/ai-slop:glossary-repo`
+
+Repository glossary mode builds the glossary from the text of a whole
+repository. It reads the same scan as `/ai-slop:review-repo` (Markdown,
+plain-text, and LaTeX files, the comments and prose string literals of source
+and config files, and the text of user interface templates) and searches the
+code for the identifiers that name each
+concept, which go in the Code column of the glossary. It sorts the directories
+into defining sources, such as the README, design documents, and decision
+records, and into using sources, records that keep the terms of their date,
+and data. A changelog and other records supply former names for the table of
+vocabulary to avoid, but they are not checked. A directory of collected data
+is excluded with `--exclude=<glob>`.
+
+The check covers the whole repository and writes `ai-slop-report.md` with
+findings grouped by file. A finding on a string literal names the tests and
+documents that quote the message. An identifier that uses another name is
+listed for author judgment rather than renamed. `/ai-slop:revise
+ai-slop-report.md <file>` applies the findings for one file.
+
+```text
+/ai-slop:glossary-repo
+/ai-slop:glossary-repo --check
+/ai-slop:glossary-repo path/to/repo --exclude='data/*' --exclude='docs/archive/*'
+/ai-slop:glossary-repo --ste
+```
+
+`--check` validates the repository against an existing glossary without
+editing it, `--glossary=<path>` selects another glossary, `--no-strings` reads
+comments without string literals, and `--commits=<spec>` adds commit messages,
+which the scan leaves out by default.
+
 ### `/ai-slop:review-diff`
 
 Diff mode is a variant of `/ai-slop:review` for git-versioned documents. Instead of walking the full draft, it runs `git diff <base>` (default `HEAD`) and restricts the rule and trope checks to the lines that you added or modified in `.tex`, `.md`, and `.txt` files. All three layers apply to the changed `.tex` files and the general layer (plus the scientific layer with `--scientific`) to the rest, so a code repository with one paper under a subdirectory still gets its Markdown changes reviewed. The output is the same `ai-slop-report.md` schema with one extra header line (`**Diff scope:** base=<ref>, files=<list>`), which lets `/ai-slop:revise` apply the suggestions unchanged.
@@ -198,7 +244,7 @@ A finding is in scope only when at least one line of its quote falls on a change
 
 ### `/ai-slop:review-repo`
 
-Repo mode is the whole-codebase counterpart to review and diff modes. Instead of one document, it runs `scripts/scan_repo.py` to extract the natural-language text of the repository: every Markdown, plain-text, and LaTeX file in full, the comments and doc-comments of the source and config files, and the commit messages. The script reads comments in most common languages and config formats, such as Python, Java, Go, YAML, and Dockerfile, and the `COMMENT_SPECS`/`NAME_SPECS` tables in `scan_repo.py` list them all. Repo mode then scans that prose against the general rules and the trope catalog and writes `ai-slop-report.md` with findings grouped by file (`### <relpath>`) and by commit (`### commit <short-sha>`), plus a `**Repo scope:**` header line. Comment detection is string-aware. A `//` or `#` inside a string literal is not mistaken for a comment. In Markdown, a fenced block with a prose format (e.g., `markdown`, `text`) as its info string is read as prose, so a quoted template is content. Other fenced code is skipped.
+Repo mode is the whole-codebase counterpart to review and diff modes. Instead of one document, it runs `scripts/scan_repo.py` to extract the natural-language text of the repository: every Markdown, plain-text, and LaTeX file in full, the comments, doc-comments, and prose string literals of the source and config files, and the commit messages. The script reads comments in most common languages and config formats, such as Python, Java, Go, YAML, and Dockerfile, and the `COMMENT_SPECS`/`NAME_SPECS` tables in `scan_repo.py` list them all. Repo mode then scans that prose against the general rules and the trope catalog and writes `ai-slop-report.md` with findings grouped by file (`### <relpath>`) and by commit (`### commit <short-sha>`), plus a `**Repo scope:**` header line. Comment detection is string-aware. A `//` or `#` inside a string literal is not mistaken for a comment. A string literal on one line that reads as prose, such as an error message or a help text, is extracted with its quote characters, except in test files, whose strings are inputs and expected output. The text of user interface templates is extracted too, from HTML, Vue, and Svelte files, from the multi-line template literals of JavaScript and TypeScript, such as an inline Angular template, and from the JSX of React components: the text between the tags and the values of the attributes that users read, such as `aria-label` and `title`. Text between tags appears as `>text<` in the scan, and a short string under a key that names text, such as `label: 'Manage users'`, is extracted whatever its length. Translation catalogs in JSON, the web app manifest, and Gherkin `.feature` files are read as well. `--no-strings` turns the extraction of strings and template text off, and `--exclude=<glob>` skips the files that match a shell pattern, such as a directory of collected data. In Markdown, a fenced block with a prose format (e.g., `markdown`, `text`) as its info string is read as prose, so a quoted template is content. Other fenced code is skipped.
 
 In a git repository the scan covers the tracked files, so `.gitignore`d build output and dependencies are excluded automatically. Outside one it walks the whole tree. In both cases it skips a denylist of vendored, build, dependency, and test-fixture directories. Generated files (a `DO NOT EDIT` or `@generated` marker on a comment line in the first ten lines, each named on stderr), lockfiles, dependency pins, and binaries are skipped. LaTeX (`.tex`) files are reviewed as prose (body and `%` comments) against the general rules. `/ai-slop:review` remains the dedicated LaTeX tool for citations, BibTeX, and section-aware checks.
 
@@ -253,7 +299,7 @@ An explicit output path exports the file without changing the global instruction
 
 ## Repository layout
 
-The plugin is under `plugins/ai-slop/`: `skills/` holds the eight `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, glossary, writing, init), which Claude Code offers as the `/ai-slop:` slash commands, and `shared/` the five rule layers plus the rationale doc. `scripts/` holds the vendored Markdown linter under `_vendor/` and the stdlib Python helpers for scope and LaTeX root detection, repository prose extraction (`scan_repo.py`), the glyph, reference, repeat, and sentence scans (`scan_glyphs.py`, `scan_reference.py`, `scan_repeats.py`, `scan_sentences.py`), the trope catalog download, the export of the rules as one file (`export_rules.py`), the assembly of `WRITING.md` (`build_writing.py`), the citation, BibTeX, and reference checks, citation extraction, the grounding quote check, and grounding-comment insertion. The marketplace manifest is at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`. The root `package.json` is the pi package manifest, which lists `plugins/ai-slop/skills` under its `pi.skills` key.
+The plugin is under `plugins/ai-slop/`: `skills/` holds the nine `SKILL.md` workflows (review, review-diff, review-repo, revise, ground, glossary, glossary-repo, writing, init), which Claude Code offers as the `/ai-slop:` slash commands, and `shared/` the five rule layers, the rationale doc, and the glossary format. `scripts/` holds the vendored Markdown linter under `_vendor/` and the stdlib Python helpers for scope and LaTeX root detection, repository prose extraction (`scan_repo.py`), the glossary scan (`scan_glossary.py`), the glyph, reference, repeat, and sentence scans (`scan_glyphs.py`, `scan_reference.py`, `scan_repeats.py`, `scan_sentences.py`), the trope catalog download, the export of the rules as one file (`export_rules.py`), the assembly of `WRITING.md` (`build_writing.py`), the citation, BibTeX, and reference checks, citation extraction, the grounding quote check, and grounding-comment insertion. The marketplace manifest is at `.claude-plugin/marketplace.json` and the plugin manifest at `plugins/ai-slop/.claude-plugin/plugin.json`. The root `package.json` is the pi package manifest, which lists `plugins/ai-slop/skills` under its `pi.skills` key.
 
 ## Maintainer notes
 
@@ -280,7 +326,7 @@ claude plugin validate plugins/ai-slop
 claude plugin validate .claude-plugin/marketplace.json
 ```
 
-To check the pi manifest, run `pi -e .` from the repository root. Pi lists the eight skills at startup and reports any skill warnings.
+To check the pi manifest, run `pi -e .` from the repository root. Pi lists the nine skills at startup and reports any skill warnings.
 
 If a user reports `Failed to install: This plugin uses a source type your Claude Code version does not support`, do not assume that the problem is the `source` field. Claude Code emits that same message for any unrecognized key in either manifest. Run `claude plugin validate` first. The validator reports the real error.
 

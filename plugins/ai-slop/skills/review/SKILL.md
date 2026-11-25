@@ -3,7 +3,7 @@ name: review
 description: Review a document (LaTeX, PDF, or plain prose) for AI slop and rule violations. Use when the user asks to check, audit, or review a draft (a `.tex`, `.pdf`, or text file) or other prose for AI tropes and, for research papers, for statistical reporting, citations, BibTeX correctness, and hallucinated references. The general rules apply by default. `--scientific` adds the scientific layer, LaTeX source loads all three, and `--ste` adds a Simplified Technical English (STE) layer to any input. `--economist` adds core Economist style advice. Writes a structured Markdown report with concrete suggested revisions that revise mode can apply.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev7"
+  version: "2026-11_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -44,7 +44,7 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
 **Optional path override.** If the user passes a path to a `.tex` or `.pdf` as an argument, use that instead of scanning. A path to a plain-text file (`.md`, `.txt`, or similar) is also accepted and reviewed with the general layer (add `--scientific`, described in step 2, to include the research article rules), so the skill works on prose that is not a LaTeX or PDF paper.
 
-**Project glossary.** Read the applicable project `GLOSSARY.md`, or the glossary named by project instructions, before checking terminology. Preserve its concept boundaries, accepted variants, and scope exceptions when applying `G.one-term` and `G.distinct-synonyms`. Propose glossary creation or a dedicated `/ai-slop:glossary` pass when definitions or competing names need a fuller audit.
+**Project glossary.** Read the applicable project `GLOSSARY.md`, or the glossary named by project instructions, before checking terminology. Preserve its concept boundaries, accepted variants, and scope exceptions when applying `G.one-term` and `G.distinct-synonyms`. When the glossary lists vocabulary to avoid, run `python3 "<skill-dir>/../../scripts/scan_glossary.py" <glossary> <file> ...` over the input files and judge each listed use against the scope that its row states. Exit status 1 means that the glossary lists one of its terms as vocabulary to avoid, which stderr names. Report that row under author judgment as a defect of the glossary. Propose glossary creation or a dedicated `/ai-slop:glossary` pass when definitions or competing names need a fuller audit.
 
 **Trope catalog override.** `--tropes=<path>` (repeatable) replaces the catalog download with one or more user-supplied files. Paths can be absolute or relative to the working directory. Each file is read as-is and the contents are concatenated in the order given to form the catalog for this run. When `--tropes` is not passed (the common case), the catalog is fetched live (see step 3).
 
@@ -134,7 +134,7 @@ The report schema is stable so that revise mode can parse it. Each finding has `
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-11_rev7
+**Skill version:** 2026-11_rev8
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at

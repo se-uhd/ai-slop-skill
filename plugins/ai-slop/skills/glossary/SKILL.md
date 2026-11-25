@@ -1,9 +1,9 @@
 ---
 name: glossary
-description: Extract or maintain GLOSSARY.md for a document and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text, and finds the main document when no filename is supplied. Writes a glossary and a terminology report, or validates an existing glossary with --check. Does not rewrite the document.
+description: Extract or maintain GLOSSARY.md for a document and validate its terminology. Use when the user asks for a glossary, proposed definitions, a synonym audit, or a check that a paper or document uses one term for each concept. Flags competing names, conflicting meanings, undefined terms, and newly invented labels for existing concepts. Supports LaTeX, PDF, Markdown, and plain text, and finds the main document when no filename is supplied. Writes a glossary and a terminology report, or validates an existing glossary with --check. --ste adds the Simplified Technical English layer. Does not rewrite the document. For the text of a whole repository, use glossary-repo.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev7"
+  version: "2026-11_rev8"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
@@ -32,7 +32,10 @@ The optional positional argument names a `.tex`, `.pdf`, `.md`, or plain-text
 document. When it is omitted, search the working directory and relevant
 subdirectories for the main document as described below. Once a clear candidate
 is found, read it and build the glossary without asking the user to supply a
-filename. The same discovery applies in `--check` mode.
+filename. The same discovery applies in `--check` mode. For a glossary of the
+documentation, code comments, and messages of a whole repository, use
+`/ai-slop:glossary-repo` instead. `--ste` loads the Simplified Technical
+English layer (see Validate the document).
 
 The default glossary is `GLOSSARY.md` in the working directory. A
 `--glossary=<path>` argument selects another path, resolved from that directory.
@@ -74,9 +77,10 @@ and the files actually read in the scope of the glossary and the report.
 ## Establish the concepts
 
 Read `../../shared/rules-general.md`, especially `G.one-term`, `G.define-once`,
-`G.distinct-synonyms`, `G.no-coinages`, and `G.context-first`. This mode checks
-terminology and does not fetch the trope catalog or audit unrelated style,
-citations, or statistics. Existing project terminology and an explicitly
+`G.distinct-synonyms`, `G.no-coinages`, and `G.context-first`, and read
+`../../shared/glossary-format.md`. With `--ste`, also read
+`../../shared/rules-ste.md`. This mode checks terminology and does not fetch
+the trope catalog or audit unrelated style, citations, or statistics. Existing project terminology and an explicitly
 designated codebook take precedence over a newly proposed preference.
 
 Read the full document before choosing preferred terms. For LaTeX, follow
@@ -107,50 +111,31 @@ label to replace several existing labels. A preference inferred from usage is a
 proposal, and an existing definition is not silently replaced when a later
 passage disagrees with it. Record the disagreement in the report.
 
-For each entry, provide a concise definition and a source location with a short
-verbatim supporting passage. Mark a definition as **Documented** only when the
-source explicitly supplies it. Mark an inferred definition or a new preference
-as **Proposed**, and state any uncertainty that affects its scope. A definition
-must preserve what counts as an instance, what it excludes, and how it differs
-from neighboring concepts, without adding facts that the source does not give.
+Write the glossary in the format of `../../shared/glossary-format.md`. Leave
+out the Code column unless the document names concepts with identifiers, as
+the documentation of a library does. Each concept row gives a concise
+definition and a source location with a short verbatim supporting passage.
+Mark a definition as proposed ("Proposed," at the start of the Source cell)
+unless the source explicitly supplies it, and state any uncertainty that
+affects its scope. A definition must preserve what counts as an instance, what
+it excludes, and how it differs from neighboring concepts, without adding facts
+that the source does not give. With `--ste`, write the definitions, the scope
+paragraph, and the reasons in the avoid table in STE.
 
-Keep the format of an existing glossary, including prose definitions and tables of
-retired vocabulary. Add inferred entries under a clearly marked proposed section,
-and leave established entries intact. Keep uncertain synonym groups and missing
-information under author judgment instead of adding each competing name as a
-new accepted concept. In `--check` mode, put all proposed additions in the report.
+An existing glossary keeps its structure, its definitions, and the edits of its
+authors, unless the user asks to convert it to the format. Add inferred entries
+to the matching section with "Proposed," in the Source cell, and leave
+established entries intact. Keep uncertain synonym groups and missing
+information under open questions instead of adding each competing name as a new
+accepted concept. In `--check` mode, put all proposed additions in the report,
+each written in full in the format of the glossary.
 
-For a new glossary, group related concepts under headings that suit the document.
-Use the following tables where their content is needed. Omit empty sections and
-do not create entries merely to fill the format:
-
-```markdown
-# Glossary
-
-<State the document and scope covered by the glossary.>
-
-## <Concept group>
-
-| Preferred term | Definition | Status | Source and supporting passage |
-|---|---|---|---|
-| <term> | <definition and boundary> | Documented or Proposed | <file:line or PDF page, short verbatim passage> |
-
-## Accepted variants
-
-| Preferred term | Accepted form | When it is appropriate |
-|---|---|---|
-| <term> | <abbreviation or short form> | <introduction, scope, or other condition> |
-
-## Vocabulary to avoid
-
-| Avoid | Use instead | Scope and reason | Evidence |
-|---|---|---|---|
-| <competing term> | <preferred term> | <the sense in which the two name one concept> | <locations supporting the equivalence> |
-
-## Proposed additions and unresolved distinctions
-
-<Proposed entries or definitions and the questions that the author must settle.>
-```
+A term of the glossary is never vocabulary to avoid. After writing the
+glossary, run `python3 "<skill-dir>/../../scripts/scan_glossary.py" <glossary> --lint`.
+It exits with status 1 and names each avoided word that is also a term or a
+variant of one. Remove each such word from the avoided vocabulary and state
+the distinction in the definition of the term, as
+`../../shared/glossary-format.md` describes, in an existing glossary too.
 
 Accepted abbreviations, ordinary inflections, and contextually clear short forms
 are not unwanted synonyms. A vocabulary restriction applies to its stated sense,
@@ -163,6 +148,17 @@ Reread the source against the glossary, including passages that introduce terms
 absent from it. Trace each important concept across sections and check its
 definition, first use, and later names. Search for known forms as fixed strings
 when helpful, but read their contexts before reporting a finding.
+
+When the glossary lists vocabulary to avoid, run
+`python3 "<skill-dir>/../../scripts/scan_glossary.py" <glossary> <file> ...`
+over the document and the files that it includes, or over a text extraction of
+a PDF. It lists each use of an avoided word with the replacement that the
+glossary names. The list holds candidates, and the Scope and reason cell of the
+row decides whether a use is in the avoided sense. The script also names on
+stderr each avoided word that is a term of the glossary, which is a defect of
+the glossary (below). With `--ste`, also apply
+`T.one-meaning` to the key words of the document that are not glossary terms,
+and report a word that takes a second meaning.
 
 Report competing names for the same referent, a term used for conflicting
 concepts, uses that contradict a definition, and technical terms that need a
@@ -178,23 +174,29 @@ genuine distinctions, a clear reference to an established concept, and approved
 short forms. Do not replace ordinary descriptive wording with the full preferred
 term in every sentence if the reference is already clear.
 
-Check the scope and exceptions of retired-vocabulary entries before flagging a
+Check the scope and exceptions of the rows of the avoid table before flagging a
 match. Preserve quotations, attributed terminology, titles, literal identifiers,
 commands, and external names, and check the surrounding author's prose instead.
 When a glossary choice is only proposed, identify it as a proposed convention
 in the report. An uncertain equivalence or conflicting authoritative definition
 belongs under author judgment and receives no automatic replacement.
 
+Report a defect of the glossary itself as a finding on the glossary under
+`G.distinct-synonyms`, with a suggested revision of its line: an avoided word
+that is also a term leaves the avoided vocabulary while the definition of the
+term states the distinction, and an avoided word without a sense that the
+document uses correctly in other senses gets the avoided sense.
+
 ## Report and finish
 
 Read the Report template in `../review/SKILL.md` for its schema, without running
 the review workflow. Write `ai-slop-report.md` in that format. Include the
 `**Paper:**` path, the version from the metadata of this skill, the review date, and a
-`**Glossary:**` path and status. Use `Findings by section` for a single document
+`**Glossary:**` path and status (created, updated, or checked). Use `Findings by section` for a single document
 or `Findings by file` for source spread across files. Each `#### Finding N`
 contains `Rule`, `Location`, `Quote`, `Suggested revision`, and `Reason`, with a
-rule key from the general layer and an exact source quote that revise mode can
-locate. Put a supporting passage elsewhere in the document in `Reason` with its
+rule key from the general layer (or `T.one-meaning` in STE mode) and an exact
+source quote that revise mode can locate. Put a supporting passage elsewhere in the document in `Reason` with its
 location, and make replacements preserve the surrounding argument.
 
 Use `Cross-cutting metrics` for the scope actually checked and counts of confirmed
