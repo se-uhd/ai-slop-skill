@@ -2,6 +2,10 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Releases before `2026-06_rev13` are recorded only in the git tags.
 
+## [Unreleased]
+
+- **Changed:** the descriptions in `plugin.json` and `marketplace.json` name repository mode and both glossary modes instead of only the glossary mode for documents. The description in `package.json` mentions inconsistent terminology and code repositories.
+
 ## [2026-11_rev8] - 2026-11-25
 
 - **Added:** `/ai-slop:glossary-repo` builds or maintains `GLOSSARY.md` from the text of a whole repository and checks the repository against it. It reads the scan of `/ai-slop:review-repo`, searches the code for the identifiers that name each concept, and sorts the directories into defining sources, using sources, records that keep the terms of their date, and data. The report groups the findings by file. `--check` validates the repository without editing the glossary, and `--ste` applies **Give each word one meaning** (`T.one-meaning`) and writes the glossary in STE.
