@@ -4,7 +4,7 @@ Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-m
 
 ## [Unreleased]
 
-- **Changed:** the descriptions in `plugin.json` and `marketplace.json` name repository mode and both glossary modes instead of only the glossary mode for documents. The description in `package.json` mentions inconsistent terminology and code repositories.
+- **Changed:** the descriptions in `plugin.json` and `marketplace.json` name repository mode and both glossary modes instead of only the glossary mode for documents. The description in `package.json` matches the description of the GitHub repository, "Catch and fix AI slop and inconsistent terminology in documents, papers, and code repositories."
 
 ## [2026-11_rev8] - 2026-11-25
 
