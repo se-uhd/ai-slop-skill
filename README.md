@@ -220,9 +220,13 @@ is excluded with `--exclude=<glob>`.
 
 The check covers the whole repository and writes `ai-slop-report.md` with
 findings grouped by file. A finding on a string literal names the tests and
-documents that quote the message. An identifier that uses another name is
-listed for author judgment rather than renamed. `/ai-slop:revise
-ai-slop-report.md <file>` applies the findings for one file.
+documents that quote the message. A defect of the glossary itself, such as a
+term that it also lists as a word to avoid or an avoided word without the
+sense that the repository uses, is a finding on `GLOSSARY.md` with a suggested
+revision. A proposed definition is written in full, so that the authors can
+confirm it as written. An identifier that uses another name is listed for
+author judgment rather than renamed. `/ai-slop:revise ai-slop-report.md <file>`
+applies the findings for one file.
 
 ```text
 /ai-slop:glossary-repo

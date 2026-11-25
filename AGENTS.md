@@ -122,6 +122,9 @@ pushed tag that others can pull:
   repeats it. `scan_glossary.py` parses the table of vocabulary to avoid in
   that format and in the older formats that its docstring lists, so a change
   to the Avoid column changes the parser and its smoke tests in the same rev.
+  A glossary term is never a word to avoid. `scan_glossary.py --lint` reports
+  a glossary that lists one, both glossary skills run it after writing a
+  glossary, and `test_scan_glossary_reports_avoided_terms` covers it.
   `scan_repo.py` extracts the text for `/ai-slop:review-repo` and
   `/ai-slop:glossary-repo`, and `scan_glossary.py` imports its `extract_file`
   to read files in the same way.
