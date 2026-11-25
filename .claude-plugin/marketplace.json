@@ -10,7 +10,7 @@
       "name": "ai-slop",
       "source": "./plugins/ai-slop",
       "description": "Catch AI slop and apply writing conventions to any prose, whether Markdown drafts, documentation, or a blog post. Reviewing .tex source adds the empirical software engineering paper rules plus LaTeX checks (BibTeX, reference verification) automatically. The --scientific flag applies the paper rules to a non-LaTeX manuscript, --ste adds Simplified Technical English rules, and --economist adds core Economist style advice. Combines these with the tropes.fyi catalog of general AI writing patterns by Ossama Chaib. Repository mode reviews the text of a whole code repository, including comments, user-facing strings, and UI text. The glossary modes build or maintain a GLOSSARY.md for a document or a repository and check its terminology against it.",
-      "version": "2026-11_rev8",
+      "version": "2026-11_rev9",
       "homepage": "https://github.com/se-uhd/ai-slop-skill",
       "license": "CC-BY-4.0"
     }

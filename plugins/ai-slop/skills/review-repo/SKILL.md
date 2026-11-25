@@ -3,7 +3,7 @@ name: review-repo
 description: Review the natural-language text of a whole code repository for AI slop and rule violations, covering every Markdown, plain-text, and LaTeX file plus the comments, doc-comments, user-facing string literals, and UI template text of its source and config files, not just one document or a diff. Use when the user wants to audit the prose spread across a codebase (READMEs, changelogs, design docs, the comments in code and config, and the messages that the code shows). Triggers on prompts such as "scan this repo for slop", "check the prose across the codebase", "audit the comments and docs", or `/ai-slop:review-repo`. Loads the general rules by default. `--scientific` adds the research article layer, `--ste` adds the Simplified Technical English layer, and `--economist` adds core Economist style advice. Writes a structured Markdown report grouped by file.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev8"
+  version: "2026-11_rev9"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 
