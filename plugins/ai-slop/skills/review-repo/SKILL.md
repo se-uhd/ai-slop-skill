@@ -63,22 +63,22 @@ The skill scans the repository rooted at the current working directory by defaul
 
    A finding on a string literal changes what the program prints, and tests or documentation can quote the message, so its Reason names the places that quote it. In STE mode, a string literal is a literal string under `T.literals`, so the STE rules do not rewrite it, and the other layers still apply.
 
-   In STE mode, list a sentence that an STE rewrite would weaken under **Items requiring author judgment** instead of reporting it, as `/ai-slop:review` step 4 does.
+   In STE mode, list a sentence that an STE rewrite would weaken under **Items requiring author judgment** instead of reporting it, as `../review/references/optional-layers.md` describes.
 
-   With `--economist`, apply the Economist pass in `/ai-slop:review` step 4 to the extracted prose. Keep research and project conventions and the stricter STE limits when selected (`E.precedence`). Cite `E.` keys for confirmed findings, combine overlapping edits, and put unresolved facts under author judgment. Name the selected optional layers in the report Summary and apply them to report prose too. Economist mode alone adds no STE metrics and does not change which files or commits are scanned.
+   With `--economist`, apply the Economist pass in `../review/references/optional-layers.md` to the extracted prose. Keep research and project conventions and the stricter STE limits when selected (`E.precedence`). Cite `E.` keys for confirmed findings, combine overlapping edits, and put unresolved facts under author judgment. Name the selected optional layers in the report Summary and apply them to report prose too. Economist mode alone adds no STE metrics and does not change which files or commits are scanned.
 
 6. **Cross-cutting metrics, repo-wide.** Compute the following metrics over the extracted text and report raw counts with locations, since per-page densities do not apply to a repository:
-   - Dashes, from `python3 "<skill-dir>/../../scripts/scan_glyphs.py"` run over the Markdown, plain-text, and LaTeX files that the scan listed. Take the counts from the scan, and treat the rows as `/ai-slop:review` step 5 does.
-   - Reference candidates, from `python3 "<skill-dir>/../../scripts/scan_reference.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested per the **Reference** rules as `/ai-slop:review` step 5 does.
+   - Dashes, from `python3 "<skill-dir>/../../scripts/scan_glyphs.py"` run over the Markdown, plain-text, and LaTeX files that the scan listed. Take the counts from the scan, and treat the rows as `../review/references/metrics.md` describes.
+   - Reference candidates, from `python3 "<skill-dir>/../../scripts/scan_reference.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested per the **Reference** rules as `../review/references/metrics.md` describes.
    - American-vs-British spelling, a frequent source of drift in code comments.
    - Restricted-word occurrences.
    - The "significant" audit and verb tense, when the scientific layer is in scope.
-   - Repeated sentences, from `python3 "<skill-dir>/../../scripts/scan_repeats.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested per **Refer back instead of repeating** (`G.refer-back`) as `/ai-slop:review` step 5 does. The scan compares sentences within one file, not across files.
-   - STE sentence candidates (STE mode only), from `python3 "<skill-dir>/../../scripts/scan_sentences.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested as `/ai-slop:review` step 5 does.
+   - Repeated sentences, from `python3 "<skill-dir>/../../scripts/scan_repeats.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested per **Refer back instead of repeating** (`G.refer-back`) as `../review/references/metrics.md` describes. The scan compares sentences within one file, not across files.
+   - STE sentence candidates (STE mode only), from `python3 "<skill-dir>/../../scripts/scan_sentences.py"` run over the same Markdown, plain-text, and LaTeX files, with the rows tested as `../review/references/metrics.md` describes.
 
    A single punctuation mark that is the wrong choice (a semicolon joining two independent clauses, an em-dash standing in for a period, a colon used as a generic mid-sentence pause) is a per-file finding under step 5. Read comments and commit messages for the same rules without the scan.
 
-7. **Write the report.** Save `ai-slop-report.md` in the working directory. It is a generated artifact and must never be committed, so resolve the repository root with `git rev-parse --show-toplevel` and add the report name to the top-level `.gitignore` if that file does not already list it. Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md` and iterate up to three times exactly as in `/ai-slop:review` step 7, then read the file back and echo it verbatim. Use the report template from `../review/SKILL.md` "Report template" with `### <relpath>` headings under "Findings by file" in place of section names, and one extra header line under `**Reviewed:**`:
+7. **Write the report.** Save `ai-slop-report.md` in the working directory. It is a generated artifact and must never be committed, so resolve the repository root with `git rev-parse --show-toplevel` and add the report name to the top-level `.gitignore` if that file does not already list it. Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md` and iterate up to three times exactly as in `/ai-slop:review` step 7, then read the file back and echo it verbatim. Use the report template in `../review/references/report-template.md` with `### <relpath>` headings under "Findings by file" in place of section names, and one extra header line under `**Reviewed:**`:
 
    ```text
    **Repo scope:** root=<repo root>, files=<N scanned>, commits=<N scanned>, prose lines=<N>
@@ -90,7 +90,7 @@ The skill scans the repository rooted at the current working directory by defaul
 
 ## Report template
 
-Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested revision` schema), with `### <relpath>` headings under "Findings by file" instead of section names, and the extra `**Repo scope:**` header line from step 7. See `../review/SKILL.md` "Report template" for the full template.
+Identical to `/ai-slop:review` (same `Rule` / `Location` / `Quote` / `Suggested revision` schema), with `### <relpath>` headings under "Findings by file" instead of section names, and the extra `**Repo scope:**` header line from step 7. See `../review/references/report-template.md` for the full template.
 
 ## Bundled files
 

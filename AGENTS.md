@@ -44,8 +44,8 @@ pushed tag that others can pull:
 4. **Keep the 12 version callsites in sync.** The version string is in
    `plugins/ai-slop/.claude-plugin/plugin.json` (canonical),
    `.claude-plugin/marketplace.json`, the `metadata.version` frontmatter of
-   each `SKILL.md`, and the `**Skill version:**` line in the report template of
-   `review/SKILL.md`. `export_rules.py` and `build_writing.py` read it from
+   each `SKILL.md`, and the `**Skill version:**` line in the report template
+   `review/references/report-template.md`. `export_rules.py` and `build_writing.py` read it from
    `plugin.json`. `test_version_strings_in_sync` in the smoke suite enforces
    this.
 5. **Run the smoke suite before every commit:**

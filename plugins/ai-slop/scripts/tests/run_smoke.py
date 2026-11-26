@@ -804,13 +804,13 @@ def test_lint_markdown_unreadable_exits_2():
 def test_version_strings_in_sync():
     """All version references must equal the canonical version in
     plugins/ai-slop/.claude-plugin/plugin.json: both manifests, every SKILL.md
-    frontmatter, and the report-template `**Skill version:**` line in
-    review/SKILL.md. export_rules.py and build_writing.py read the version
-    from plugin.json.
+    frontmatter, and the `**Skill version:**` line in the report template
+    review/references/report-template.md. export_rules.py and build_writing.py
+    read the version from plugin.json.
 
     Guards against the drift seen at rev7, where SKILL.md files got bumped but the
-    two manifests were left behind. See README "Maintainer notes" for the list
-    of files this enforces.
+    two manifests were left behind. Rule 4 of the release protocol in AGENTS.md
+    lists the files that this test enforces.
     """
     import json
     import re
@@ -844,13 +844,13 @@ def test_version_strings_in_sync():
         rel = skill_md.relative_to(repo_root)
         check(f"{rel} frontmatter version", m.group(1) if m else None)
 
-    review_text = (skills_dir / 'review' / 'SKILL.md').read_text(encoding='utf-8')
-    m = re.search(r'\*\*Skill version:\*\*\s*(\S+)', review_text)
-    check("review/SKILL.md report-template **Skill version:** line",
+    template = skills_dir / 'review' / 'references' / 'report-template.md'
+    m = re.search(r'\*\*Skill version:\*\*\s*(\S+)', template.read_text(encoding='utf-8'))
+    check("review/references/report-template.md **Skill version:** line",
           m.group(1) if m else None)
 
     assert not mismatches, (
-        "Version drift detected (see README \"Maintainer notes\"):\n  "
+        "Version drift detected (see rule 4 of the release protocol in AGENTS.md):\n  "
         + "\n  ".join(mismatches)
     )
 

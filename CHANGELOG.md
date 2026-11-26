@@ -22,6 +22,8 @@ Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-m
 - `AGENTS.md` describes the format of commit messages, the types and scopes, and the three checks. A release commit has the subject `chore(release): YYYY-MM_revN` and no longer has a subject that ends with `; release YYYY-MM_revN`.
 - The maintainer notes describe the format of commit messages and tell maintainers how to enable the Git hook.
 - The README keeps the description of the bundle, the installation for each client, the table of skills, and links to the documentation. The sections Rule layers, Skill workflows, and Maintainer notes moved from the README into `docs/rule-layers.md`, `docs/skill-workflows.md`, and `docs/maintainer-notes.md` without a change to their text. A sentence that named one of these sections now links to its file.
+- `review/SKILL.md` keeps the workflow steps and moves the reference material into four files under `review/references/`, which it names at the step that needs them. `optional-layers.md` holds the instructions for STE and Economist mode (step 4), `metrics.md` the scans and metric targets (step 5), `citations.md` the citation and BibTeX checks (step 6), and `report-template.md` the report template (step 7). The body of `review/SKILL.md` drops from about 9,300 to about 4,600 tokens.
+- The `**Skill version:**` line of the report template is in `review/references/report-template.md`. `/ai-slop:review-diff`, `/ai-slop:review-repo`, and both glossary skills point to the reference files instead of the steps of `review/SKILL.md`.
 
 ## [2026-11_rev9] - 2026-11-25
 

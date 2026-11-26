@@ -237,7 +237,7 @@ from the list of deficient definitions in `../../shared/glossary-format.md`.
 
 ## Report and finish
 
-Read the Report template in `../review/SKILL.md` for its schema, without running
+Read the report template in `../review/references/report-template.md` for its schema, without running
 the review workflow. Write `ai-slop-report.md` in that format. Include the
 `**Paper:**` path, the version from the metadata of this skill, the review date, and a
 `**Glossary:**` path and status (created, updated, or checked). Use `Findings by section` for a single document

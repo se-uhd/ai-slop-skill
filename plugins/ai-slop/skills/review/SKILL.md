@@ -82,160 +82,38 @@ When both LaTeX source and PDF are available for the same paper, prefer the LaTe
 
    For a **Reference** finding (an unanchored pronoun, a summarizing noun, or a first-mention definite) and for an empty head noun (`G.be-concrete`), record a suggested revision only when the intended referent is identifiable with confidence from the text. Otherwise list it under **Items requiring author judgment** with the candidate readings, so that revise mode does not insert a guessed noun.
 
-   In STE mode, when the STE rewrite of a sentence would lose meaning, precision, or force (`T.keep-original`), record no STE finding for it. List it under **Items requiring author judgment** instead, with the STE rule and a short reason, so revise mode leaves it alone. No suggested revision changes a quotation or a literal string (`T.quotations`, `T.literals`).
+   In STE mode or Economist mode, read `references/optional-layers.md` before the pass and apply its instructions for the selected layers.
 
    When the scientific layer is loaded, the review does not fetch cited sources. If a claim attributed to a citation looks unsupported by what you know of the cited work (`S.ground-claims`), list it under **Items requiring author judgment** with the reason, not as a finding that rewrites the claim, because revise mode would apply that edit although nobody has read the source. For LaTeX, step 6 also lists the citation as a grounding to-do, and `/ai-slop:ground` checks the claim against the retrieved source.
 
-   In Economist mode, assess structure and reader needs before local wording. Record an Economist finding only for a demonstrated problem, citing its `E.` key. Combine overlapping findings at one location rather than reporting the same edit under multiple layers. When a proposed edit requires an essential fact or interpretation absent from the source, put a focused question under **Items requiring author judgment** (`E.keep-original`). An unknown actor is not itself a finding when the passive suits the passage. Preserve exact figures and required statistical reporting. Economist mode alone adds no sentence-length limits, number quotas, or STE metrics.
+5. **Cross-cutting metrics.** Compute and record the metrics for the layers in scope (when only the general layer is loaded, skip the scientific metrics: verb-tense compliance and the "significant" audit). Read `references/metrics.md` before you start. It gives the command, the output format, and the test that turns a row into a finding for each scan, and the target of each metric. Run the deterministic scans first, instead of counting by eye, because the per-section reading pass undercounts glyphs, reference candidates, and sentence lengths:
+   - Glyph and dash tells, from `scan_glyphs.py` over the paper file(s).
+   - Reference candidates, from `scan_reference.py` over the paper file(s).
+   - Repeated sentences, from `scan_repeats.py` over the paper file(s), or over the text of a PDF saved as a `.txt` file.
+   - Cross-reference candidates (LaTeX only), from `scan_crossrefs.py` over the LaTeX root.
+   - Sentence candidates (STE mode only), from `scan_sentences.py` over the paper file(s), or over the text of a PDF saved as a `.txt` file.
 
-5. **Cross-cutting metrics.** Compute and record the metrics for the layers in scope (when only the general layer is loaded, skip the scientific metrics: verb-tense compliance and the "significant" audit). Run the deterministic scans below first, because the per-section reading pass undercounts glyphs, reference candidates, and sentence lengths:
-   - **Glyph and dash tells (run `scan_glyphs.py` instead of counting by eye).** Run `python3 "<skill-dir>/../../scripts/scan_glyphs.py" <paper-file> [<input.tex> ...]` over the paper file(s). Each stdout line is `<file>:<line>:<col>\t<glyph-name>\t<context>` for one tell, with `em-dash`, `ascii-dash`, `en-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` as the categories, and the stderr summary gives the per-category totals (e.g. `15 tell(s) [em-dash=15 ascii-dash=0 ...]`). Take the dash-density count below from this output, not from a visual estimate, adding the `em-dash` and `ascii-dash` rows. Report every `em-dash`, `arrow`, `curly-quote`, `ellipsis`, and `nbsp` row as a per-section finding with its ASCII replacement. For `en-dash`, keep the dashes in numeric or page ranges (`pp. 12–18`). For any glyph, skip the occurrences inside quoted source material or a code string. A glyph inside a code *comment* is still a finding (the comment is prose). An `ascii-dash` row is a candidate for the per-mark judgment in **Em-dashes** (`G.em-dashes`), not an automatic finding: `---` is the correct em-dash in LaTeX and `--` is a normal ASCII dash in Markdown, so report one only when the dash itself is the wrong mark. The ASCII dash pass already skips flags, numeric ranges, table separators, fenced blocks, inline code, `%` comments in `.tex` (so the ` -- ` separator in the `% GROUNDING:` comments that the bundle writes never counts), and runs of four or more dashes. The Unicode glyph rows skip none of these, so clear a glyph inside fenced code or a `% GROUNDING` quote by hand. The script exits 0 once it read a file (with or without findings) and 2 on a usage error.
-   - **Reference candidates (run `scan_reference.py` instead of checking by eye).** Run `python3 "<skill-dir>/../../scripts/scan_reference.py" <paper-file> [<input.tex> ...]`. Each stdout line is `<file>:<line>:<col>\t<kind>\t<context>` for one candidate: `bare-demonstrative` (a sentence-initial *This*, *These*, *That*, or *It* followed directly by a verb), `bare-quantifier` (a sentence-initial *Both*, *Neither*, *Either*, *Each*, *None*, *All*, *Some*, *Most*, *Several*, *Many*, or *Few* followed directly by a verb), `such-noun` (*such* + noun), or `stand-in` (*ones*, *the former / the latter*, *respectively*, *do so*, *those of / that / which / with*). The stderr summary gives the per-kind totals. The rows are candidates, not findings. Apply the tests of the **Reference** rules to each (identifying the referent for `bare-demonstrative` and `such-noun`, attaching the noun for `bare-quantifier` unless an exception in `G.bare-quantifiers` applies, and putting the noun back for `stand-in`), report the confirmed rows as per-section findings under that rule (or under author judgment when the referent cannot be determined, per step 4), and clear a dummy *it* that the script did not filter. First-mention definites are not scanned. Check them in the per-section pass. The script exits 0 once it read a file and 2 on a usage error.
-   - **Repeated sentences (run `scan_repeats.py` instead of checking by eye).** Run `python3 "<skill-dir>/../../scripts/scan_repeats.py" <paper-file> [<input.tex> ...]`, or, for a PDF, run it on the extracted text saved as a `.txt` file in a temporary directory. Each stdout line is `<file>:<line>:<col>\trepeat\t<context>` for a sentence that repeats text from an earlier sentence of the same file, and the context gives the line of the earlier sentence (`line 25 | ...`). The scan lists a verbatim copy, a copy with a changed ending, and a short sentence pasted twice, and it leaves out a sentence that recurs word for word three or more times, such as a template label. The rows are candidates for **Refer back instead of repeating** (`G.refer-back`). Apply the test in the rule to each: a brief reminder that the argument needs stays, and a verbatim or near-verbatim copy is a second copy and a finding, located at the later sentence, with a pointer back to the first as the suggested revision. Clear a row inside quoted source material or form text. The script exits 0 once it read a file and 2 on a usage error.
-   - **Cross-reference candidates (LaTeX only, run `scan_crossrefs.py` instead of checking by eye).** Run `python3 "<skill-dir>/../../scripts/scan_crossrefs.py" <root.tex>` over the LaTeX root. The script follows `\input` / `\include` itself and resolves labels and references across all files of the paper. Each stdout line is `<file>:<line>:<col>\t<kind>\t<context>` for one candidate: `unreferenced-float` (a figure or table with no label, or with no label that a reference names, located at its `\begin` line, with the labels and the start of the caption as context), `lowercase-ref` (a lowercase name such as *section* or *fig.* before a reference that prints no name), `name-before-autoref` (a name before `\autoref`, `\cref`, `\Cref`, or `\zcref`, which print the name themselves, so the output reads "Section Section 3"), and `hard-coded-ref` (a name followed by a typed number, or "Appendix A"). The stderr summary gives the per-kind totals. The rows are candidates. Report a confirmed `lowercase-ref` row as a per-section finding under **Capitalize cross-references** (`S.capitalize-cross-references`) with the capitalized name as the suggested revision, and a confirmed `name-before-autoref` row as a per-section finding under **Use cross-reference macros** (`L.cross-reference-macros`) with the doubled name removed. Report a `hard-coded-ref` row as a finding under `L.cross-reference-macros` with a `\ref{}` to the label that the number stands for when that label is identifiable, list it under **Items requiring author judgment** otherwise, and clear it when it points to the section or table of another work. For a confirmed `unreferenced-float` under **Refer to every figure and table in the text** (`S.refer-to-every-figure`), look for a sentence that already discusses the content of the float. If one does and the float has a label, report a per-section finding that adds the reference to that sentence, as in "... (Table~\ref{tab:usage})". Otherwise list the float under **Items requiring author judgment**, since only the author can write the sentence that discusses it or decide to remove it. In the **Cross-references (LaTeX only)** block of the report, list each confirmed row by location, pointing to its finding or author-judgment item rather than repeating it. The scan skips `%` comments, `\iffalse` blocks, and verbatim and listing environments, so it lists a float that only commented-out text references. The script exits 0 once it read a file and 2 on a usage error.
-   - **Sentence candidates (in STE mode only, run `scan_sentences.py` instead of checking by eye).** Run `python3 "<skill-dir>/../../scripts/scan_sentences.py" <paper-file> [<input.tex> ...]`, or, for a PDF, run it on the extracted text saved as a `.txt` file in a temporary directory. Each stdout line is `<file>:<line>:<col>\t<kind>\t<context>` for one candidate, and the context opens with the word count or the matched words. The kinds are `long-sentence` (more than 25 words, with a quotation, code span, or URL counted as one word), `uniform-run` (three or more consecutive sentences within 5 words of each other in length), `passive`, and `nominalization` (a light verb followed by an action noun). The stderr summary gives the sentence count and the per-kind totals. The rows are candidates. Apply the STE rules' tests to each: split a sentence of more than 35 words, apply the clause test of `T.short-sentences` to a sentence of 26 to 35 words, vary a run, keep a passive only when its actor is unknown, and keep a noun that names a thing rather than an action. Report the confirmed rows as per-section findings. In STE mode, take the sentence-length variance count below from the `uniform-run` rows. The script exits 0 once it read a file and 2 on a usage error.
-   - Dash density, counting `em-dash` and `ascii-dash` rows together (target: ≤ 2 to 3 per page-equivalent of ~350 words, matching the em-dash ceiling in the general layer, with the count taken from `scan_glyphs.py`).
-   - Colon density in running prose (target: ≤ 2 per page-equivalent).
-   - Capitalization after a colon in running prose (flag a colon when the clause after it is a complete sentence beginning lowercase, except the first item of an enumerated series of independent clauses, which the capitalization rule treats as a list and keeps lowercase, and flag a colon when the text after it is a fragment or list beginning uppercase).
-   - Semicolon density in running prose (target: ≤ 1 to 2 per page-equivalent).
-   - Combined pause-punctuation signal (the combined em-dash + colon + semicolon count per page-equivalent, where a page near all three caps at once is over-punctuated).
-   - Restricted-word density per paragraph (flag paragraphs with more than 2 to 3 occurrences).
-   - Sentence-length variance (flag stretches of three or more consecutive sentences within 5 words of each other in length).
-   - Verb-tense compliance, checked per clause, not per section (only when the scientific layer is in scope). Do not certify a section from its dominant tense. A present-tense prior-work clause can hide inside an otherwise-correct section. Inspect every sentence with a citation or author name as its subject (`\citeauthor{...}`, "X et al.", "the authors"). An empirical action that the cited study performed takes past or present perfect (compare against the table in the scientific layer).
-   - American-vs-British spelling (flag British variants).
-   - "Significant" audit (flag non-statistical uses).
-   - STE metrics (only in STE mode): sentences over 35 words, sentences of 26 to 35 words that fail the clause test, runs of similar length, passives with a known actor, nominalizations, and units with more than one stylistic device (`T.one-device`).
+   These counts are secondary signals, not the findings. A page can sit within every target in `references/metrics.md` and still contain an individual mark that is the wrong choice. When a specific em-dash, colon, or semicolon should be a different mark, record it as a per-section finding under step 4 (with the corrected punctuation as the suggested revision), regardless of the per-page count. The most common case is a semicolon joining two independent clauses that a period would separate, especially when the second clause opens with we, it, this, they, or these. An em-dash standing in for a period, and a colon used as a generic mid-sentence pause, are promoted the same way.
 
-   These counts are secondary signals, not the findings. A page can sit within every target above and still contain an individual mark that is the wrong choice. When a specific em-dash, colon, or semicolon should be a different mark, record it as a per-section finding under step 4 (with the corrected punctuation as the suggested revision), regardless of the per-page count. The most common case is a semicolon joining two independent clauses that a period would separate, especially when the second clause opens with we, it, this, they, or these. An em-dash standing in for a period, and a colon used as a generic mid-sentence pause, are promoted the same way.
-
-6. **Citations and BibTeX (LaTeX only).** Scan for:
-   - Citation clusters with three or more keys, and `\cite{}` calls without a nearby grounding comment. A grounding comment leads with the `% GROUNDING` marker. Both `% GROUNDING: "..."` (and `% GROUNDING: <key> -- "..."`) and the per-key `% GROUNDING <key>: "..."` form are recognized, so a paper that names the key before the colon is not falsely reported as ungrounded. Run `python3 "<skill-dir>/../../scripts/find_citation_issues.py" <root.tex>` over the LaTeX root. The script follows `\input` / `\include` itself and reports each included file by its path, so passing the root is enough. Each stdout line is `<file>:<line>\t<issue>\t<keys>\t<context>` where `<issue>` is `cluster` or `missing-grounding`. The script prints a stderr summary (e.g. `considered 41 cite call(s) across 1 file(s); 1 cluster(s), 41 missing-grounding`). Use it to confirm that the run completed. Known limitations of the scan:
-     - Biblatex multi-citation commands (`\textcites`, `\autocites`, `\fullcites`) read only the first key group.
-     - "Nearby grounding" means the comment block attached to the `\cite{}` call: the same line plus the contiguous run of blank and `%`-comment lines directly below it. A comment placed after intervening code or prose is not credited. A quote-less `TODO verify` stub counts as attached (marked, not missing). `/ai-slop:ground` fills such stubs.
-   - For each cluster, only flag it as a finding if the surrounding prose does not explain what each cited work contributes. A cluster followed by sentences that distinguish each work is fine.
-   - For missing-grounding, always report the result as a **Grounding to-do** list in the report: every `\cite{}` lacking a grounding comment, by `file:line` and key. Emit this list in every review. (A paper may use the per-key `% GROUNDING <key>: "..."` convention. The script credits it, so do not re-report those citations as ungrounded.) To fill genuinely missing comments, that is, to fetch each cited source and insert a retrieved supporting quote, point the user to `/ai-slop:ground`.
+6. **Citations and BibTeX (LaTeX only).** Read `references/citations.md` before this step. For each check below, it gives the command, the output format, the known limitations, and how to report the result. Scan for:
+   - Citation clusters with three or more keys, and `\cite{}` calls without a nearby grounding comment, with `find_citation_issues.py` over the LaTeX root. List every `\cite{}` without a grounding comment under **Grounding to-do** in every review.
    - Spelled-out author names that should use `\citeauthor{}`. The script does not check this. Scan manually.
-   - `.bib` entries with missing required fields. To find the bib files, grep the LaTeX root (and any `\input`-ed files) for `\bibliography{...}` and `\addbibresource{...}` directives and resolve each path. If at least one is found, run `python3 "<skill-dir>/../../scripts/check_bib_fields.py" <bibfile1> <bibfile2> ...` and report each printed entry as a finding. The script uses standard BibTeX required-field semantics (Patashnik's `btxdoc`) and does not honor `crossref` inheritance, so sanity-check flagged entries before reporting them. Skip the check entirely if no bib files are referenced. The script always prints a one-line summary to stderr (e.g. `checked 142 entries across 1 file(s), 0 missing-field issue(s)`). Use it to confirm that the run completed.
-   - Hallucinated or mismatched references. After the field check, run `python3 "<skill-dir>/../../scripts/verify_references.py" <bibfile1> [<bibfile2> ...] [--mailto you@example.org]` over the same `.bib` files (`--mailto` defaults to `$CROSSREF_MAILTO`). It resolves a DOI at CrossRef, and at doi.org when CrossRef does not hold it (the DataCite DOIs of arXiv and Zenodo), looks each title up in the local DBLP database and, when DBLP has no match, in CrossRef, prefers DBLP's year and venue where DBLP has the paper, accepts any year that the databases record for the work (online-first or print), expands common venue abbreviations before comparing venues, and prints one tab-separated line per entry that is not cleanly verified: `<key>\t<verdict>\t<detail>`, where `<verdict>` is `doi-not-found`, `title-mismatch`, `year-mismatch`, `venue-mismatch`, `not-found`, `unchecked-offline`, or `unchecked`. Report these under **Reference verification**. This check is advisory and needs network access for CrossRef and doi.org. With no network, every lookup returns `unchecked-offline` and the run still exits 0. The script reads DBLP from a local database. The stderr summary names the database, or the script prints that DBLP was not checked together with the `setup_dblp.py` command that downloads the DBLP dump and builds the database. In that case, state under **Reference verification** that DBLP was not checked, and give the user that command in your reply. An entry without a DOI that CrossRef does not hold is then `unchecked`, not `not-found`. Never assert that a reference is fabricated on the basis of a visual check. Treat `doi-not-found` and `not-found` as likely-fabricated only after a sanity check, and for entries that the databases cannot confirm, do a web search to validate before flagging. DBLP's curated BibTeX is the canonical record for CS/SE venues. Prefer the publisher/DOI metadata only when DBLP holds just a preprint of a now-published paper. For an exhaustive non-LLM audit of someone else's submission, point the user to the `hallucite` skill.
+   - `.bib` entries with missing required fields, with `check_bib_fields.py` over the bib files that the LaTeX root names. Report each printed entry as a finding.
+   - Hallucinated or mismatched references, with `verify_references.py` over the same `.bib` files. Report its rows under **Reference verification**, and apply the sanity check in `references/citations.md` before you call a reference likely fabricated.
 
 7. **Write the report.** Save the assessment as `ai-slop-report.md` in the user's current working directory. The report is a generated artifact and must never be committed. If the working directory is inside a git repository, resolve its root with `git rev-parse --show-toplevel` and, when the top-level `.gitignore` does not already list `ai-slop-report.md`, append that line (creating the file if absent).
 
    Then run `python3 "<skill-dir>/../../scripts/lint_markdown.py" --fix ai-slop-report.md`. If the linter exits non-zero, read its stdout findings (one per line, tab-separated `<file>:<line>\t<rule>\t<message>`), revise the report in place to address each, and re-run the linter. Repeat at most three iterations. After the third pass, proceed regardless of what the linter reports. The lint loop is internal quality control. Do not mention lint output, rule names, exit codes, or iteration counts in the user-facing summary.
 
-   Then read the file back and quote its contents verbatim in your reply, rather than writing the report text a second time, so that the printed version is identical to the file. Use the report template below. Name the selected optional layers in the Summary. Write the report prose and suggested revisions under those layers too (`T.scope`, `E.scope`), keeping quotations unchanged.
+   Then read the file back and quote its contents verbatim in your reply, rather than writing the report text a second time, so that the printed version is identical to the file. Use the template in `references/report-template.md`, whose schema revise mode parses. Name the selected optional layers in the Summary. Write the report prose and suggested revisions under those layers too (`T.scope`, `E.scope`), keeping quotations unchanged.
 
 8. **Stop after the report.** Do not modify the paper. If the user wants the findings applied, route them to `/ai-slop:revise`.
-
-## Report template
-
-The report schema is stable so that revise mode can parse it. Each finding has `Rule`, `Location`, `Quote`, and `Suggested revision`. Revise mode locates the `Quote` in the paper and replaces it with `Suggested revision`.
-
-````markdown
-# AI Slop Review
-
-**Paper:** <path>
-**Skill version:** 2026-11_rev9
-**Reviewed:** <ISO 8601 date>
-
-> This report applies the writing rules at
-> <https://github.com/se-uhd/ai-slop-skill> as a self-check.
-> Findings are revision suggestions. Nothing is grounds for rejection.
-
-## Summary
-
-<What reads well, what needs revision, and the main counts, in one short paragraph.>
-
-## Findings by section
-
-### <Section name, e.g., Abstract>
-
-#### Finding <N>
-
-- **Rule:** <rule name and key from a rule layer, e.g. Semicolons (G.semicolons), or trope name with its catalog status, e.g. Negative parallelism (tropes.fyi, consistent)>
-- **Location:** `<file:line>` or `Section: <name>` if line not available
-- **Quote:** `<verbatim quote of the offending text, with enough surrounding context to be unique>`
-- **Suggested revision:** `<concrete replacement text>`
-- **Reason:** <problem in context and benefit of the replacement, or the explicit convention being corrected>
-
-<Repeat per finding within the section.>
-
-### <Next section>
-...
-
-## Cross-cutting metrics
-
-### Dash density (em-dash and ascii-dash)
-- Per-page-equivalent count: <N> (target: ≤ 2 to 3)
-- Locations: <list>
-
-### Colon density (running prose)
-- Per-page-equivalent count: <N> (target: ≤ 2)
-- Locations: <list>
-
-### Capitalization after a colon
-- Colons followed by a complete sentence with a lowercase first word (the first item of an enumerated series is exempt): <list>
-- Colons followed by a fragment or list with an uppercase first word: <list>
-
-### Semicolon density (running prose)
-- Per-page-equivalent count: <N> (target: ≤ 1 to 2)
-- Locations: <list>
-
-### Combined pause-punctuation signal
-- Per-page-equivalent count (dash + colon + semicolon): <N> (target: ≤ 5)
-- Pages over the combined cap: <list>
-
-### Restricted-word density
-- Paragraphs over threshold: <list with paragraph pointers>
-
-### Verb-tense compliance
-- Prior-work attributions in present tense where past or present perfect is required: <list with pointers>
-- Unmotivated tense shifts within a paragraph or clause: <list>
-
-### Spelling (American vs. British)
-- British variants found: <list>
-
-### "Significant" audit
-- Non-statistical uses: <list>
-
-### Cross-references (LaTeX only)
-- Figures and tables that the text never references: <list>
-- Lowercase, doubled, or hard-coded references: <list>
-
-### Citations
-- Citation clusters lacking per-work explanation: <list>
-- Spelled-out author names that should use `\citeauthor{}`: <list>
-
-### Grounding to-do
-- `\cite{}` calls with no grounding comment (always listed, with `% GROUNDING <key>:` counted as grounded): <file:line, keys>
-
-### BibTeX (if applicable)
-- Entries with missing or unverifiable required fields: <list>
-
-### Reference verification (if applicable)
-- DBLP database used, or that DBLP was not checked: <database and build date, or the setup command>
-- Entries flagged by `verify_references.py`, with verdict and detail: <list>
-- Entries that returned `unchecked-offline` (no network at review time): <list>
-
-### STE metrics (STE mode only)
-- Sentences over 35 words: <N>, at <list>
-- Sentences of 26 to 35 words that fail the clause test: <list>
-- Runs of three or more sentences within 5 words of each other in length: <list>
-- Passive verbs with a known actor: <list>
-- Light verb + action noun: <list>
-- Units with more than one stylistic device: <list>
-
-## Items requiring author judgment
-
-<Findings that the skill cannot resolve automatically: terminology choices, threats-to-validity specificity,
-gap statements in related work, hedging that depends on evidence that the skill has not assessed,
-and, in STE mode, sentences that an STE rewrite would weaken, each with the rule and the reason.
-Phrase each as a suggestion, not a command. Revise mode will not act on these.>
-````
 
 ## Bundled files
 
 - `../../shared/rules-general.md`, `../../shared/rules-scientific.md`, and `../../shared/rules-latex.md` are the three rule layers that the scope selects from (general prose; research article conventions; LaTeX mechanics). `--economist` adds `../../shared/rules-economist.md`, and `--ste` adds `../../shared/rules-ste.md`. Load the subset that step 2 calls for.
-- `../../scripts/find_latex_root.py`, `../../scripts/detect_scope.py`, `../../scripts/fetch_tropes.py`, `../../scripts/find_citation_issues.py`, `../../scripts/check_bib_fields.py`, `../../scripts/verify_references.py`, `../../scripts/scan_glyphs.py`, `../../scripts/scan_reference.py`, `../../scripts/scan_repeats.py`, `../../scripts/scan_crossrefs.py`, `../../scripts/scan_sentences.py`, and `../../scripts/lint_markdown.py` implement the deterministic checks above (root and scope detection, the catalog download, citation issues, BibTeX field and reference verification, the Unicode-glyph recheck, the reference-candidate scan, the repeat scan, the cross-reference scan for LaTeX, the sentence scan for STE mode, report linting). Their module docstrings document inputs, outputs, exit codes, and known limitations. `../../scripts/setup_dblp.py` builds the local DBLP database that the reference check reads, and the review only names it.
+- `../../scripts/` holds the scripts that the steps name. Their module docstrings document inputs, outputs, exit codes, and known limitations. `../../scripts/setup_dblp.py` builds the local DBLP database that the reference check reads, and the review only names it.
+- `references/optional-layers.md`, `references/metrics.md`, `references/citations.md`, and `references/report-template.md` hold the details of steps 4, 5, 6, and 7. Read each one at the step that names it.
 
 ## Constraints
 

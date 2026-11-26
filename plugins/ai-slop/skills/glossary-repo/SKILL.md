@@ -280,7 +280,7 @@ refactoring. List it under author judgment with the files that declare it.
 
 ## Report and finish
 
-Read the report template in `../review/SKILL.md` for its schema, without
+Read the report template in `../review/references/report-template.md` for its schema, without
 running the review workflow. Write `ai-slop-report.md` in that format, with
 the repository root as `**Paper:**`, `### <relpath>` headings under "Findings
 by file", as `/ai-slop:review-repo` does, and the following header lines under

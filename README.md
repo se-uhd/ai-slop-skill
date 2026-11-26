@@ -8,7 +8,7 @@ Stylistic checks require a problem in context and a replacement that preserves t
 
 ## Versioning
 
-The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string appears at twelve callsites, and the smoke suite checks that they agree: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `metadata.version` field of each of the nine `SKILL.md` files, and the `**Skill version:**` line in the report template of `review/SKILL.md`. `export_rules.py` and `build_writing.py` read the version from `plugin.json` when they write a file. Git tags follow the same scheme. The pi package manifest (`package.json`) has no version field, because pi pins a git install to a tag.
+The bundle uses CalVer with a per-month revision counter: `YYYY-MM` for the first release of a calendar month (the implicit `rev0`), then `YYYY-MM_rev1`, `YYYY-MM_rev2`, ... for subsequent releases that month. The version string appears at twelve callsites, and the smoke suite checks that they agree: `plugins/ai-slop/.claude-plugin/plugin.json` (canonical), `.claude-plugin/marketplace.json`, the `metadata.version` field of each of the nine `SKILL.md` files, and the `**Skill version:**` line in the report template `review/references/report-template.md`. `export_rules.py` and `build_writing.py` read the version from `plugin.json` when they write a file. Git tags follow the same scheme. The pi package manifest (`package.json`) has no version field, because pi pins a git install to a tag.
 
 ## Dependencies
 
