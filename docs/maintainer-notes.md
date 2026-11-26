@@ -16,7 +16,11 @@ Releases follow the release protocol in `AGENTS.md`. Run the smoke suite with `p
 
 ## Commit messages
 
-Commit messages follow Conventional Commits with a body of short bullets, as `AGENTS.md` describes. `scripts/check_commit_message.py` checks the format. Enable its Git hook in your clone with `git config core.hooksPath .githooks`. Claude Code runs the check after each commit through the hook in `.claude/settings.json`, and the workflow `commit-messages.yml` runs it on each pull request and on each push to `main`.
+Commit messages follow Conventional Commits with a body of short bullets, as `AGENTS.md` describes. `scripts/check_commit_message.py` checks the format. Enable its Git hook in your clone with `git config core.hooksPath .githooks`. Claude Code, Codex, and pi run the check after each commit through `scripts/agent_hook.py`, and the workflow `commit-messages.yml` runs it on each pull request and on each push to `main`.
+
+## Markdown checks
+
+`scripts/check_markdown_limits.py` checks the length and structure of the README, `AGENTS.md` with `CLAUDE.md`, each `SKILL.md`, and the changelog against the limits in `scripts/markdown_limits.toml`, which names the source of each limit. The smoke suite runs it. After an agent edits a Markdown file, `scripts/agent_hook.py` runs the check and `lint_markdown.py` on the file. `AGENTS.md` describes how Claude Code, Codex, and pi run the hook.
 
 ## Validating the manifests
 

@@ -3982,21 +3982,51 @@ def test_check_commit_message_usage_errors():
         assert result.returncode == 2, f"{args}: rc={result.returncode} err={result.stderr!r}"
 
 
-def _repository_with_commit_tools(d):
-    """A repository with copies of the checker and both hooks, and the tag
-    2026-11_rev9 on its first commit."""
-    for relative in ('scripts/check_commit_message.py', '.githooks/commit-msg',
-                     '.claude/hooks/check_last_commit.py'):
+AGENT_HOOK_FILES = ('scripts/check_commit_message.py', 'scripts/agent_hook.py', '.githooks/commit-msg',
+                    '.claude/settings.json', '.codex/hooks.json', '.pi/extensions/ai-slop-checks.ts')
+
+
+def _repository_with_agent_hooks(d, markdown=False):
+    """A repository with copies of the commit message checker, the agent hook,
+    the Git hook, and the configuration of Claude Code, Codex, and pi, and the
+    tag 2026-11_rev9 on its first commit. With markdown, it also holds the
+    Markdown checks, with the limits of LIMITS_CONFIG and links to the
+    bundle helpers."""
+    files = AGENT_HOOK_FILES + (('scripts/check_markdown_limits.py',) if markdown else ())
+    for relative in files:
         (Path(d) / relative).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO / relative, Path(d) / relative)
+    if markdown:
+        write(Path(d) / 'scripts' / 'markdown_limits.toml', LIMITS_CONFIG)
+        helpers = Path(d) / 'plugins' / 'ai-slop' / 'scripts'
+        helpers.mkdir(parents=True)
+        for path in SCRIPTS.iterdir():
+            if path.is_file():
+                (helpers / path.name).symlink_to(path)
     _git(d, 'init', '-q')
     _git(d, 'commit', '-q', '--allow-empty', '-m', 'Released message')
     _git(d, 'tag', '2026-11_rev9')
 
 
+# The hooks run git, so the tests hide the global and system configuration.
+HOOK_ENV = {**os.environ, 'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1'}
+
+
+def _agent_hook(project, event):
+    """Run the agent hook of the project with an event as Claude Code does."""
+    import json
+    return subprocess.run([PYTHON, str(Path(project) / 'scripts' / 'agent_hook.py')],
+                          input=json.dumps(event), capture_output=True, text=True, env=HOOK_ENV)
+
+
+def _additional_context(result):
+    import json
+    return json.loads(result.stdout)['hookSpecificOutput']['additionalContext'] if result.stdout else ''
+
+
 def test_commit_msg_hook_refuses_a_bad_message_and_skips_merges():
     with tempfile.TemporaryDirectory() as d:
-        _repository_with_commit_tools(d)
+        _repository_with_agent_hooks(d)
         _git(d, 'config', 'core.hooksPath', '.githooks')
         result = _git(d, 'commit', '-q', '--allow-empty', '-m', 'Add a note', check=False)
         assert result.returncode != 0 and 'does not have the form' in result.stderr, result.stderr
@@ -4012,24 +4042,25 @@ def test_claude_hook_checks_the_commit_of_the_command():
     """The PostToolUse hook checks HEAD after a Bash command that runs
     `git commit` in the repository or one of its worktrees, found through
     `git -C` or `cd`, and exits 2 on a violation. It ignores other commands
-    and other repositories. .claude/settings.json runs it."""
+    and other repositories, and it names the Git hook until a clone enables
+    it. .claude/settings.json runs it after Bash and after each edit."""
     import json
 
     settings = json.loads((REPO / '.claude' / 'settings.json').read_text(encoding='utf-8'))
-    commands = [hook['command'] for entry in settings['hooks']['PostToolUse']
-                if entry['matcher'] == 'Bash' for hook in entry['hooks']]
-    assert any('.claude/hooks/check_last_commit.py' in c for c in commands), commands
+    matchers = {tool: [hook['command'] for entry in settings['hooks']['PostToolUse']
+                       if tool in entry['matcher'].split('|') for hook in entry['hooks']]
+                for tool in ('Bash', 'Edit', 'Write', 'MultiEdit')}
+    for tool, commands in matchers.items():
+        assert any('"$CLAUDE_PROJECT_DIR"/scripts/agent_hook.py' in c for c in commands), (tool, commands)
 
     def hook(project, command, cwd):
-        event = json.dumps({'hook_event_name': 'PostToolUse', 'tool_name': 'Bash',
-                            'cwd': str(cwd), 'tool_input': {'command': command}})
-        return subprocess.run([PYTHON, str(Path(project) / '.claude/hooks/check_last_commit.py')],
-                              input=event, capture_output=True, text=True)
+        return _agent_hook(project, {'hook_event_name': 'PostToolUse', 'tool_name': 'Bash',
+                                     'cwd': str(cwd), 'tool_input': {'command': command}})
 
     with tempfile.TemporaryDirectory() as d:
         project, worktree, other = Path(d) / 'project', Path(d) / 'worktree', Path(d) / 'other'
         project.mkdir()
-        _repository_with_commit_tools(project)
+        _repository_with_agent_hooks(project)
         _git(project, 'commit', '-q', '--allow-empty', '-m', 'Add a note')
         assert hook(project, 'git status', d).returncode == 0
         assert hook(project, 'git log --grep commit', d).returncode == 0
@@ -4040,10 +4071,14 @@ def test_claude_hook_checks_the_commit_of_the_command():
         assert result.returncode == 2, (result.returncode, result.stderr)
 
         _git(project, 'commit', '-q', '--amend', '--allow-empty', '-m', 'docs: add a note\n\n- a')
-        assert hook(project, f'cd {project} && git commit --amend', d).returncode == 0
+        result = hook(project, f'cd {project} && git commit --amend', d)
+        assert result.returncode == 0 and 'core.hooksPath .githooks' in _additional_context(result), result
+        _git(project, 'config', 'core.hooksPath', '.githooks')
+        result = hook(project, f'cd {project} && git commit --amend', d)
+        assert result.returncode == 0 and not result.stdout, result
 
         _git(project, 'worktree', 'add', '-q', str(worktree))
-        _git(worktree, 'commit', '-q', '--allow-empty', '-m', 'Add a test')
+        _git(worktree, 'commit', '-q', '--allow-empty', '--no-verify', '-m', 'Add a test')
         result = hook(project, f'cd {worktree} && git commit -m "Add a test"', d)
         assert result.returncode == 2, (result.returncode, result.stderr)
 
@@ -4051,6 +4086,159 @@ def test_claude_hook_checks_the_commit_of_the_command():
         _git(other, 'init', '-q')
         _git(other, 'commit', '-q', '--allow-empty', '-m', 'Any message')
         assert hook(project, f'git -C {other} commit -m "Any message"', d).returncode == 0
+
+
+def test_agent_hook_checks_an_edited_markdown_file():
+    """After an edit of a Markdown file of the repository, the hook runs the
+    Markdown lint and the limits of the file and exits 2 on a violation. A
+    glyph that the edit inserted does not block: it comes back as
+    additionalContext. The hook skips upstream-owned files, ignored files,
+    other repositories, and files that are not Markdown."""
+    def edit(project, tool, path, **tool_input):
+        return _agent_hook(project, {'hook_event_name': 'PostToolUse', 'tool_name': tool, 'cwd': str(project),
+                                     'tool_input': {'file_path': str(path), **tool_input}})
+
+    with tempfile.TemporaryDirectory() as d:
+        project, other = Path(d) / 'project', Path(d) / 'other'
+        project.mkdir()
+        _repository_with_agent_hooks(project, markdown=True)
+        notes = project / 'notes.md'
+        write(notes, '# Notes\n\nText.\n')
+        result = edit(project, 'Write', notes, content='# Notes\n\nText.\n')
+        assert result.returncode == 0 and not result.stdout and not result.stderr, result
+
+        write(notes, '# Notes\n\nText.\n\n# Second title\n')
+        result = edit(project, 'Edit', notes, old_string='Text.', new_string='Text.\n\n# Second title')
+        assert result.returncode == 2 and 'notes.md:5' in result.stderr and 'md025' in result.stderr, result
+
+        write(notes, '# Notes\n\nA — B.\n')
+        result = edit(project, 'MultiEdit', notes, edits=[{'old_string': 'A', 'new_string': 'A — B.'}])
+        assert result.returncode == 0 and 'notes.md: inserted em-dash' in _additional_context(result), result
+        result = edit(project, 'Edit', notes, old_string='A', new_string='A')
+        assert result.returncode == 0 and not result.stdout, 'a glyph that the edit did not insert'
+
+        write(project / 'README.md', '# R\n\n' + 'Line.\n' * 7)
+        result = edit(project, 'Edit', project / 'README.md', new_string='Line.→')
+        assert result.returncode == 2 and 'README.md: 9 lines, more than 8 (readme source)' in result.stderr \
+            and 'inserted arrow' in result.stderr, result
+        write(project / 'AGENTS.md', '# Agents\n')
+        write(project / 'CLAUDE.md', '# Claude\n\n@AGENTS.md\n\nText.\n')
+        result = edit(project, 'Write', project / 'CLAUDE.md', content='')
+        assert result.returncode == 2 and 'AGENTS.md and CLAUDE.md: 6 lines, more than 5' in result.stderr \
+            and 'lint_markdown.py' not in result.stderr, result
+        write(project / 'CHANGELOG.md', '# Changes\n')
+        result = edit(project, 'Write', project / 'CHANGELOG.md', content='')
+        assert result.returncode == 2 and '(structure source)' in result.stderr, result
+
+        bad = '# One\n\n# Two\n'
+        vendored = project / 'plugins' / 'ai-slop' / 'scripts' / '_vendor' / 'NOTES.md'
+        vendored.parent.mkdir()
+        write(vendored, bad)
+        write(project / '.gitignore', 'ignored.md\n')
+        write(project / 'ignored.md', bad)
+        write(project / 'notes.txt', bad)
+        other.mkdir()
+        _git(other, 'init', '-q')
+        write(other / 'notes.md', bad)
+        for path in (vendored, project / 'ignored.md', project / 'notes.txt', other / 'notes.md'):
+            result = edit(project, 'Write', path, content=bad)
+            assert result.returncode == 0 and not result.stderr, (path, result)
+
+
+def test_codex_hooks_run_the_agent_hook():
+    """.codex/hooks.json runs the agent hook after Bash and apply_patch, from
+    the root of the worktree. The hook reads the files of a patch, including
+    the target of a move, and skips a deleted file."""
+    import json
+
+    config = json.loads((REPO / '.codex' / 'hooks.json').read_text(encoding='utf-8'))
+    commands = [hook['command'] for group in config['hooks']['PostToolUse']
+                if {'Bash', 'apply_patch'} <= set(group['matcher'].split('|')) for hook in group['hooks']]
+    assert len(commands) == 1 and 'scripts/agent_hook.py' in commands[0], config
+
+    with tempfile.TemporaryDirectory() as d:
+        project = Path(d) / 'project'
+        (project / 'docs').mkdir(parents=True)
+        _repository_with_agent_hooks(project, markdown=True)
+        _git(project, 'config', 'core.hooksPath', '.githooks')
+
+        def codex(tool, command, cwd=project):
+            event = {'session_id': 's', 'turn_id': 't', 'transcript_path': None, 'cwd': str(cwd),
+                     'hook_event_name': 'PostToolUse', 'model': 'm', 'permission_mode': 'default',
+                     'tool_name': tool, 'tool_use_id': 'u', 'tool_input': {'command': command},
+                     'tool_response': {}}
+            return subprocess.run(commands[0], shell=True, cwd=cwd, input=json.dumps(event),
+                                  capture_output=True, text=True, env=HOOK_ENV)
+
+        _git(project, 'commit', '-q', '--allow-empty', '--no-verify', '-m', 'Add a note')
+        result = codex('Bash', 'git commit -m "Add a note"', cwd=project / 'docs')
+        assert result.returncode == 2 and 'does not have the form' in result.stderr, result
+
+        write(project / 'docs' / 'a.md', '# A\n\nText.\n\n# B\n')
+        result = codex('apply_patch', '*** Begin Patch\n*** Add File: docs/a.md\n+# A\n+\n+Text.\n+\n+# B\n'
+                                      '*** End Patch\n')
+        assert result.returncode == 2 and 'docs/a.md:5' in result.stderr, result
+        write(project / 'docs' / 'b.md', '# B\n\nA — B.\n')
+        result = codex('apply_patch', '*** Begin Patch\n*** Update File: docs/old.md\n*** Move to: docs/b.md\n'
+                                      '@@\n-A.\n+A — B.\n*** End Patch\n')
+        assert result.returncode == 0 and 'docs/b.md: inserted em-dash' in _additional_context(result), result
+        result = codex('apply_patch', '*** Begin Patch\n*** Delete File: docs/a.md\n*** End Patch\n')
+        assert result.returncode == 0 and not result.stdout and not result.stderr, result
+
+
+def test_pi_extension_appends_the_findings():
+    """.pi/extensions/ai-slop-checks.ts runs the agent hook after bash, edit,
+    and write and appends its findings to the tool result: a violation marks
+    the result as an error, and a glyph note does not. The test loads the
+    extension with Node.js, which strips the TypeScript types, and skips
+    without Node.js except in CI."""
+    import json
+
+    node = shutil.which('node')
+    if node is None:
+        assert not os.environ.get('CI'), 'CI needs Node.js for the pi extension test'
+        print('  (skipped: no Node.js)')
+        return
+    driver = '''
+const [, , extension, events] = process.argv;
+const handlers = {};
+(await import(extension)).default({ on: (name, handler) => { handlers[name] = handler; } });
+const results = [];
+for (const event of JSON.parse(events)) {
+  const ctx = { cwd: event.cwd, hasUI: false, ui: { notify() {} } };
+  results.push((await handlers.tool_result(event, ctx)) ?? null);
+}
+process.stdout.write(JSON.stringify(results));
+'''
+    with tempfile.TemporaryDirectory() as d:
+        project = Path(d) / 'project'
+        project.mkdir()
+        _repository_with_agent_hooks(project, markdown=True)
+        _git(project, 'config', 'core.hooksPath', '.githooks')
+        _git(project, 'commit', '-q', '--allow-empty', '--no-verify', '-m', 'Add a note')
+        write(Path(d) / 'driver.mjs', driver)
+        write(project / 'bad.md', '# A\n\n# B\n')
+        write(project / 'glyph.md', '# A\n\nA — B.\n')
+        output = [{'type': 'text', 'text': 'output'}]
+
+        def event(tool, **tool_input):
+            return {'toolName': tool, 'toolCallId': 'c', 'input': tool_input, 'content': output,
+                    'isError': False, 'cwd': str(project)}
+
+        events = [event('read', path='bad.md'), event('bash', command='git status'),
+                  event('bash', command='git commit -m "Add a note"'),
+                  event('edit', path='bad.md', edits=[{'oldText': 'A', 'newText': 'B'}]),
+                  event('write', path='glyph.md', content='# A\n\nA — B.\n')]
+        result = subprocess.run([node, '--no-warnings', str(Path(d) / 'driver.mjs'),
+                                 str(project / '.pi' / 'extensions' / 'ai-slop-checks.ts'), json.dumps(events)],
+                                capture_output=True, text=True, env=HOOK_ENV)
+        assert result.returncode == 0, result.stderr
+        read, status, commit, lint, glyph = json.loads(result.stdout)
+        assert read is None and status is None, (read, status)
+        assert commit['isError'] and commit['content'][0] == output[0] \
+            and 'does not have the form' in commit['content'][1]['text'], commit
+        assert lint['isError'] and 'bad.md:3' in lint['content'][1]['text'], lint
+        assert not glyph['isError'] and 'glyph.md: inserted em-dash' in glyph['content'][1]['text'], glyph
 
 
 # ---------- Markdown limits (scripts/check_markdown_limits.py) ----------
@@ -4451,6 +4639,9 @@ TESTS = [
     test_check_commit_message_usage_errors,
     test_commit_msg_hook_refuses_a_bad_message_and_skips_merges,
     test_claude_hook_checks_the_commit_of_the_command,
+    test_agent_hook_checks_an_edited_markdown_file,
+    test_codex_hooks_run_the_agent_hook,
+    test_pi_extension_appends_the_findings,
     test_markdown_limits_hold_in_the_repository,
     test_markdown_limits_report_each_violation,
     test_changelog_structure_rejects_each_violation,

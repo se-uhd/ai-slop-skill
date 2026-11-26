@@ -101,7 +101,7 @@ For chat UIs or LLM APIs without Agent Skills support, paste the contents of the
 
 - [Rule layers](docs/rule-layers.md) describes the five rule layers and the flags that select them.
 - [Skill workflows](docs/skill-workflows.md) describes the steps, options, and output of each skill.
-- [Maintainer notes](docs/maintainer-notes.md) describes how to refresh the vendored linter, release, write commit messages, and validate the manifests.
+- [Maintainer notes](docs/maintainer-notes.md) describes how to refresh the vendored linter, release, write commit messages, check the Markdown files, and validate the manifests.
 - [`AGENTS.md`](AGENTS.md) is the development guide for this repository, with the release protocol and the checks.
 - [`CHANGELOG.md`](CHANGELOG.md) lists the changes of each release.
 

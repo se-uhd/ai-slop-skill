@@ -1,0 +1,18 @@
+{
+  "description": "Checks of the ai-slop repository. scripts/agent_hook.py checks the message of a new commit and an edited Markdown file.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/agent_hook.py\"",
+            "timeout": 120,
+            "statusMessage": "Checking the commit message or the Markdown file"
+          }
+        ]
+      }
+    ]
+  }
+}

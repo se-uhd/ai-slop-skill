@@ -96,13 +96,24 @@ pushed tag that others can pull:
   continuation lines indented by two spaces. The trailers, such as `Co-Authored-By:`, come last,
   after a blank line. A release commit has the subject
   `chore(release): YYYY-MM_revN`, and its bullets summarize the release.
-- **`scripts/check_commit_message.py` enforces the format.** Enable its Git
-  hook once per clone with `git config core.hooksPath .githooks`. The Claude
-  Code hook in `.claude/settings.json` checks each commit that an agent makes
-  and returns the violations to the agent. The workflow `commit-messages.yml`
-  checks the commits of a pull request and of a push to `main`. The check skips
-  the commits up to the tag `2026-11_rev9`, since rule 3 keeps their released
-  messages. The smoke suite tests the script and both hooks.
+- **`scripts/check_commit_message.py` enforces the format.** Its Git hook in
+  `.githooks/` checks each commit in every client. Enable it once per clone
+  with `git config core.hooksPath .githooks`, and as an agent, run this
+  command before your first commit when `git config core.hooksPath` does not
+  print `.githooks`. The workflow `commit-messages.yml` checks the commits of
+  a pull request and of a push to `main`. The check skips the commits up to
+  the tag `2026-11_rev9`, since rule 3 keeps their released messages.
+- **`scripts/agent_hook.py` checks the work of an agent after a shell
+  command or an edit.** After a `git commit`, it checks the new message and names the Git
+  hook while it is off. After an edit of a Markdown file, it runs
+  `lint_markdown.py` and `check_markdown_limits.py` on the file, except on an
+  upstream-owned file. It returns each violation to the agent, and a glyph
+  that `scan_glyphs.py` finds in the inserted text is a note that does not
+  block. Claude Code runs the script through `.claude/settings.json`. Codex
+  runs it through `.codex/hooks.json` in a trusted project, once you review
+  the hook with `/hooks`. Pi runs it through `.pi/extensions/ai-slop-checks.ts`
+  when pi starts at the root of the repository and you trust the project. The
+  smoke suite tests the script and each entry point.
 - **Commit messages also follow the general layer.** They are prose, and
   `/ai-slop:review-repo` scans them with every other file. Correcting a pushed
   message means rewriting history, which rule 3 above allows only as a

@@ -2,11 +2,11 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check_last_commit.py"
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/agent_hook.py"
           }
         ]
       }
