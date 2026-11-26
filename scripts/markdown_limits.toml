@@ -1,0 +1,37 @@
+# The length and structure limits of the Markdown files of this repository.
+# scripts/check_markdown_limits.py reads this file. Each [[limit]] applies to
+# the files that its `paths` globs name, relative to the repository root, and a
+# violation repeats the `source` of its limit. A file that no entry names has
+# no limits.
+
+# A token count is an approximation: the number of characters divided by
+# chars_per_token, rounded up.
+chars_per_token = 4
+chars_per_token_source = "OpenAI, What are tokens and how to count them: \"1 token is approximately 4 characters\" of English text (https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them)"
+
+[[limit]]
+paths = ["CHANGELOG.md"]
+changelog_headings = ["Added", "Changed", "Removed", "Fixed", "Unchanged"]
+source = "AGENTS.md, section on the changelog: the headings Added, Changed, Removed, Fixed, and Unchanged, in this order and only where they apply, with one bullet per change"
+
+[[limit]]
+paths = ["CHANGELOG.md"]
+max_bullet_sentences = 4
+after_release = "2026-11_rev9"
+source = "the 90th percentile of the sentences per bullet in the 292 bullets of the releases up to 2026-11_rev9 (measured on 2026-11-26). AGENTS.md keeps released entries, so the cap applies to [Unreleased] and to later releases"
+
+[[limit]]
+paths = ["plugins/ai-slop/skills/*/SKILL.md"]
+max_body_tokens = 5000
+source = "Agent Skills specification, Progressive disclosure: \"< 5000 tokens recommended\" for the SKILL.md body (https://agentskills.io/specification)"
+
+[[limit]]
+paths = ["AGENTS.md", "CLAUDE.md"]
+max_lines = 200
+source = "Claude Code documentation, How Claude remembers your project: \"target under 200 lines per CLAUDE.md file\", and CLAUDE.md imports AGENTS.md, which loads with it (https://code.claude.com/docs/en/memory)"
+
+[[limit]]
+paths = ["README.md"]
+max_lines = 200
+max_section_lines = 60
+source = "decision of the maintainer on 2026-11-26, after ADR 013 of se-uhd/coffee-kitty"

@@ -137,6 +137,15 @@ pushed tag that others can pull:
   where they apply. A bullet records one change, which is a change to one
   component or one behavior, with its details and reasons. Unlike the rest of
   the bundle prose, the changelog follows the STE layer.
+- **`scripts/check_markdown_limits.py` checks the length and structure of the
+  Markdown files.** `scripts/markdown_limits.toml` sets each limit with its
+  source: the structure of the changelog, at most 4 sentences per bullet in
+  `[Unreleased]` and later releases, at most 5,000 tokens in the body of a
+  `SKILL.md`, at most 200 lines in `AGENTS.md` and `CLAUDE.md` together, and
+  at most 200 lines and 60 lines per section in `README.md`. To meet a limit,
+  move text instead of cutting it. Reference material of a skill goes into
+  its `references/` directory, with a pointer at the step that needs it, and
+  a README section goes into `docs/`. The smoke suite runs the check.
 - **The root `package.json` is the pi package manifest and has no `version`
   field on purpose.** Do not add one. Pi pins a git install to a release tag,
   so the tag carries the version and the version callsites stay at twelve.

@@ -4053,6 +4053,203 @@ def test_claude_hook_checks_the_commit_of_the_command():
         assert hook(project, f'git -C {other} commit -m "Any message"', d).returncode == 0
 
 
+# ---------- Markdown limits (scripts/check_markdown_limits.py) ----------
+
+LIMITS_CHECKER = REPO / 'scripts' / 'check_markdown_limits.py'
+LIMITS_CONFIG = '''chars_per_token = 4
+chars_per_token_source = "tokens source"
+
+[[limit]]
+paths = ["CHANGELOG.md"]
+changelog_headings = ["Added", "Changed", "Removed", "Fixed", "Unchanged"]
+source = "structure source"
+
+[[limit]]
+paths = ["CHANGELOG.md"]
+max_bullet_sentences = 4
+after_release = "2026-11_rev9"
+source = "bullet source"
+
+[[limit]]
+paths = ["skills/*/SKILL.md"]
+max_body_tokens = 10
+source = "skill source"
+
+[[limit]]
+paths = ["AGENTS.md", "CLAUDE.md"]
+max_lines = 5
+source = "agents source"
+
+[[limit]]
+paths = ["README.md"]
+max_lines = 8
+max_section_lines = 3
+source = "readme source"
+'''
+VALID_CHANGELOG = '''# Changelog
+
+Notable changes.
+
+## [Unreleased]
+
+### Added
+
+- One sentence. Two, e.g., with `a.b` and "a quote. Here." Three. Four.
+
+## [2026-11_rev9] - 2026-11-25
+
+### Changed
+
+- Released. Bullets. Keep. Their. Sentences.
+  A continuation line.
+
+### Unchanged
+
+- A heading of its own.
+
+## [2026-11] - 2026-11-01
+
+### Fixed
+
+- The first release of a month.
+'''
+
+
+def _check_limits(root, *files, config=None):
+    args = ['--root', str(root)] + (['--config', str(config)] if config else [])
+    return subprocess.run([PYTHON, str(LIMITS_CHECKER), *args, *map(str, files)],
+                          capture_output=True, text=True)
+
+
+def _limits_fixture(d, changelog=VALID_CHANGELOG):
+    root = Path(d)
+    (root / 'scripts').mkdir()
+    write(root / 'scripts' / 'markdown_limits.toml', LIMITS_CONFIG)
+    write(root / 'CHANGELOG.md', changelog)
+    (root / 'skills' / 'a').mkdir(parents=True)
+    write(root / 'skills' / 'a' / 'SKILL.md', '---\nname: a\ndescription: ' + 'x' * 200 + '\n---\n\n# A\n')
+    write(root / 'AGENTS.md', '# Agents\n\nA.\n')
+    write(root / 'CLAUDE.md', '@AGENTS.md\n')
+    write(root / 'README.md', '# R\n\n## S\n\nText.\n')
+    return root
+
+
+def test_markdown_limits_hold_in_the_repository():
+    """The README, AGENTS.md with CLAUDE.md, each SKILL.md, and the changelog
+    stay within the limits of scripts/markdown_limits.toml, and every limit
+    names its source."""
+    import tomllib
+    result = subprocess.run([PYTHON, str(LIMITS_CHECKER)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    config = tomllib.loads((REPO / 'scripts' / 'markdown_limits.toml').read_text(encoding='utf-8'))
+    assert all(limit.get('source') for limit in config['limit']), config
+    assert config.get('chars_per_token_source'), config
+
+
+def test_markdown_limits_report_each_violation():
+    """A file over a limit fails with the file, the count, the limit, and its
+    source. The front matter of a SKILL.md does not count, and the sentence
+    cap skips the releases up to after_release."""
+    with tempfile.TemporaryDirectory() as d:
+        root = _limits_fixture(d)
+        result = _check_limits(root)
+        assert result.returncode == 0, result.stderr
+
+        write(root / 'skills' / 'a' / 'SKILL.md', '---\nname: a\n---\n\n' + 'y' * 41 + '\n')
+        write(root / 'CLAUDE.md', '@AGENTS.md\n\nOne.\n')
+        write(root / 'README.md', '# R\n\n## S\n\n1\n2\n3\n\n## T\n')
+        changelog = VALID_CHANGELOG.replace('Three. Four.', 'Three. Four. Five.')
+        write(root / 'CHANGELOG.md', changelog)
+        result = _check_limits(root)
+        assert result.returncode == 1, result.stderr
+        for expected in ('skills/a/SKILL.md: the body has about 11 tokens, more than 10 (skill source)',
+                         'AGENTS.md and CLAUDE.md: 6 lines, more than 5 (agents source)',
+                         'README.md: 9 lines, more than 8 (readme source)',
+                         'README.md:3: the section has 5 lines, more than 3 (readme source)',
+                         'CHANGELOG.md:9: the bullet has 5 sentences, more than 4 (bullet source)'):
+            assert expected in result.stderr, (expected, result.stderr)
+        assert 'CHANGELOG.md:15' not in result.stderr, result.stderr
+
+        result = _check_limits(root, root / 'CLAUDE.md')
+        assert result.returncode == 1 and 'AGENTS.md and CLAUDE.md' in result.stderr \
+            and 'README.md' not in result.stderr, result.stderr
+        write(root / 'docs.md', '# Docs\n' * 300)
+        assert _check_limits(root, root / 'docs.md').returncode == 0
+
+
+def test_changelog_structure_rejects_each_violation():
+    """The changelog of AGENTS.md: CalVer versions newest first with dates in
+    their month, an optional [Unreleased] at the top, and the headings Added,
+    Changed, Removed, Fixed, and Unchanged in this order with bullets only."""
+    released = '## [2026-11_rev9] - 2026-11-25\n\n### Changed\n\n- A.\n'
+    older = '## [2026-11_rev8] - 2026-11-20\n\n### Fixed\n\n- B.\n'
+    cases = {
+        'first line': ('# Changes\n\n' + released, "starts with the heading '# Changelog'"),
+        'version without a date': ('# Changelog\n\n## [2026-11_rev9]\n\n### Added\n\n- A.\n',
+                                   'a version heading is'),
+        'unreleased with a date': ('# Changelog\n\n## [Unreleased] - 2026-11-26\n\n### Added\n\n- A.\n',
+                                   'a version heading is'),
+        'semantic version': ('# Changelog\n\n## [1.2.0] - 2026-11-25\n\n### Added\n\n- A.\n',
+                             'a version heading is'),
+        'unreleased below a release': ('# Changelog\n\n' + released + '\n## [Unreleased]\n',
+                                       'is not older than the version above it'),
+        'older version first': ('# Changelog\n\n' + older + '\n' + released,
+                                'is not older than the version above it'),
+        'date outside the month': ('# Changelog\n\n## [2026-11_rev9] - 2026-12-01\n\n### Added\n\n- A.\n',
+                                   'is not in the month of the version'),
+        'later date below': ('# Changelog\n\n' + released + '\n' + older.replace('2026-11-20', '2026-11-30'),
+                             'is later than the date above it'),
+        'unknown heading': ('# Changelog\n\n' + released.replace('Changed', 'Security'),
+                            'the headings of a version are'),
+        'headings out of order': ('# Changelog\n\n' + released + '\n### Added\n\n- B.\n',
+                                  'the headings of a version are'),
+        'heading twice': ('# Changelog\n\n' + released + '\n### Changed\n\n- B.\n',
+                          'the headings of a version are'),
+        'heading without a bullet': ('# Changelog\n\n' + released.replace('- A.\n', '') + '\n### Fixed\n\n- B.\n',
+                                     'the heading Changed has no bullet'),
+        'release without a heading': ('# Changelog\n\n## [2026-11_rev9] - 2026-11-25\n\n' + older,
+                                      'the version 2026-11_rev9 has no heading'),
+        'paragraph in a section': ('# Changelog\n\n' + released + '\nA paragraph.\n',
+                                   'holds only bullets'),
+        'continuation after a blank line': ('# Changelog\n\n' + released + '\n  more\n',
+                                            'holds only bullets'),
+        'bold label instead of a heading': ('# Changelog\n\n## [2026-11_rev9] - 2026-11-25\n\n- **Added**: A.\n',
+                                            'holds only bullets'),
+    }
+    with tempfile.TemporaryDirectory() as d:
+        root = _limits_fixture(d)
+        for name, (changelog, expected) in cases.items():
+            write(root / 'CHANGELOG.md', changelog)
+            result = _check_limits(root, root / 'CHANGELOG.md')
+            assert result.returncode == 1 and expected in result.stderr \
+                and '(structure source)' in result.stderr, f'{name}: {result.stderr!r}'
+        write(root / 'CHANGELOG.md', '# Changelog\n\n## [Unreleased]\n\n' + released)
+        result = _check_limits(root, root / 'CHANGELOG.md')
+        assert result.returncode == 0, f'an empty [Unreleased] is allowed: {result.stderr!r}'
+
+
+def test_markdown_limits_usage_and_config_errors():
+    """An entry without paths or a source, an unknown key, a sentence cap
+    without after_release, or a token budget without chars_per_token is a
+    configuration error (exit 2), and so is a missing configuration."""
+    with tempfile.TemporaryDirectory() as d:
+        root = _limits_fixture(d)
+        bad = {
+            'no source': '[[limit]]\npaths = ["README.md"]\nmax_lines = 1\n',
+            'unknown key': '[[limit]]\npaths = ["README.md"]\nmax_line = 1\nsource = "s"\n',
+            'cap without a release': '[[limit]]\npaths = ["CHANGELOG.md"]\nmax_bullet_sentences = 4\nsource = "s"\n',
+            'tokens without a ratio': '[[limit]]\npaths = ["a"]\nmax_body_tokens = 4\nsource = "s"\n',
+            'no entry': 'chars_per_token = 4\n',
+            'not TOML': '[[limit\n',
+        }
+        for name, text in bad.items():
+            write(root / 'bad.toml', text)
+            result = _check_limits(root, config=root / 'bad.toml')
+            assert result.returncode == 2, f'{name}: rc={result.returncode} err={result.stderr!r}'
+        result = _check_limits(root, config=root / 'missing.toml')
+        assert result.returncode == 2, result.stderr
+
+
 TESTS = [
     test_scan_glyphs_counts_every_occurrence,
     test_scan_glyphs_two_on_one_line_distinct_columns,
@@ -4254,6 +4451,10 @@ TESTS = [
     test_check_commit_message_usage_errors,
     test_commit_msg_hook_refuses_a_bad_message_and_skips_merges,
     test_claude_hook_checks_the_commit_of_the_command,
+    test_markdown_limits_hold_in_the_repository,
+    test_markdown_limits_report_each_violation,
+    test_changelog_structure_rejects_each_violation,
+    test_markdown_limits_usage_and_config_errors,
 ]
 
 
