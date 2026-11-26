@@ -86,8 +86,8 @@ pushed tag that others can pull:
   `add a rule for noun chains`. The type is `feat`, `fix`, `docs`, `refactor`,
   `test`, `build`, `ci`, `chore`, `perf`, or `revert`, and `!` marks a breaking
   change. A change to a rule layer or a `SKILL.md` changes what the skills do,
-  so it is `feat` or `fix`, and `docs` is for the README, this file, and the
-  changelog. The scope is optional. It is the name of a skill, the name of a
+  so it is `feat` or `fix`, and `docs` is for the README, the files under
+  `docs/`, this file, and the changelog. The scope is optional. It is the name of a skill, the name of a
   rule layer (i.e., `general`, `scientific`, `latex`, `economist`, or `ste`),
   `scripts` for the helpers in `plugins/ai-slop/scripts/`, `vendor` for the
   synced linter, `manifests` for the three manifests, or `release`. A blank

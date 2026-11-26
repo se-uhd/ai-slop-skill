@@ -18,9 +18,10 @@ Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-m
 ### Changed
 
 - `shared/glossary-format.md` follows ISO 704. The Definition cell holds one statement without an article. The statement starts with the broader concept, so that it can replace the term. Other information goes into notes that start with "Note:". An abbreviation is a variant in the Term cell and never the definition. A new section lists the deficient definitions: circular, inaccurate, and negative ones. The Sources section cites ISO 704:2009 and ISO 704:2022 by clause, and the example glossary uses the new form.
-- `/ai-slop:glossary` and `/ai-slop:glossary-repo` run `scan_glossary.py --lint --definitions` and apply the substitution test to each definition. They report a deficient definition under `G.definition-form`. When a word is both a term and avoided vocabulary, the distinction goes into a note of the term. The README describes `--definitions`, and the smoke suite tests it.
+- `/ai-slop:glossary` and `/ai-slop:glossary-repo` run `scan_glossary.py --lint --definitions` and apply the substitution test to each definition. They report a deficient definition under `G.definition-form`. When a word is both a term and avoided vocabulary, the distinction goes into a note of the term. `docs/skill-workflows.md` describes `--definitions`, and the smoke suite tests it.
 - `AGENTS.md` describes the format of commit messages, the types and scopes, and the three checks. A release commit has the subject `chore(release): YYYY-MM_revN` and no longer has a subject that ends with `; release YYYY-MM_revN`.
-- The maintainer notes in the README describe the format of commit messages and tell maintainers how to enable the Git hook.
+- The maintainer notes describe the format of commit messages and tell maintainers how to enable the Git hook.
+- The README keeps the description of the bundle, the installation for each client, the table of skills, and links to the documentation. The sections Rule layers, Skill workflows, and Maintainer notes moved from the README into `docs/rule-layers.md`, `docs/skill-workflows.md`, and `docs/maintainer-notes.md` without a change to their text. A sentence that named one of these sections now links to its file.
 
 ## [2026-11_rev9] - 2026-11-25
 
