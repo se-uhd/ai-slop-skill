@@ -80,16 +80,36 @@ pushed tag that others can pull:
   the rationale, or a `SKILL.md`. `test_every_rule_key_in_a_self_check_item`
   fails when a key is in no self-check item of its layer. Its exempt list names
   the rules that have nothing to scan for, such as the scope of a layer.
-- **Commit messages follow the general layer.** They are prose, and
+- **Commit messages follow Conventional Commits with length limits.** The
+  subject has the form `type(scope)!: description`, at most 72 characters, and
+  no final period. The description is an imperative, such as
+  `add a rule for noun chains`. The type is `feat`, `fix`, `docs`, `refactor`,
+  `test`, `build`, `ci`, `chore`, `perf`, or `revert`, and `!` marks a breaking
+  change. A change to a rule layer or a `SKILL.md` changes what the skills do,
+  so it is `feat` or `fix`, and `docs` is for the README, this file, and the
+  changelog. The scope is optional. It is the name of a skill, the name of a
+  rule layer (i.e., `general`, `scientific`, `latex`, `economist`, or `ste`),
+  `scripts` for the helpers in `plugins/ai-slop/scripts/`, `vendor` for the
+  synced linter, `manifests` for the three manifests, or `release`. A blank
+  line and 1 to 5 bullets follow the subject. Each bullet starts with a hyphen
+  and a space and has at most 2 lines of at most 72 characters, with
+  continuation lines indented by two spaces. The trailers, such as `Co-Authored-By:`, come last,
+  after a blank line. A release commit has the subject
+  `chore(release): YYYY-MM_revN`, and its bullets summarize the release.
+- **`scripts/check_commit_message.py` enforces the format.** Enable its Git
+  hook once per clone with `git config core.hooksPath .githooks`. The Claude
+  Code hook in `.claude/settings.json` checks each commit that an agent makes
+  and returns the violations to the agent. The workflow `commit-messages.yml`
+  checks the commits of a pull request and of a push to `main`. The check skips
+  the commits up to the tag `2026-11_rev9`, since rule 3 keeps their released
+  messages. The smoke suite tests the script and both hooks.
+- **Commit messages also follow the general layer.** They are prose, and
   `/ai-slop:review-repo` scans them with every other file. Correcting a pushed
   message means rewriting history, which rule 3 above allows only as a
   deliberate repair, so the check happens before `git commit`. The recurring
   failures are a semicolon joining two independent clauses, a literal em-dash
   glyph (U+2014), a British spelling, and a comma splice. A semicolon in a
   parenthetical list, in quoted output, or in a code span stays.
-  Write the subject line as an imperative ending in `; release YYYY-MM_revN` on
-  a release commit. That suffix is the one semicolon that the convention keeps,
-  and the rest of the subject takes commas.
 - **The trope catalog has one source and no bundled copy.** `fetch_tropes.py`
   reads tropes.fyi and exits non-zero when it cannot. Do not add a mirror or a
   bundled snapshot. A stale copy that outranks the live catalog is worse than

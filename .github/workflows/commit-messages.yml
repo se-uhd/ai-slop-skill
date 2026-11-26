@@ -1,0 +1,32 @@
+name: commit messages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  commit-messages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The check reads the commits since the base and the tag 2026-11_rev9.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      # A pull request checks its own commits, and a push to main checks the
+      # pushed commits. When the old head is unknown, such as after a force
+      # push, the script checks every commit after the tag 2026-11_rev9.
+      - name: Check commit messages
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+        run: |
+          if git rev-parse -q --verify "$BASE^{commit}" >/dev/null; then range="$BASE..HEAD"; else range=HEAD; fi
+          python3 scripts/check_commit_message.py --range "$range"

@@ -331,6 +331,10 @@ The sync replaces `lint_markdown.py`, `check_baseline.py`, `refresh_vendor.py`, 
 
 Releases follow the release protocol in `AGENTS.md`. Run the smoke suite with `python3 plugins/ai-slop/scripts/tests/run_smoke.py` before every commit.
 
+### Commit messages
+
+Commit messages follow Conventional Commits with a body of short bullets, as `AGENTS.md` describes. `scripts/check_commit_message.py` checks the format. Enable its Git hook in your clone with `git config core.hooksPath .githooks`. Claude Code runs the check after each commit through the hook in `.claude/settings.json`, and the workflow `commit-messages.yml` runs it on each pull request and on each push to `main`.
+
 ### Validating the manifests
 
 Before committing changes to the manifests, validate them:

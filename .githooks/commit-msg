@@ -1,0 +1,6 @@
+#!/bin/sh
+# Checks the message of a new commit with scripts/check_commit_message.py. A
+# merge is skipped, as in the check of a revision range. Git runs the hook in
+# the root of the working tree. Enable it with `git config core.hooksPath .githooks`.
+git rev-parse -q --verify MERGE_HEAD >/dev/null && exit 0
+exec python3 scripts/check_commit_message.py "$1"

@@ -3858,6 +3858,201 @@ def test_build_writing_assembles_layers_and_catalog():
         assert rc == 1 and not (Path(d) / 'x.md').exists(), (rc, err)
 
 
+# ---------- commit messages (scripts/ and the hooks at the repository root) ----------
+
+REPO = SCRIPTS.parent.parent.parent
+COMMIT_CHECKER = REPO / 'scripts' / 'check_commit_message.py'
+VALID_MESSAGE = ('fix(scripts): name the cause of a failed catalog download\n\n'
+                 '- fetch_tropes.py printed "no catalog" after a DNS or TLS\n'
+                 '  error.\n'
+                 '- It now names the cause, such as an HTTP status.\n')
+
+
+def _git(d, *args, check=True, email='t@e.x'):
+    env = {**os.environ, 'GIT_AUTHOR_NAME': 'T', 'GIT_AUTHOR_EMAIL': email,
+           'GIT_COMMITTER_NAME': 'T', 'GIT_COMMITTER_EMAIL': email,
+           'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1'}
+    result = subprocess.run(['git', *args], cwd=d, env=env, capture_output=True, text=True)
+    assert result.returncode == 0 or not check, f"git {args}: {result.stderr}"
+    return result
+
+
+def _check_commit_message(message):
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / 'COMMIT_EDITMSG'
+        path.write_bytes(message.encode('utf-8'))
+        result = subprocess.run([PYTHON, str(COMMIT_CHECKER), str(path)],
+                                capture_output=True, text=True)
+    return result.returncode, result.stderr
+
+
+def test_check_commit_message_accepts_the_format():
+    """The format of AGENTS.md: a Conventional Commits subject of at most 72
+    characters, a blank line, 1 to 5 bullets of at most 2 lines of 72
+    characters, and the trailers. Comment lines and the diff below the
+    scissors line of `git commit --verbose` do not count."""
+    x66, a66 = 'x' * 66, 'ä' * 66
+    cases = {
+        'bullets': VALID_MESSAGE,
+        'trailer': VALID_MESSAGE + '\nCo-Authored-By: Claude <noreply@anthropic.com>\n',
+        'no scope': 'docs: shorten the README\n\n- Move the install steps to a table.\n',
+        'skill scope': 'feat(review-repo): read Vue templates\n\n- a\n',
+        'breaking change': 'feat(review)!: require a report path\n\n- a\n',
+        'release': 'chore(release): 2026-12_rev1\n\n- a\n',
+        'first release of a month': 'chore(release): 2026-12\n\n- a\n',
+        'comments and scissors': VALID_MESSAGE + '# Please enter the message.\n'
+            '# ------------------------ >8 ------------------------\n'
+            'diff --git a/README.md b/README.md\n',
+        'carriage returns': 'docs: fix a typo\r\n\r\n- Correct the name.\r\n',
+        'five bullets': 'chore: tidy\n\n- a\n- b\n- c\n- d\n- e\n',
+        '72 characters': f'docs: {x66}\n\n- a\n',
+        'umlauts count as one character': f'docs: {a66}\n\n- a\n',
+    }
+    for name, message in cases.items():
+        rc, err = _check_commit_message(message)
+        assert rc == 0, f"{name}: rc={rc} err={err!r}"
+
+
+def test_check_commit_message_rejects_violations():
+    x67, x71 = 'x' * 67, 'x' * 71
+    cases = {
+        'no type': ('Name the cause of a failed download\n\n- a\n', 'does not have the form'),
+        'unknown type': ('feature: add a chart\n\n- a\n', "type 'feature'"),
+        'unknown scope': ('feat(parser): add a mode\n\n- a\n', "scope 'parser'"),
+        'empty scope': ('feat(): add a mode\n\n- a\n', "scope ''"),
+        'release without a version': ('chore(release): publish the glossary\n\n- a\n',
+                                      'chore(release): YYYY-MM_revN'),
+        'release of another type': ('feat(release): 2026-12\n\n- a\n', 'chore(release)'),
+        'subject of 73 characters': (f'docs: {x67}\n\n- a\n', '73 characters'),
+        'period at the end': ('docs: fix a typo.\n\n- a\n', 'period'),
+        'no body': ('docs: fix a typo\n', 'blank line'),
+        'no blank line': ('docs: fix a typo\n- a\n', 'blank line'),
+        'paragraph body': ('docs: fix a typo\n\nThe README named the wrong file.\n',
+                           'neither a bullet'),
+        'six bullets': ('chore: tidy\n\n- a\n- b\n- c\n- d\n- e\n- f\n', '6 bullets'),
+        'bullet of three lines': ('chore: tidy\n\n- a\n  b\n  c\n', 'more than 2 lines'),
+        'line of 73 characters': (f'chore: tidy\n\n- {x71}\n', '73 characters'),
+        'blank line between bullets': ('chore: tidy\n\n- a\n\n- b\n', 'neither a bullet'),
+        'continuation without a bullet': ('chore: tidy\n\n  a\n', 'neither a bullet'),
+        'empty': ('# only a comment\n', 'empty'),
+    }
+    for name, (message, expected) in cases.items():
+        rc, err = _check_commit_message(message)
+        assert rc == 1 and expected in err, f"{name}: rc={rc} err={err!r}"
+        assert 'AGENTS.md' in err, f"{name}: no pointer to AGENTS.md: {err!r}"
+
+
+def test_check_commit_message_range_skips_released_merged_and_dependabot_commits():
+    """--range checks the commits after the tag 2026-11_rev9, so the released
+    history keeps its messages. Merges and Dependabot commits are skipped."""
+    def check(d, revision_range):
+        return subprocess.run([PYTHON, str(COMMIT_CHECKER), '--range', revision_range],
+                              cwd=d, capture_output=True, text=True)
+
+    with tempfile.TemporaryDirectory() as d:
+        _git(d, 'init', '-q')
+        _git(d, 'commit', '-q', '--allow-empty', '-m', 'Released message; release 2026-11_rev9')
+        _git(d, 'tag', '2026-11_rev9')
+        _git(d, 'commit', '-q', '--allow-empty', '-m', 'docs: add a note\n\n- a')
+        _git(d, 'commit', '-q', '--allow-empty', '-m', 'Bump actions/checkout from 4 to 5',
+             email='49699333+dependabot[bot]@users.noreply.github.com')
+        _git(d, 'checkout', '-q', '-b', 'side')
+        _git(d, 'commit', '-q', '--allow-empty', '-m', 'test: cover a case\n\n- a')
+        _git(d, 'checkout', '-q', '-')
+        _git(d, 'merge', '-q', '--no-ff', '--no-edit', 'side')
+        result = check(d, 'HEAD')
+        assert result.returncode == 0, f"valid range: {result.stderr!r}"
+
+        _git(d, 'commit', '-q', '--allow-empty', '-m', 'Fix the hook\n\n# a kept line')
+        sha = _git(d, 'rev-parse', '--short', 'HEAD').stdout.strip()
+        result = check(d, 'HEAD~1..HEAD')
+        assert result.returncode == 1 and f'commit {sha}: ' in result.stderr, result.stderr
+        assert "'# a kept line'" in result.stderr, f"a committed # line is skipped: {result.stderr!r}"
+
+        _git(d, 'tag', '-d', '2026-11_rev9')
+        result = check(d, 'HEAD')
+        assert result.returncode == 2 and '2026-11_rev9' in result.stderr, result.stderr
+
+
+def test_check_commit_message_usage_errors():
+    for args in ([], ['--range'], ['--range', '--all'], ['a', 'b'],
+                 ['/nonexistent/COMMIT_EDITMSG']):
+        result = subprocess.run([PYTHON, str(COMMIT_CHECKER), *args],
+                                capture_output=True, text=True)
+        assert result.returncode == 2, f"{args}: rc={result.returncode} err={result.stderr!r}"
+
+
+def _repository_with_commit_tools(d):
+    """A repository with copies of the checker and both hooks, and the tag
+    2026-11_rev9 on its first commit."""
+    for relative in ('scripts/check_commit_message.py', '.githooks/commit-msg',
+                     '.claude/hooks/check_last_commit.py'):
+        (Path(d) / relative).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO / relative, Path(d) / relative)
+    _git(d, 'init', '-q')
+    _git(d, 'commit', '-q', '--allow-empty', '-m', 'Released message')
+    _git(d, 'tag', '2026-11_rev9')
+
+
+def test_commit_msg_hook_refuses_a_bad_message_and_skips_merges():
+    with tempfile.TemporaryDirectory() as d:
+        _repository_with_commit_tools(d)
+        _git(d, 'config', 'core.hooksPath', '.githooks')
+        result = _git(d, 'commit', '-q', '--allow-empty', '-m', 'Add a note', check=False)
+        assert result.returncode != 0 and 'does not have the form' in result.stderr, result.stderr
+        _git(d, 'commit', '-q', '--allow-empty', '-m', 'docs: add a note\n\n- a')
+        _git(d, 'checkout', '-q', '-b', 'side')
+        _git(d, 'commit', '-q', '--allow-empty', '-m', 'test: cover a case\n\n- a')
+        _git(d, 'checkout', '-q', '-')
+        _git(d, 'commit', '-q', '--allow-empty', '-m', 'docs: add a second note\n\n- a')
+        _git(d, 'merge', '-q', '--no-ff', '--no-edit', 'side')
+
+
+def test_claude_hook_checks_the_commit_of_the_command():
+    """The PostToolUse hook checks HEAD after a Bash command that runs
+    `git commit` in the repository or one of its worktrees, found through
+    `git -C` or `cd`, and exits 2 on a violation. It ignores other commands
+    and other repositories. .claude/settings.json runs it."""
+    import json
+
+    settings = json.loads((REPO / '.claude' / 'settings.json').read_text(encoding='utf-8'))
+    commands = [hook['command'] for entry in settings['hooks']['PostToolUse']
+                if entry['matcher'] == 'Bash' for hook in entry['hooks']]
+    assert any('.claude/hooks/check_last_commit.py' in c for c in commands), commands
+
+    def hook(project, command, cwd):
+        event = json.dumps({'hook_event_name': 'PostToolUse', 'tool_name': 'Bash',
+                            'cwd': str(cwd), 'tool_input': {'command': command}})
+        return subprocess.run([PYTHON, str(Path(project) / '.claude/hooks/check_last_commit.py')],
+                              input=event, capture_output=True, text=True)
+
+    with tempfile.TemporaryDirectory() as d:
+        project, worktree, other = Path(d) / 'project', Path(d) / 'worktree', Path(d) / 'other'
+        project.mkdir()
+        _repository_with_commit_tools(project)
+        _git(project, 'commit', '-q', '--allow-empty', '-m', 'Add a note')
+        assert hook(project, 'git status', d).returncode == 0
+        assert hook(project, 'git log --grep commit', d).returncode == 0
+        result = hook(project, f'git -C "{project}" commit -q -m "Add a note"', d)
+        assert result.returncode == 2 and 'does not have the form' in result.stderr \
+            and '--amend' in result.stderr, (result.returncode, result.stderr)
+        result = hook(project, 'git -c core.hooksPath=.githooks commit --amend', project)
+        assert result.returncode == 2, (result.returncode, result.stderr)
+
+        _git(project, 'commit', '-q', '--amend', '--allow-empty', '-m', 'docs: add a note\n\n- a')
+        assert hook(project, f'cd {project} && git commit --amend', d).returncode == 0
+
+        _git(project, 'worktree', 'add', '-q', str(worktree))
+        _git(worktree, 'commit', '-q', '--allow-empty', '-m', 'Add a test')
+        result = hook(project, f'cd {worktree} && git commit -m "Add a test"', d)
+        assert result.returncode == 2, (result.returncode, result.stderr)
+
+        other.mkdir()
+        _git(other, 'init', '-q')
+        _git(other, 'commit', '-q', '--allow-empty', '-m', 'Any message')
+        assert hook(project, f'git -C {other} commit -m "Any message"', d).returncode == 0
+
+
 TESTS = [
     test_scan_glyphs_counts_every_occurrence,
     test_scan_glyphs_two_on_one_line_distinct_columns,
@@ -4053,6 +4248,12 @@ TESTS = [
     test_export_rules_replaces_only_an_earlier_export,
     test_export_rules_usage_and_bad_catalog,
     test_build_writing_assembles_layers_and_catalog,
+    test_check_commit_message_accepts_the_format,
+    test_check_commit_message_rejects_violations,
+    test_check_commit_message_range_skips_released_merged_and_dependabot_commits,
+    test_check_commit_message_usage_errors,
+    test_commit_msg_hook_refuses_a_bad_message_and_skips_merges,
+    test_claude_hook_checks_the_commit_of_the_command,
 ]
 
 

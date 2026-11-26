@@ -8,8 +8,11 @@
 *.swo
 *~
 
-# Local Claude Code state
-.claude/
+# Local Claude Code state, such as settings.local.json and worktrees/. The
+# project settings and their hooks are committed.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 
 # Python bytecode from running scripts locally. The vendored tree under
 # scripts/_vendor/ is committed, but its __pycache__ is regenerated on use.
