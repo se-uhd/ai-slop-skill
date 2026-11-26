@@ -6,7 +6,7 @@ The report schema is stable so that revise mode can parse it. Each finding has `
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-11_rev9
+**Skill version:** 2026-11_rev10
 **Reviewed:** <ISO 8601 date>
 
 > This report applies the writing rules at
