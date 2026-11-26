@@ -1687,6 +1687,49 @@ def test_scan_glossary_reports_avoided_terms():
     assert words == ['fund', 'the fund'], f"a quotation in a parenthetical sense was read as a word: {words!r}"
 
 
+def test_scan_glossary_lists_deficient_definitions():
+    """--definitions lists the definitions that a pattern marks as deficient
+    under ISO 704, in the format and in the older list format, ignores a term
+    inside a longer term and the text after "Note:", passes the example of the
+    format, and keeps the exit code of --lint. Both glossary skills run it."""
+    table = ('# Glossary\n\n'
+             '| Term | Definition | Code | Source |\n|---|---|---|---|\n'
+             '| bundle | archive that the server installs. | | Proposed, `a.md:1` |\n'
+             '| release tag | signed git tag of a release. Note: Write the tag. | | Proposed, `a.md:2` |\n'
+             '| release | published version, made up of its release tag and its bundle. | | Proposed, `a.md:3` |\n'
+             '| undo | reversal of a coffee that the user did not undo. | | Proposed, `a.md:4` |\n'
+             '| deciduous tree | tree other than an evergreen tree. | | Proposed, `a.md:5` |\n'
+             '| test build | A bundle built from changes. It cannot be released. | | Proposed, `a.md:6` |\n')
+    entries = ('# Glossary\n\n'
+               '- **undo**: The reversal of a coffee that the user did not undo.\n'
+               '  Avoid: cancel.\n')
+    with tempfile.TemporaryDirectory() as d:
+        write(Path(d) / 'GLOSSARY.md', table)
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), '--definitions')
+        found = {(row[2], row[1]) for row in _glossary_rows(out)}
+        assert rc == 0 and found == {
+            ('release tag / release', 'mutual'), ('undo', 'own-term'), ('deciduous tree', 'negative'),
+            ('test build', 'article'), ('test build', 'sentences')}, f"table: rc={rc} {found!r} {err!r}"
+        assert '6 definition(s)' in err and 'mutual=1' in err, f"table: summary: {err!r}"
+        write(Path(d) / 'GLOSSARY.md', entries)
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), '--definitions')
+        found = {(row[2], row[1]) for row in _glossary_rows(out)}
+        assert rc == 0 and found == {('undo', 'article'), ('undo', 'own-term')}, f"entries: {found!r} {err!r}"
+        fmt = (SCRIPTS.parent / 'shared' / 'glossary-format.md').read_text(encoding='utf-8')
+        example = fmt[fmt.index('## Example'):]
+        write(Path(d) / 'GLOSSARY.md', example[example.index('```markdown\n') + len('```markdown\n'):example.rindex('```')])
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), '--definitions')
+        assert rc == 0 and not out, f"format example: rc={rc} out={out!r}"
+        write(Path(d) / 'GLOSSARY.md', table + '\n| Avoid | Use instead | Scope and reason |\n|---|---|---|\n'
+              '| undo | bundle | Never. |\n')
+        rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), '--definitions')
+        assert rc == 1 and '"undo" as vocabulary to avoid' in err, f"avoided term: rc={rc} err={err!r}"
+    for name in ('glossary', 'glossary-repo'):
+        text = (SCRIPTS.parent / 'skills' / name / 'SKILL.md').read_text(encoding='utf-8')
+        assert 'scan_glossary.py" <glossary> --definitions' in text and 'G.definition-form' in text, \
+            f"{name}: does not check the definitions"
+
+
 def test_scan_glossary_exit_codes():
     with tempfile.TemporaryDirectory() as d:
         write(Path(d) / 'GLOSSARY.md', '# Glossary\n\nNo table of avoided words.\n')
@@ -3931,6 +3974,7 @@ TESTS = [
     test_scan_glossary_reads_scan_repo_output_from_stdin,
     test_scan_glossary_skips_terms_and_identifier_references,
     test_scan_glossary_reports_avoided_terms,
+    test_scan_glossary_lists_deficient_definitions,
     test_scan_glossary_exit_codes,
     test_glossary_format_example_parses,
     test_rule_layers_exist,

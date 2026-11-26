@@ -2,6 +2,19 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Only the git tags record the releases before `2026-06_rev13`.
 
+## [Unreleased]
+
+### Added
+
+- **Define a term by its broader concept and what sets it apart** (`G.definition-form`) in the general layer, after ISO 704 (Terminology work: Principles and methods). A definition names the broader concept of the term. It also names the characteristics that make the concept different from the other concepts of that kind. The definition passes the substitution test: it can replace the term in a sentence of the text, and the meaning does not change. A definition that contains its term needs a revision. A negative definition, which only says what the concept is not, also needs a revision. So does a definition that describes how the concept operates instead of what it is. The same applies to two definitions that contain the term of each other. Item 16 of the general self-check covers the rule, and `rules-rationale.md` gives its reason.
+- `scan_glossary.py --definitions` lists the definitions of a glossary that a pattern marks as deficient. The patterns find a definition that starts with an article, has more than one sentence, contains its own term, or is negative. They also find two definitions that contain the term of each other. The lines are candidates for the substitution test. Like `--lint`, the option checks only the glossary. It exits with status 1 when the glossary lists a term as vocabulary to avoid.
+- `/ai-slop:glossary` and `/ai-slop:glossary-repo` have the new option `--convert`. It rewrites an existing glossary into the format of `shared/glossary-format.md` and the definitions into the form of ISO 704. The skill does this before the check. The report lists each old entry with its new row. It also lists each sentence that moved into a note, into the documentation, or out of the glossary.
+
+### Changed
+
+- `shared/glossary-format.md` follows ISO 704. The Definition cell holds one statement without an article. The statement starts with the broader concept, so that it can replace the term. Other information goes into notes that start with "Note:". An abbreviation is a variant in the Term cell and never the definition. A new section lists the deficient definitions: circular, inaccurate, and negative ones. The Sources section cites ISO 704:2009 and ISO 704:2022 by clause, and the example glossary uses the new form.
+- `/ai-slop:glossary` and `/ai-slop:glossary-repo` run `scan_glossary.py --lint --definitions` and apply the substitution test to each definition. They report a deficient definition under `G.definition-form`. When a word is both a term and avoided vocabulary, the distinction goes into a note of the term. The README describes `--definitions`, and the smoke suite tests it.
+
 ## [2026-11_rev9] - 2026-11-25
 
 ### Changed

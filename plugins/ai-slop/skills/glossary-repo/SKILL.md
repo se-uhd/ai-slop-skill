@@ -1,6 +1,6 @@
 ---
 name: glossary-repo
-description: Build or maintain GLOSSARY.md for a whole repository and check its terminology. Use when the user asks for a glossary of a code base, a project, or a paper repository, or for a check that its documentation, code comments, user-facing messages, and LaTeX or Markdown files use one term for each concept. Reads every text file of the repository through the shared repository scan, including the comments and prose string literals of source code, and the identifiers that name each concept. Flags competing names, conflicting meanings, undefined terms, avoided vocabulary, and newly invented labels for existing concepts. Writes a glossary and a terminology report grouped by file, or validates an existing glossary with --check. --ste adds the Simplified Technical English layer. Does not change the repository files that it checks.
+description: Build or maintain GLOSSARY.md for a whole repository and check its terminology. Use when the user asks for a glossary of a code base, a project, or a paper repository, or for a check that its documentation, code comments, user-facing messages, and LaTeX or Markdown files use one term for each concept. Reads every text file of the repository through the shared repository scan, including the comments and prose string literals of source code, and the identifiers that name each concept. Flags competing names, conflicting meanings, undefined terms, avoided vocabulary, and newly invented labels for existing concepts. Writes a glossary and a terminology report grouped by file, validates an existing glossary with --check, or converts it to the format and to ISO 704 definitions with --convert. --ste adds the Simplified Technical English layer. Does not change the repository files that it checks.
 license: CC-BY-4.0
 metadata:
   version: "2026-11_rev9"
@@ -41,6 +41,9 @@ positional path to a directory overrides it. For one document, use
   `ai-slop-report.md`. If the glossary does not exist, explain that a normal
   invocation creates it and stop. Without `--check`, the skill creates or
   updates the glossary and checks the repository against it in the same run.
+- **Convert mode.** `--convert` rewrites the existing glossary into the format
+  and its definitions into the form of ISO 704 before the check (see Convert
+  an existing glossary).
 - **Scan options.** `--exclude=<glob>` (repeatable) skips the files that match
   a shell pattern relative to the root, such as `data/*`. `--no-strings` reads
   only the comments of source files and not their string literals.
@@ -103,8 +106,8 @@ searches.
 ## Establish the concepts
 
 Read `../../shared/rules-general.md`, especially `G.one-term`,
-`G.define-once`, `G.distinct-synonyms`, `G.no-coinages`, and
-`G.context-first`, and read `../../shared/glossary-format.md`. With `--ste`,
+`G.define-once`, `G.distinct-synonyms`, `G.definition-form`, `G.no-coinages`,
+and `G.context-first`, and read `../../shared/glossary-format.md`. With `--ste`,
 also read `../../shared/rules-ste.md`. This mode checks terminology and does
 not fetch the trope catalog or audit unrelated style. Existing project
 terminology, an explicitly designated codebook, and the wording of a user
@@ -146,21 +149,56 @@ Write the glossary in the format of `../../shared/glossary-format.md`, with the
 Code column. The scope paragraph names the directories and kinds of text that
 the glossary covers, the records and data that the check skips, and the source
 that decides between sources. Mark a definition as proposed unless a defining
-source states it. A definition must preserve what counts as an instance, what
-it excludes, and how it differs from neighboring concepts, without adding facts
-that the sources do not give. With `--ste`, write the definitions, the scope
+source states it. Write each definition in the form that the format
+describes, following `G.definition-form`: the superordinate concept without an
+article, the delimiting characteristics, and notes for the rest. A definition
+and its notes must preserve what counts as an instance, what it excludes, and
+how it differs from neighboring concepts, without adding facts that the
+sources do not give. Apply the substitution test to each definition: put it in
+place of the term in a sentence of a defining source, and revise it when the
+meaning changes. With `--ste`, write the definitions, the notes, the scope
 paragraph, and the reasons in the avoid table in STE.
 
 An existing glossary keeps its structure, its definitions, and the edits of
-its authors, unless the user asks to convert it to the format. Add new
+its authors, unless the user asks to convert it to the format or passes `--convert`
+(see Convert an existing glossary). Add new
 concepts to the matching section, with "Proposed," in the Source cell.
 
+## Convert an existing glossary
+
+With `--convert`, rewrite the existing glossary into the format of
+`../../shared/glossary-format.md` before the check. Without the flag, a
+conversion happens only when the user asks for it.
+
+1. Read every entry of the old glossary and give it a concept row in the group
+   of concepts that it belongs to. Accepted variants and abbreviations go into
+   the Term cell, identifiers into the Code cell, and the file or section that
+   defines the concept into the Source cell.
+2. Rewrite each definition in the form of `G.definition-form`: one statement
+   without an article that starts with the superordinate concept and names
+   the delimiting characteristics. Apply the substitution test to it. Move
+   every other sentence of the old definition into a note that starts with
+   "Note:", or into the documentation that the Source cell names when the note
+   would only repeat it. Keep every restriction and decision.
+3. Move the avoided words into the avoid table with the replacement and the
+   sense that the old entry gave. Resolve each avoided word that is also a
+   term as "Existing glossaries" in the format describes.
+4. Run `scan_glossary.py <glossary> --lint --definitions` and revise each
+   listed definition until only the exceptions of its kind remain.
+5. List the conversion in the report: for each old entry its new row, and each
+   sentence that moved into a note, into the documentation, or out of the
+   glossary, so that the author can check that no content was lost.
+
 A term of the glossary is never vocabulary to avoid. Before finishing, run
-`python3 "<skill-dir>/../../scripts/scan_glossary.py" <glossary> --lint`. It
-exits with status 1 and names each avoided word that is also a term or a
+`python3 "<skill-dir>/../../scripts/scan_glossary.py" <glossary> --lint --definitions`.
+It exits with status 1 and names each avoided word that is also a term or a
 variant of one. Remove each such word from the avoided vocabulary and state
-the distinction in the definition of the term, as
-`../../shared/glossary-format.md` describes, in an existing glossary too.
+the distinction in a note of the term, as
+`../../shared/glossary-format.md` describes, in an existing glossary too. The
+script also lists the definitions that a pattern marks as deficient, such as a
+definition that contains its term or two definitions that use each other's
+term. Revise each listed definition that you added or changed, unless the
+exception in its kind applies, and report the others.
 
 ## Check the repository
 
@@ -213,11 +251,19 @@ Report a defect of the glossary itself as a finding on the glossary under
 `G.distinct-synonyms`, with a suggested revision of its line:
 
 - an avoided word that is also a term: the revision removes the word from the
-  avoided vocabulary and states the distinction in the definition of the term
+  avoided vocabulary and states the distinction in a note of the term
 - an avoided word without a sense that the project uses correctly in other
   senses: the revision names the avoided sense
 - a row that rules out a label of the interface that the glossary names as its
   reference: the revision limits the row to the other text
+
+Report a deficient definition as a finding on the glossary under
+`G.definition-form`, with the definition rewritten in the form of the format
+as the suggested revision. Run
+`python3 "<skill-dir>/../../scripts/scan_glossary.py" <glossary> --definitions`
+for the candidates that a pattern finds, and apply the substitution test to
+the other definitions. The Reason names the defect and its clause of ISO 704
+from the list of deficient definitions in `../../shared/glossary-format.md`.
 
 A definition that the code contradicts goes under author judgment, since the
 authors decide which of the two is right.

@@ -10,13 +10,17 @@ the terminology report (`ai-slop-report.md`), which a later check writes again.
 ## Principles
 
 1. State each fact once. A variant, an identifier, or a decision belongs to the
-   entry of its concept. A distinction between two concepts goes in the entry
-   of the term that readers confuse with the other, and other entries use the
-   defined term without explaining it again.
-2. Keep definitions short. A definition says what kind of thing the concept
-   is, which property distinguishes it from its neighbors, and what does not
-   count as an instance. Behavior, procedures, defaults, file layouts, counts,
-   and history belong in the documentation that the Source cell names.
+   entry of its concept. A distinction between two concepts goes in a note of
+   the entry of the term that readers confuse with the other, and other entries
+   use the defined term without explaining it again.
+2. Define each concept by its kind and by what sets it apart. A definition
+   names the superordinate concept, that is, the broader kind of thing, and the
+   delimiting characteristics that distinguish the concept from the other
+   concepts of that kind (ISO 704:2022, 3.3). It gives the minimum that keeps
+   readers from confusing the concept with related concepts, not a full
+   account of it (ISO 704:2009, 6.2). Notes add what readers also need.
+   Behavior, procedures, defaults, file layouts, counts, and history belong in
+   the documentation that the Source cell names.
 3. Put content with the same parts in every entry into a table, and use prose
    for the scope paragraph, the lead sentences, and the open questions.
 4. Include the concepts that readers have to tell apart, such as the object of
@@ -78,7 +82,8 @@ One paragraph under the title, without a heading, states the following:
 Each group of concepts is a `##` section named with a noun phrase in sentence
 case, such as "Builds and releases", "Populations", or "Coding and checks".
 Order the sections, and the rows within a section, so that a term is defined
-before an entry uses it. When the rows of a section stand in one relation,
+before an entry uses it and a superordinate concept comes before the concepts
+of its kind (ISO 704:2009, 6.3.5). When the rows of a section stand in one relation,
 such as populations that are each drawn from the one above or the stages of a
 pipeline, order the rows by that relation and state it once in a lead sentence
 above the table. Divide a section into `###` subsections only when it covers
@@ -92,13 +97,26 @@ when no code names the concepts, as in the glossary of a paper.
 - **Term.** The preferred term as it appears in running text, lowercase unless
   it is a proper noun. Accepted variants follow in parentheses, such as an
   abbreviation or a short form for later mentions: `Global South (GS)`,
-  `release tag (the tag)`. The last sentence of the definition states a
-  condition on a variant. Two terms that differ only in one qualifier, such as
-  a read lock and a write lock, can share a row.
-- **Definition.** One to three sentences that give the kind of thing, the
-  distinguishing property, and, where a neighboring concept invites confusion,
-  what is not an instance. The definition uses the other terms of the glossary
-  as they are defined.
+  `release tag (the tag)`. A note states a condition on a variant. An
+  abbreviation and its full form both designate the concept, so the full form
+  is a variant in the Term cell and never the definition (ISO 704:2009, 6.1).
+  Two terms that differ only in one qualifier, such as a read lock and a write
+  lock, can share a row.
+- **Definition.** The definition, followed by notes where readers need them.
+  The definition is one statement that does not form a complete sentence. It
+  begins with the superordinate concept, without an article, and continues
+  with the delimiting characteristics, as in "archive that the server
+  installs" for *bundle* (ISO 704:2009, 6.3.2). A term for an action begins
+  with a verb, and a term for a property with a phrase such as "having" or
+  "of". The definition can replace the term in a sentence of the sources
+  without a loss or change of meaning, which is the substitution test (ISO
+  704:2009, 6.3.4). Its superordinate concept is a term defined in an earlier
+  row or a word that a general dictionary defines (ISO 704:2009, 6.3.5). Each
+  note begins with "Note:" and gives supplementary information (ISO 704:2009,
+  6.4), such as the distinction from a concept that readers confuse with this
+  one, a condition on a variant, or an optional part. The definition and each
+  note end with a period and use the other terms of the glossary as they are
+  defined.
 - **Code.** The main identifiers that name the concept, each in a code span,
   such as a type, a module, a file, a configuration key, a command, or a route.
   An identifier that keeps an avoided word carries the reason in parentheses,
@@ -109,6 +127,28 @@ when no code names the concepts, as in the glossary of a paper.
   quotes. A definition inferred from use starts with "Proposed," and gives the
   location of a typical use. Authors confirm a definition by deleting
   "Proposed,".
+
+### Deficient definitions
+
+A definition with one of these defects needs a revision.
+`scan_glossary.py --definitions` lists the candidates that a pattern can find,
+and the substitution test finds others:
+
+- It contains its term, or two definitions each contain the term of the other,
+  so that a reader who substitutes one for the other cannot finish either
+  (ISO 704:2009, 6.5.2).
+- It says what the concept is not, unless the concept is the opposite of a
+  defined concept, as *nonconformity* is of *conformity* (ISO 704:2009, 6.5.4).
+- It defines a second concept on the way, repeats a characteristic of the
+  superordinate concept, or lists the kinds of the concept (ISO 704:2009,
+  6.3.5). A second concept gets a row of its own.
+- It tells how the concept operates or how to use it instead of what it is,
+  which makes it an explanation (ISO 704:2009, 6.4.5). That account belongs in
+  the documentation that the Source cell names.
+- It explains the words of the term instead of the concept, as "tree bearing
+  cones" does for *coniferous tree* (ISO 704:2009, 6.3.5).
+- It admits instances that the sources exclude, or leaves out instances that
+  they include (ISO 704:2009, 6.5.3).
 
 ### Value tables
 
@@ -138,9 +178,9 @@ One table for the whole glossary, sorted alphabetically by its first column:
 
 The table never lists a term of the concept tables or a variant of one, not
 even in one sense. When readers use a term for a neighboring concept, as
-"rating" for the score of a rating, the definition of the term that readers
-confuse states the distinction (principle 1). `scan_glossary.py --lint` names
-each avoided word that is also a term.
+"rating" for the score of a rating, a note of the term that readers confuse
+states the distinction (principle 1). `scan_glossary.py --lint` names each
+avoided word that is also a term.
 
 ### Open questions
 
@@ -155,11 +195,28 @@ when no question is open.
 Keep the structure of an existing glossary unless the user asks to convert it.
 An avoided word that is also a term is a defect in any structure, and every
 update removes the word from the avoided vocabulary and states the
-distinction in the definition of the term. A conversion keeps every definition, variant, restriction, and decision. It
-moves accepted variants into the Term cells, identifier lists into the Code
-cells, decisions into the definitions or the rows of the avoid table that they
-settle, and a status column into the "Proposed," marker. It drops columns that
-list where a word is used.
+distinction in a note of the term. A deficient definition is also a defect in
+any structure. A check reports it, and an update rewrites the definitions that
+it adds or changes in the form of the Definition column.
+
+A conversion keeps the content of every definition, variant, restriction, and
+decision. It rewrites each definition in the form of the Definition column and
+moves the other sentences of the old definition into notes or into the
+documentation that the Source cell names. It moves accepted variants into the
+Term cells, identifier lists into the Code cells, decisions into the
+definitions or the rows of the avoid table that they settle, and a status
+column into the "Proposed," marker. It drops columns that list where a word is
+used.
+
+## Sources
+
+The rules for definitions follow ISO 704, *Terminology work: Principles and
+methods*. ISO 704:2022 replaces ISO 704:2009 and defines the intensional
+definition, the form of the Definition column, in its clause 3.3. Its table of
+contents keeps the subclauses of the 2009 edition that the clause numbers
+above cite: the nature of intensional definitions (6.4.2), writing them
+(6.4.3), the substitution principle (6.4.4), deficient definitions (6.5), and
+information that supplements a definition (6.6).
 
 ## Example
 
@@ -177,10 +234,10 @@ definition inferred from use, which the maintainers have not confirmed.
 
 | Term | Definition | Code | Source |
 |---|---|---|---|
-| bundle | The archive that the server installs: one directory with the executable and the manifest. | `Bundle`, `dist/<id>.tar.gz` | `README.md:41`, "The bundle is the archive that the server installs" |
-| test build | A bundle built from uncommitted changes. It cannot replace a release bundle. | `build.py --dirty` | `README.md:52`, "a test build skips the check for uncommitted changes" |
-| release | One published version: its release tag, its changelog section, and its bundle. | `publish_release()` | `docs/releasing.md:8`, "A release is the tag, the changelog section, and the bundle" |
-| release tag (the tag) | The signed git tag `v<version>` of a release. Write *the tag* only after the first mention in a section. | `RELEASE_TAG_RE` | Proposed, `docs/releasing.md:12` |
+| bundle | archive that the server installs, with one directory for the executable and the manifest. | `Bundle`, `dist/<id>.tar.gz` | `README.md:41`, "The bundle is the archive that the server installs" |
+| release tag (the tag) | signed git tag `v<version>` that marks a published version. Note: Write *the tag* only after the first mention in a section. | `RELEASE_TAG_RE` | Proposed, `docs/releasing.md:12` |
+| release | published version of the project, made up of its release tag, its changelog section, and its bundle. | `publish_release()` | `docs/releasing.md:8`, "A release is the tag, the changelog section, and the bundle" |
+| test build | bundle built from uncommitted changes. Note: A test build cannot be the bundle of a release. | `build.py --dirty` | `README.md:52`, "a test build skips the check for uncommitted changes" |
 
 `build.json` records the state of a build:
 

@@ -162,17 +162,20 @@ over a PDF of the same document and follows the files that a LaTeX root includes
 candidate is used directly, with a question only when discovery finds no document
 or leaves genuine ambiguity.
 
-Glossary mode reads a paper or document, groups its terms by concept, and creates
-or maintains `GLOSSARY.md` in the format of `shared/glossary-format.md`. Each
-group of concepts has a table of terms with their accepted variants,
+Glossary mode reads a paper or document, groups its terms by concept, and
+creates or maintains `GLOSSARY.md` in the format of `shared/glossary-format.md`.
+Each group of concepts has a table of terms with their accepted variants,
 definitions, and sources. A table of vocabulary to avoid and a list of open
 questions follow. Each fact is in one place, so the format has no separate
-tables for variants, identifiers, or decisions. Definitions carry source
-locations and short supporting passages, and an inferred definition is marked
-as proposed until the authors confirm it. Existing definitions, distinctions,
-accepted abbreviations, and scoped vocabulary restrictions are preserved rather
-than replaced by newly extracted preferences, and an existing glossary keeps its
-structure unless you ask for a conversion.
+tables for variants, identifiers, or decisions. Each definition follows ISO 704
+(*Terminology work: Principles and methods*): it names the broader concept and
+what sets the concept apart, without an article, and it can replace the term in
+a sentence without a change in meaning. Notes hold the other information.
+Definitions carry source locations and short supporting passages, and an
+inferred definition is marked as proposed until the authors confirm it. Existing
+definitions, distinctions, accepted abbreviations, and scoped vocabulary
+restrictions are preserved rather than replaced by newly extracted preferences,
+and an existing glossary keeps its structure unless you ask for a conversion.
 
 The same invocation validates the document against the glossary and writes
 `ai-slop-report.md` with concrete source suggestions and questions for the author.
@@ -183,7 +186,9 @@ and the ordinary sense of a word is not automatically forbidden.
 `scripts/scan_glossary.py` lists each use of a word that the glossary avoids,
 and the scope of its row decides whether the use is a finding. A term of the
 glossary is never a word to avoid, and the script reports a glossary that lists
-one, so that the definition of the term states the distinction. The document
+one, so that a note of the term states the distinction. With `--definitions`,
+it also lists the definitions that contain their own term, define each other,
+say what a concept is not, or hold more than one statement. The document
 stays unchanged, and `/ai-slop:revise` can apply concrete source suggestions.
 With `--ste`, the check also gives each key word one meaning (`T.one-meaning`),
 and the glossary definitions follow the STE rules.
@@ -193,11 +198,14 @@ and the glossary definitions follow the STE rules.
 /ai-slop:glossary main.tex
 /ai-slop:glossary draft.md
 /ai-slop:glossary draft.md --check
+/ai-slop:glossary draft.md --convert
 /ai-slop:glossary paper.pdf --glossary=terminology/GLOSSARY.md
 /ai-slop:glossary main.tex --ste
 ```
 
-`--check` validates against an existing glossary without editing it.
+`--check` validates against an existing glossary without editing it, and
+`--convert` rewrites an existing glossary into the format and its definitions
+into the form of ISO 704 before the check.
 `--glossary=<path>` selects a glossary instead of `GLOSSARY.md` in the working
 directory. Glossary mode works offline and loads the general terminology rules
 without fetching the trope catalog. The glossary is maintained project content,
@@ -231,12 +239,14 @@ applies the findings for one file.
 ```text
 /ai-slop:glossary-repo
 /ai-slop:glossary-repo --check
+/ai-slop:glossary-repo --convert
 /ai-slop:glossary-repo path/to/repo --exclude='data/*' --exclude='docs/archive/*'
 /ai-slop:glossary-repo --ste
 ```
 
 `--check` validates the repository against an existing glossary without
-editing it, `--glossary=<path>` selects another glossary, `--no-strings` reads
+editing it, `--convert` rewrites the glossary into the format first,
+`--glossary=<path>` selects another glossary, `--no-strings` reads
 comments without string literals, and `--commits=<spec>` adds commit messages,
 which the scan leaves out by default.
 

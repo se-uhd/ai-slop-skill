@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """scan_glossary.py GLOSSARY [FILE ...] [--exclude=GLOB ...] [--root=DIR] [--no-strings]
-                        [--counts] [--lint]
+                        [--counts] [--lint] [--definitions]
 
 Recall aid for the terminology checks. It reads the vocabulary that a glossary
 tells writers to avoid and lists every use of an avoided word in the text, so
@@ -34,13 +34,47 @@ full output.
 Terms that the glossary avoids:
     A glossary term is never vocabulary to avoid, not even in one sense. When
     readers use a term for a neighboring concept, such as "rating" for the
-    score of a rating, the definition of the term states the distinction
+    score of a rating, a note of the term states the distinction
     (shared/glossary-format.md). The script names on stderr each avoided word
     that matches a term or a variant of one in full, such as "rating" for the
     terms "rating" and "ratings", and leaves the word out of the scan, since
     its uses are uses of the term. A word avoided only in lowercase does not
     conflict with a term in capitals, such as "system" with "SYSTEM". With
     `--lint`, the script checks only the glossary and reads no text.
+
+Definitions:
+    With `--definitions`, the script checks only the glossary, as with
+    `--lint`, and also prints one line per definition that a pattern marks as
+    deficient under the rules of shared/glossary-format.md, which follow ISO
+    704 (Terminology work: Principles and methods):
+
+        <glossary>:<line>\\t<kind>\\t<term>\\t<definition>
+
+    The definition is the Definition cell of a concept table, or the text
+    after the term of a list entry `- **term**: ...` up to a line that starts
+    with API:, Code:, Avoid:, or Source:. The checks read the part of the
+    definition before the first "Note:", without code spans. Kinds:
+
+      - article:   the definition starts with "A", "An", or "The". A
+                   definition starts with its superordinate concept, and the
+                   article is implied (ISO 704:2009, 6.3.2).
+      - sentences: the definition holds more than one sentence. A definition
+                   is one statement, and other information goes into a note
+                   (ISO 704:2009, 6.3.2, 6.3.5, 6.4).
+      - own-term:  the definition contains its term or a variant of it, an
+                   inner circle (ISO 704:2009, 6.5.2).
+      - mutual:    two definitions each contain the term of the other, an
+                   outer circle that the substitution test reveals (ISO
+                   704:2009, 6.3.4, 6.5.2). The term column names both terms.
+      - negative:  the definition starts with "not", "no", or "non-", or says
+                   "other than", which marks a definition of what the concept
+                   is not (ISO 704:2009, 6.5.4).
+
+    The lines are candidates. An opposite concept can have a negative
+    definition (ISO 704:2009, 6.5.4), and two definitions can name each other
+    without a circle when each also states its own delimiting characteristics.
+    The caller applies the substitution test to each definition and judges
+    each candidate. A summary with the count of each kind goes to stderr.
 
 Input:
     With FILE arguments, each file is read the way scan_repo.py reads it:
@@ -108,8 +142,8 @@ Matching:
 
 Exit codes:
     0  the scan ran, with or without candidates, including a glossary that
-       lists no vocabulary to avoid (noted on stderr), and with `--lint`, no
-       avoided word is a term
+       lists no vocabulary to avoid (noted on stderr), and with `--lint` or
+       `--definitions`, no avoided word is a term
     1  the glossary lists a term as vocabulary to avoid (named on stderr); the
        scan of the other words ran
     2  usage error, the glossary cannot be read, or none of the FILE
@@ -312,6 +346,110 @@ def read_entries(text):
     return entries
 
 
+DEFINITION_END_RE = re.compile(r'^\s*(?:[-*+]\s+)?(?:API|Code|Avoid|Source):')
+NOTE_RE = re.compile(r'(?:^|(?<=[.!?])\s+)Note:')
+ARTICLE_RE = re.compile(r'^(?:A|An|The)\s')
+NEGATIVE_RE = re.compile(r'^(?:not|no|non-)\b|\bother than\b', re.IGNORECASE)
+ABBREVIATION_RE = re.compile(r'\b(?:e\.g|i\.e|etc|vs|cf)\.', re.IGNORECASE)
+SENTENCE_BREAK_RE = re.compile(r'[.!?]["\')\]]?\s+(?=[A-Z0-9"\'(\[])')
+DEFINITION_KINDS = ('article', 'sentences', 'own-term', 'mutual', 'negative')
+
+
+def read_definitions(text):
+    """Return (line, terms, definition) for each concept row of a table with a
+    Definition column and for each list entry `- **term**: definition`. The
+    terms are the variants of the Term cell or the entry name."""
+    found, fence_open = [], False
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if scan_repo.FENCE_RE.match(line):
+            fence_open = not fence_open
+        if fence_open:
+            continue
+        m = re.match(r'^\s*[-*+]\s+\*\*(?P<term>[^*]+)\*\*:?\s*(?P<rest>.*)$', line)
+        if m:
+            parts = [m.group('rest')]
+            for more in lines[i + 1:]:
+                if (not more.strip() or ENTRY_RE.match(more) or DEFINITION_END_RE.match(more)
+                        or more.lstrip().startswith('#')):
+                    break
+                parts.append(more.strip())
+            found.append((i + 1, term_variants(m.group('term').rstrip(':')), ' '.join(parts).strip()))
+        elif (line.lstrip().startswith('|') and i + 1 < len(lines)
+              and SEPARATOR_RE.match(lines[i + 1].strip())):
+            header = [plain(c).lower() for c in split_row(line)]
+            if not header or header[0] != 'term' or 'definition' not in header:
+                continue
+            col = header.index('definition')
+            for k, row in enumerate(lines[i + 2:]):
+                if not row.lstrip().startswith('|'):
+                    break
+                cells = split_row(row)
+                if col < len(cells):
+                    found.append((i + 3 + k, term_variants(cells[0]), cells[col]))
+    return found
+
+
+def statement(definition):
+    """Split a definition into its part before the first note and the first
+    sentence of that part, both with code spans blanked and emphasis removed,
+    so that an identifier does not match a term. A glossary without notes
+    holds the definition in the first sentence and other information after
+    it."""
+    head = NOTE_RE.split(definition, maxsplit=1)[0]
+    head = ' '.join(plain(CODE_SPAN_RE.sub(' ', head)).split())
+    protected = ABBREVIATION_RE.sub(lambda m: m.group(0).replace('.', '\x00'), head)
+    first_break = SENTENCE_BREAK_RE.search(protected.rstrip('.'))
+    return head, head[:first_break.start() + 1] if first_break else head
+
+
+def mentions(text, terms, glossary_terms):
+    """True when `text` contains one of `terms` as a whole word or phrase,
+    outside the longer `glossary_terms` that contain it, such as "release" in
+    "release tag"."""
+    patterns = [word_pattern(t) for t in terms]
+    longer = [t for t in glossary_terms
+              if t not in terms and any(p.search(t) for p in patterns)]
+    for t in sorted(longer, key=len, reverse=True):
+        text = word_pattern(t).sub(' ', text)
+    return any(p.search(text) for p in patterns)
+
+
+def definition_candidates(definitions):
+    """Yield (line, kind, term, definition) for each definition that a pattern
+    marks as deficient; see "Definitions" in the module docstring."""
+    statements = [(line, terms, *statement(text), text) for line, terms, text in definitions]
+    glossary_terms = list(dict.fromkeys(t for _, terms, _ in definitions for t in terms))
+    for line, terms, head, first, text in statements:
+        name = terms[0] if terms else ''
+        context = truncate(text, CONTEXT_CAP)
+        if ARTICLE_RE.match(first):
+            yield line, 'article', name, context
+        if first != head:
+            yield line, 'sentences', name, context
+        if terms and mentions(first, terms, glossary_terms):
+            yield line, 'own-term', name, context
+        if NEGATIVE_RE.search(re.sub(r'^(?:A|An|The)\s+', '', first)):
+            yield line, 'negative', name, context
+    for a, (line, terms, _, first, text) in enumerate(statements):
+        for _, other_terms, _, other_first, _ in statements[a + 1:]:
+            if (terms and other_terms and set(terms).isdisjoint(other_terms)
+                    and mentions(first, other_terms, glossary_terms)
+                    and mentions(other_first, terms, glossary_terms)):
+                yield line, 'mutual', f'{terms[0]} / {other_terms[0]}', truncate(text, CONTEXT_CAP)
+
+
+def report_definitions(glossary_path, definitions):
+    """Print the definition candidates and a summary with a count per kind."""
+    counts = dict.fromkeys(DEFINITION_KINDS, 0)
+    for line, kind, term, context in sorted(definition_candidates(definitions)):
+        print(f"{glossary_path}:{line}\t{kind}\t{term}\t{context}")
+        counts[kind] += 1
+    summary = ' '.join(f'{kind}={n}' for kind, n in counts.items())
+    print(f"{len(definitions)} definition(s) in {glossary_path}; "
+          f"{sum(counts.values())} candidate(s) [{summary}].", file=sys.stderr)
+
+
 def is_acronym(word):
     return sum(c.isupper() for c in word) >= 2 and not any(c.islower() for c in word)
 
@@ -479,12 +617,13 @@ def report_conflicts(glossary_path, entries, conflicts):
         print(f'scan_glossary: {glossary_path} defines the term{"s" * (len(terms) > 1)} '
               f'{" and ".join(terms)} and lists "{word}" as vocabulary to avoid{sense}. '
               'A term cannot also be avoided vocabulary. Remove the word from the '
-              'avoided vocabulary and state the distinction in the definition of the '
-              'term.', file=sys.stderr)
+              'avoided vocabulary and state the distinction in a note of the term.',
+              file=sys.stderr)
 
 
 def main(argv):
     excludes, strings, counts, lint, root, positional = [], True, False, False, None, []
+    definitions = False
     for arg in argv[1:]:
         if arg.startswith('--exclude='):
             excludes.append(arg.split('=', 1)[1])
@@ -496,6 +635,8 @@ def main(argv):
             counts = True
         elif arg == '--lint':
             lint = True
+        elif arg == '--definitions':
+            definitions = True
         elif arg.startswith('--'):
             print(f"scan_glossary: unknown option {arg}", file=sys.stderr)
             return 2
@@ -503,7 +644,7 @@ def main(argv):
             positional.append(arg)
     if not positional:
         print("usage: scan_glossary.py GLOSSARY [FILE ...] [--exclude=GLOB ...] "
-              "[--root=DIR] [--no-strings] [--counts] [--lint]", file=sys.stderr)
+              "[--root=DIR] [--no-strings] [--counts] [--lint] [--definitions]", file=sys.stderr)
         return 2
     glossary_path, files = positional[0], positional[1:]
     try:
@@ -516,7 +657,9 @@ def main(argv):
     terms = read_terms(glossary_text)
     conflicts = term_conflicts(entries, terms)
     report_conflicts(glossary_path, entries, conflicts)
-    if lint:
+    if definitions:
+        report_definitions(glossary_path, read_definitions(glossary_text))
+    if lint or definitions:
         print(f"{len(terms)} term(s) and {len(entries)} avoided word(s) in {glossary_path}; "
               f"{len({w for w, _ in conflicts})} avoided word(s) that are terms.",
               file=sys.stderr)

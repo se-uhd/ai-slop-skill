@@ -84,6 +84,9 @@ The rules draw on these bodies of evidence:
 - ASD-STE100 Simplified Technical English, for the optional STE layer. The
   layer adapts its rules on sentences, voice, paragraphs, word meanings, and
   articles, and leaves out its dictionary of approved words.
+- ISO 704, *Terminology work: Principles and methods* (editions 2009 and
+  2022), for the form of definitions (`G.definition-form`) and the entries of
+  `GLOSSARY.md` (`shared/glossary-format.md`).
 
 The general AI trope catalog (named patterns such as negative parallelism and
 em-dash addiction, each tagged with a status) is fetched at runtime from
@@ -131,6 +134,24 @@ A reader who sees "code review," "code inspection," and
 "review process" cannot tell whether these name one concept or three. One term
 per concept (`G.one-term`) removes the doubt. Where terms name distinct concepts,
 define the difference and retain both (`G.distinct-synonyms`).
+
+**Define a term by its broader concept and what sets it apart**
+(`G.definition-form`) applies ISO 704, the standard on the principles of
+terminology work. ISO 704:2022 (3.3) calls this form the intensional
+definition, which states "the immediate superordinate concept and the
+delimiting characteristic(s)", and its note prefers it to the other types of
+definitions. ISO 704:2009 gives the reasons that the rule relies on. A
+definition provides "the minimum amount of information" that distinguishes a
+concept from related concepts (6.2), so an account of how the concept works is
+an explanation and not a definition (6.4.5). The substitution principle (6.3.4)
+gives a test that a reader can apply without knowledge of the field: a valid
+definition "can replace a designation in discourse without loss of or change
+in meaning". The same test exposes a circular definition (6.5.2), and the
+standard rejects a negative definition except for opposite concepts (6.5.4).
+The glossary format (`shared/glossary-format.md`) applies these clauses to the
+entries of `GLOSSARY.md` and follows the conventions of a terminological entry
+there: the definition has no leading article (6.3.2), and supplementary
+information goes into notes (6.4).
 
 ## Reference and clause boundaries
 
