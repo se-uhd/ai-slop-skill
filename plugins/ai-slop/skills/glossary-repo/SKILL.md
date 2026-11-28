@@ -3,7 +3,7 @@ name: glossary-repo
 description: Build or maintain GLOSSARY.md for a whole repository and check its terminology. Use when the user asks for a glossary of a code base, a project, or a paper repository, or for a check that its documentation, code comments, user-facing messages, and LaTeX or Markdown files use one term for each concept. Reads every text file of the repository through the shared repository scan, including the comments and prose string literals of source code, and the identifiers that name each concept. Flags competing names, conflicting meanings, undefined terms, avoided vocabulary, and newly invented labels for existing concepts. Writes a glossary and a terminology report grouped by file, validates an existing glossary with --check, or converts it to the format and to ISO 704 definitions with --convert. --ste adds the Simplified Technical English layer. Does not change the repository files that it checks.
 license: CC-BY-4.0
 metadata:
-  version: "2026-11_rev10"
+  version: "2026-11_rev11"
   homepage: https://github.com/se-uhd/ai-slop-skill
 ---
 

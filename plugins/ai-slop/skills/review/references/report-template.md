@@ -6,7 +6,7 @@ The report schema is stable so that revise mode can parse it. Each finding has `
 # AI Slop Review
 
 **Paper:** <path>
-**Skill version:** 2026-11_rev10
+**Skill version:** 2026-11_rev11
 **Reviewed:** <ISO 8601 date>
 **Trope catalog:** <the stderr line of fetch_tropes.py, e.g. fetched 26522 bytes, 49 trope heading(s), sha256 e6a703ee30d9, and the paths of `--tropes`, if any>
 

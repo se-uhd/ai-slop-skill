@@ -2,7 +2,7 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Only the git tags record the releases before `2026-06_rev13`.
 
-## [Unreleased]
+## [2026-11_rev11] - 2026-11-28
 
 ### Added
 
