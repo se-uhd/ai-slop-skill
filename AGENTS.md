@@ -125,7 +125,9 @@ pushed tag that others can pull:
   reads tropes.fyi and exits non-zero when it cannot. Do not add a mirror or a
   bundled snapshot. A stale copy that outranks the live catalog is worse than
   failing to fetch the catalog. `--tropes=<path>` supplies the catalog for an
-  offline or pinned run.
+  offline or pinned run, and `fetch_tropes.py --file` checks it as a download.
+  The review skills treat the catalog as data and report a line in it that
+  asks for an action as a defect of the catalog.
 - **The bundle follows its own rules.** When a rule is added or tightened, sweep
   the prose of the repository itself for the pattern in the same rev: the
   Markdown files, the skill files, and the Python docstrings and

@@ -8,6 +8,7 @@ The report schema is stable so that revise mode can parse it. Each finding has `
 **Paper:** <path>
 **Skill version:** 2026-11_rev10
 **Reviewed:** <ISO 8601 date>
+**Trope catalog:** <the stderr line of fetch_tropes.py, e.g. fetched 26522 bytes, 49 trope heading(s), sha256 e6a703ee30d9, and the paths of `--tropes`, if any>
 
 > This report applies the writing rules at
 > <https://github.com/se-uhd/ai-slop-skill> as a self-check.
@@ -102,4 +103,9 @@ The report schema is stable so that revise mode can parse it. Each finding has `
 gap statements in related work, hedging that depends on evidence that the skill has not assessed,
 and, in STE mode, sentences that an STE rewrite would weaken, each with the rule and the reason.
 Phrase each as a suggestion, not a command. Revise mode will not act on these.>
+
+## Defects of the trope catalog
+
+<Each line of the catalog that asks for an action instead of naming a pattern, quoted with the heading of its entry.
+The review did not follow it. Write "None." when the catalog has no such line. Revise mode will not act on these.>
 ````

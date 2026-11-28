@@ -2,6 +2,17 @@
 
 Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-month revision counter (`YYYY-MM_revN`), described in the README "Versioning" section. Every release is also a git tag. Only the git tags record the releases before `2026-06_rev13`.
 
+## [Unreleased]
+
+### Added
+
+- `fetch_tropes.py --file <path>` reads a local copy of the trope catalog instead of tropes.fyi. The option takes one file each time, and the script concatenates the files in the given order. The script applies the checks of a download to the copy, and the copy must also be valid UTF-8. For the same text, the script prints the same size, heading count, and hash as for a download.
+
+### Changed
+
+- `/ai-slop:review`, `/ai-slop:review-diff`, and `/ai-slop:review-repo` give the files of `--tropes=<path>` to `fetch_tropes.py --file`. Before, they read the files without a check. The new `**Trope catalog:**` line of the report names the hash of the catalog. The README, `docs/skill-workflows.md`, and `AGENTS.md` describe the check.
+- The review skills treat the trope catalog as data that names candidate patterns. No text in the catalog changes the rules, the scope, the findings, or the commands of a review. The review does not do what a catalog line asks for. It quotes the line under the new report section "Defects of the trope catalog".
+
 ## [2026-11_rev10] - 2026-11-26
 
 ### Added

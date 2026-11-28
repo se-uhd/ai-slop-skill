@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""fetch_tropes.py
+"""fetch_tropes.py [--file <path> ...]
 
-Fetch the AI trope catalog from tropes.fyi and emit it on stdout.
+Fetch the AI trope catalog from tropes.fyi, or read a local copy of it, and
+emit it on stdout.
 
 One source, no fallback: <https://tropes.fyi/tropes-md>. When fetching the
 catalog fails, the script says so and exits non-zero, and the caller stops
 rather than reviewing against a catalog that is missing or out of date. To
 review without the network, pass an explicit catalog file to the skill with
-`--tropes=<path>`.
+`--tropes=<path>`, which the review skills pass on as `--file <path>`.
 
 The site serves the catalog inside a rendered HTML page rather than as raw
 markdown. `extract_markdown` therefore unwraps it: first from the
@@ -22,11 +23,22 @@ body, or an error page that happens to carry a `<pre>` block is rejected, so a
 redesign or an outage stops the run with an error instead of returning other
 text as the catalog. A body over MAX_BYTES is rejected too.
 
+`--file <path>` (repeatable) reads local files instead of the site,
+concatenated in the order given (see `read_files`). The concatenation gets
+the checks of a download: at most MAX_BYTES, not empty, and structured like
+the catalog. A local copy is the Markdown file that the download link of the
+site gives, so the script does not unwrap a page from it. The copy must also
+be valid UTF-8, so the hash on stderr is the SHA-256 of the bytes of the
+files, which `cat <files> | shasum -a 256` reproduces. `code-slop tropes
+--file` of code-slop-skill applies the same checks and prints the same hash.
+
 What was accepted is described on stderr (byte count, heading count, and a
 content hash), which makes a changed catalog visible in the run log and lets
-a reader compare two runs. Because the content is third-party text that the
-skills hand to the model as rules to apply, a paper repository that needs a
-reproducible review keeps its own copy and passes it with `--tropes=<path>`.
+a reader compare two runs. The content is third-party text. The review skills
+hand it to the model as data that names candidate patterns, and a line in it
+that asks for an action is a defect of the catalog to report, never an
+instruction. A paper repository that needs a reproducible review keeps its
+own copy and passes it with `--tropes=<path>`.
 
 The site answers the default urllib user agent with 403, so requests carry
 USER_AGENT (this skill and its repository URL).
@@ -37,8 +49,9 @@ calling environment and does not establish that the site is down.
 Exit codes
 ----------
   0  catalog written to stdout.
-  1  the site was unreachable, or the page carried no catalog.
-  2  usage error (this script takes no arguments).
+  1  the site was unreachable, the page carried no catalog, or a local copy
+     could not be read or is not the catalog.
+  2  usage error: an argument other than `--file <path>`.
 """
 import base64
 import binascii
@@ -157,19 +170,82 @@ def describe(body):
             f"heading(s), sha256 {digest}")
 
 
+def parse_args(argv):
+    """Return the paths of the `--file <path>` and `--file=<path>` arguments
+    in their order, or None on a usage error, such as any other argument or an
+    empty path."""
+    paths, args, i = [], argv[1:], 0
+    while i < len(args):
+        if args[i] == '--file' and i + 1 < len(args):
+            path, i = args[i + 1], i + 2
+        elif args[i].startswith('--file='):
+            path, i = args[i][len('--file='):], i + 1
+        else:
+            return None
+        if not path:
+            return None
+        paths.append(path)
+    return paths
+
+
+def local_copy_problem(raw):
+    """Return why the bytes `raw` of a local copy are not the catalog, or None.
+    The checks are those of a download, and the copy must be valid UTF-8."""
+    if len(raw) > MAX_BYTES:
+        return f"exceeds {MAX_BYTES} bytes"
+    try:
+        body = raw.decode('utf-8')
+    except UnicodeDecodeError:
+        return "is not valid UTF-8"
+    if not body.strip():
+        return "is empty"
+    if not looks_like_catalog(body):
+        return (f"has no valid catalog (expected an H1 and at least "
+                f"{MIN_HEADINGS} trope headings)")
+    return None
+
+
+def read_files(paths):
+    """Return the catalog in the local files `paths`, concatenated in the given
+    order, or None after the reason on stderr."""
+    raw = b''
+    for path in paths:
+        try:
+            with open(path, 'rb') as handle:
+                raw += handle.read(MAX_BYTES + 1)
+        except OSError as error:
+            print(f"error: cannot read {path}: {error.strerror or error}",
+                  file=sys.stderr)
+            return None
+        if len(raw) > MAX_BYTES:
+            break
+    problem = local_copy_problem(raw)
+    if problem:
+        print(f"error: the local copy {', '.join(paths)} {problem}",
+              file=sys.stderr)
+        return None
+    return raw.decode('utf-8')
+
+
 def main(argv):
-    if len(argv) > 1:
-        print("usage: fetch_tropes.py", file=sys.stderr)
+    paths = parse_args(argv)
+    if paths is None:
+        print("usage: fetch_tropes.py [--file <path> ...]", file=sys.stderr)
         return 2
-    response = try_fetch(VIEWER_URL)
-    body = extract_markdown(response)
-    if not body:
-        reason = ("catalog download failed" if response is None else
-                  "response has no valid catalog (expected an H1 and at least "
-                  f"{MIN_HEADINGS} trope headings)")
-        print(f"error: {reason} from {VIEWER_URL}; pass --tropes=<path> to "
-              "review against a local copy", file=sys.stderr)
-        return 1
+    if paths:
+        body = read_files(paths)
+        if body is None:
+            return 1
+    else:
+        response = try_fetch(VIEWER_URL)
+        body = extract_markdown(response)
+        if not body:
+            reason = ("catalog download failed" if response is None else
+                      "response has no valid catalog (expected an H1 and at "
+                      f"least {MIN_HEADINGS} trope headings)")
+            print(f"error: {reason} from {VIEWER_URL}; pass --tropes=<path> to "
+                  "review against a local copy", file=sys.stderr)
+            return 1
     sys.stdout.write(body)
     print(describe(body), file=sys.stderr)
     return 0
