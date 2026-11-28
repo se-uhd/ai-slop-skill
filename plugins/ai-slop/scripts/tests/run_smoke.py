@@ -1786,7 +1786,8 @@ def test_scan_glossary_lists_deficient_definitions():
              '| release | published version, made up of its release tag and its bundle. | | Proposed, `a.md:3` |\n'
              '| undo | reversal of a coffee that the user did not undo. | | Proposed, `a.md:4` |\n'
              '| deciduous tree | tree other than an evergreen tree. | | Proposed, `a.md:5` |\n'
-             '| test build | A bundle built from changes. It cannot be released. | | Proposed, `a.md:6` |\n')
+             '| test build | A bundle built from changes. It cannot be released. | | Proposed, `a.md:6` |\n'
+             '| guest | a non-member of the kitty. | | Proposed, `a.md:7` |\n')
     entries = ('# Glossary\n\n'
                '- **undo**: The reversal of a coffee that the user did not undo.\n'
                '  Avoid: cancel.\n')
@@ -1796,8 +1797,9 @@ def test_scan_glossary_lists_deficient_definitions():
         found = {(row[2], row[1]) for row in _glossary_rows(out)}
         assert rc == 0 and found == {
             ('release tag / release', 'mutual'), ('undo', 'own-term'), ('deciduous tree', 'negative'),
-            ('test build', 'article'), ('test build', 'sentences')}, f"table: rc={rc} {found!r} {err!r}"
-        assert '6 definition(s)' in err and 'mutual=1' in err, f"table: summary: {err!r}"
+            ('test build', 'article'), ('test build', 'sentences'),
+            ('guest', 'article'), ('guest', 'negative')}, f"table: rc={rc} {found!r} {err!r}"
+        assert '7 definition(s)' in err and 'mutual=1' in err, f"table: summary: {err!r}"
         write(Path(d) / 'GLOSSARY.md', entries)
         rc, out, err = run('scan_glossary.py', str(Path(d) / 'GLOSSARY.md'), '--definitions')
         found = {(row[2], row[1]) for row in _glossary_rows(out)}

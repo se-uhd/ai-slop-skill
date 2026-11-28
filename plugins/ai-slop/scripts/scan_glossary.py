@@ -55,9 +55,9 @@ Definitions:
     with API:, Code:, Avoid:, or Source:. The checks read the part of the
     definition before the first "Note:", without code spans. Kinds:
 
-      - article:   the definition starts with "A", "An", or "The". A
-                   definition starts with its superordinate concept, and the
-                   article is implied (ISO 704:2009, 6.3.2).
+      - article:   the definition starts with "a", "an", or "the", in any
+                   case. A definition starts with its superordinate concept,
+                   and the article is implied (ISO 704:2009, 6.3.2).
       - sentences: the definition holds more than one sentence. A definition
                    is one statement, and other information goes into a note
                    (ISO 704:2009, 6.3.2, 6.3.5, 6.4).
@@ -348,7 +348,7 @@ def read_entries(text):
 
 DEFINITION_END_RE = re.compile(r'^\s*(?:[-*+]\s+)?(?:API|Code|Avoid|Source):')
 NOTE_RE = re.compile(r'(?:^|(?<=[.!?])\s+)Note:')
-ARTICLE_RE = re.compile(r'^(?:A|An|The)\s')
+ARTICLE_RE = re.compile(r'^(?:a|an|the)\s', re.IGNORECASE)
 NEGATIVE_RE = re.compile(r'^(?:not|no|non-)\b|\bother than\b', re.IGNORECASE)
 ABBREVIATION_RE = re.compile(r'\b(?:e\.g|i\.e|etc|vs|cf)\.', re.IGNORECASE)
 SENTENCE_BREAK_RE = re.compile(r'[.!?]["\')\]]?\s+(?=[A-Z0-9"\'(\[])')
@@ -429,7 +429,7 @@ def definition_candidates(definitions):
             yield line, 'sentences', name, context
         if terms and mentions(first, terms, glossary_terms):
             yield line, 'own-term', name, context
-        if NEGATIVE_RE.search(re.sub(r'^(?:A|An|The)\s+', '', first)):
+        if NEGATIVE_RE.search(re.sub(r'^(?:a|an|the)\s+', '', first, flags=re.IGNORECASE)):
             yield line, 'negative', name, context
     for a, (line, terms, _, first, text) in enumerate(statements):
         for _, other_terms, _, other_first, _ in statements[a + 1:]:

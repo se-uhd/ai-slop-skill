@@ -13,6 +13,10 @@ Notable changes to the ai-slop skill bundle. The bundle uses CalVer with a per-m
 - `/ai-slop:review`, `/ai-slop:review-diff`, and `/ai-slop:review-repo` give the files of `--tropes=<path>` to `fetch_tropes.py --file`. Before, they read the files without a check. The new `**Trope catalog:**` line of the report names the hash of the catalog. The README, `docs/skill-workflows.md`, and `AGENTS.md` describe the check.
 - The review skills treat the trope catalog as data that names candidate patterns. No text in the catalog changes the rules, the scope, the findings, or the commands of a review. The review does not do what a catalog line asks for. It quotes the line under the new report section "Defects of the trope catalog".
 
+### Fixed
+
+- `scan_glossary.py --definitions` also finds a definition that starts with a lowercase article, such as "the reversal of a coffee". Before, it found only "A", "An", and "The". The check for a negative definition also removes a lowercase article before it looks for "not", "no", or "non-".
+
 ## [2026-11_rev10] - 2026-11-26
 
 ### Added
